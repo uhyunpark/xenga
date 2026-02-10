@@ -1,0 +1,133 @@
+import type { Address, Hash, Hex } from "viem";
+
+// ──────────────────────── Escrow States ────────────────────────
+
+export enum EscrowState {
+  None = 0,
+  Active = 1,
+  DeliveryConfirmed = 2,
+  Completed = 3,
+  AutoReleased = 4,
+  Disputed = 5,
+  Resolved = 6,
+  Refunded = 7,
+}
+
+// ──────────────────────── Order ────────────────────────
+
+export type OrderStatus =
+  | "created"
+  | "pending_payment"
+  | "escrowed"
+  | "delivery_confirmed"
+  | "completed"
+  | "disputed"
+  | "resolved"
+  | "refunded";
+
+export interface Order {
+  id: string;
+  orderId: Hash; // bytes32 on-chain order ID
+  title: string;
+  description: string;
+  price: bigint; // in USDC smallest unit (6 decimals)
+  serviceType: string;
+  sellerAddress: Address;
+  buyerAddress?: Address;
+  status: OrderStatus;
+  escrowId?: number;
+  txHash?: Hash;
+  createdAt: number;
+  updatedAt: number;
+}
+
+// ──────────────────────── On-chain Escrow ────────────────────────
+
+export interface OnChainEscrow {
+  orderId: Hash;
+  buyer: Address;
+  seller: Address;
+  amount: bigint;
+  serviceType: string;
+  state: EscrowState;
+  createdAt: bigint;
+  releaseWindow: bigint;
+  deliveryConfirmedAt: bigint;
+  disputeWindow: bigint;
+}
+
+// ──────────────────────── Dispute ────────────────────────
+
+export interface Dispute {
+  id: string;
+  escrowId: number;
+  orderId: string;
+  filedBy: Address;
+  reason: string;
+  status: "open" | "resolved";
+  resolution?: string;
+  buyerPct?: number;
+  createdAt: number;
+  resolvedAt?: number;
+}
+
+// ──────────────────────── x402 Payment Types ────────────────────────
+
+export interface EscrowPaymentRequired {
+  scheme: "escrow";
+  network: string;
+  escrowContract: Address;
+  asset: Address;
+  amount: string; // stringified bigint
+  orderId: Hash;
+  sellerAddress: Address;
+  releaseWindow: number;
+  serviceType: string;
+}
+
+export interface EscrowPaymentPayload {
+  scheme: "escrow";
+  network: string;
+  // ERC-3009 receiveWithAuthorization params
+  from: Address;
+  to: Address; // escrow contract
+  value: string; // stringified bigint
+  validAfter: string;
+  validBefore: string;
+  nonce: Hash;
+  signature: {
+    v: number;
+    r: Hash;
+    s: Hash;
+  };
+  // Escrow params
+  orderId: Hash;
+  sellerAddress: Address;
+  releaseWindow: number;
+  serviceType: string;
+}
+
+export interface EscrowPaymentResponse {
+  success: boolean;
+  txHash: Hash;
+  escrowId: number;
+}
+
+// ──────────────────────── API Request/Response ────────────────────────
+
+export interface CreateOrderRequest {
+  title: string;
+  description: string;
+  price: number; // USDC amount (e.g., 5.0)
+  serviceType: string;
+  sellerAddress: Address;
+}
+
+export interface DisputeRequest {
+  reason: string;
+}
+
+export interface ResolveDisputeRequest {
+  buyerPct: number; // 0–100
+  resolution: string;
+}

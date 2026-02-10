@@ -1,0 +1,19 @@
+node_modules/
+dist/
+.env
+
+# Foundry
+contracts/out/
+contracts/cache/
+contracts/lib/
+
+# SQLite
+*.db
+*.sqlite
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
