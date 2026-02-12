@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg-primary: #0A0A0B;
+  --color-bg-secondary: #141416;
+  --color-bg-tertiary: #1C1C1F;
+  --color-border-default: rgba(255, 255, 255, 0.08);
+  --color-border-active: rgba(255, 255, 255, 0.16);
+  --color-text-primary: #FAFAFA;
+  --color-text-secondary: #A1A1AA;
+  --color-text-tertiary: #71717A;
+  --color-accent: #3B82F6;
+  --color-accent-purple: #8B5CF6;
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Subtle background grid (Vercel-style) */
+.bg-grid {
+  background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #FAFAFA 0%, #8B5CF6 50%, #3B82F6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glow effects */
+.glow-blue {
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3), 0 0 20px rgba(59, 130, 246, 0.15);
+}
+
+.glow-purple {
+  box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.3), 0 0 20px rgba(139, 92, 246, 0.15);
+}
+
+/* Pulse animation for active state */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(59, 130, 246, 0);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s infinite;
+}
+
+/* Code block styling */
+.code-block {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-default);
+  border-radius: 12px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

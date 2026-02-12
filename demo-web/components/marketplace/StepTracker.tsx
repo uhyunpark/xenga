@@ -1,0 +1,72 @@
+"use client";
+
+export type DemoStep =
+  | "select"
+  | "create_order"
+  | "request_payment"
+  | "sign"
+  | "submit"
+  | "escrowed"
+  | "delivery"
+  | "complete";
+
+const steps: { key: DemoStep; label: string }[] = [
+  { key: "select", label: "Select Product" },
+  { key: "create_order", label: "Create Order" },
+  { key: "request_payment", label: "Request Payment" },
+  { key: "sign", label: "Sign Authorization" },
+  { key: "submit", label: "Submit Payment" },
+  { key: "escrowed", label: "Funds Escrowed" },
+  { key: "delivery", label: "Delivery" },
+  { key: "complete", label: "Complete" },
+];
+
+interface StepTrackerProps {
+  currentStep: DemoStep;
+  className?: string;
+}
+
+export function StepTracker({ currentStep, className = "" }: StepTrackerProps) {
+  const currentIndex = steps.findIndex((s) => s.key === currentStep);
+
+  return (
+    <div className={`space-y-1 ${className}`}>
+      {steps.map((step, i) => {
+        const isPast = i < currentIndex;
+        const isCurrent = i === currentIndex;
+
+        return (
+          <div
+            key={step.key}
+            className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-xs transition-colors ${
+              isCurrent
+                ? "bg-accent/10 text-accent font-medium"
+                : isPast
+                  ? "text-success"
+                  : "text-text-tertiary"
+            }`}
+          >
+            <div
+              className={`flex h-5 w-5 items-center justify-center rounded-full border text-[10px] font-bold ${
+                isCurrent
+                  ? "border-accent bg-accent text-white"
+                  : isPast
+                    ? "border-success bg-success/20 text-success"
+                    : "border-border-default"
+              }`}
+            >
+              {isPast ? (
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M2 5l2 2 4-4" />
+                </svg>
+              ) : (
+                i + 1
+              )}
+            </div>
+            {step.label}
+          </div>
+        );
+      })}
+    </div>
+  );
+}

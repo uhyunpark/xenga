@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "x402 HTTP 402 Escrow Payment System — HTTP-native payments with escrow protection",
+  "workspaces": ["demo-web"],
   "scripts": {
     "dev": "bun --watch src/server/index.ts",
     "start": "bun src/server/index.ts",
