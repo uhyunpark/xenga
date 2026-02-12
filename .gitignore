@@ -7,8 +7,13 @@ contracts/out/
 contracts/cache/
 contracts/lib/
 
+# TypeScript
+*.tsbuildinfo
+
 # SQLite
 *.db
+*.db-shm
+*.db-wal
 *.sqlite
 
 # OS
