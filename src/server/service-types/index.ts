@@ -23,17 +23,27 @@ export interface ServiceType {
 }
 
 // ──────────── Registry ────────────
+// Use globalThis with Symbol.for() so the registry survives webpack module duplication
+// (e.g. instrumentation.ts importing without .js vs route handlers importing with .js)
 
-const registry = new Map<string, ServiceType>();
+const REGISTRY_KEY = Symbol.for("x402.serviceTypeRegistry");
+
+function getRegistry(): Map<string, ServiceType> {
+  const g = globalThis as Record<symbol, unknown>;
+  if (!g[REGISTRY_KEY]) {
+    g[REGISTRY_KEY] = new Map<string, ServiceType>();
+  }
+  return g[REGISTRY_KEY] as Map<string, ServiceType>;
+}
 
 export function registerServiceType(serviceType: ServiceType) {
-  registry.set(serviceType.name, serviceType);
+  getRegistry().set(serviceType.name, serviceType);
 }
 
 export function getServiceType(name: string): ServiceType | undefined {
-  return registry.get(name);
+  return getRegistry().get(name);
 }
 
 export function getAllServiceTypes(): ServiceType[] {
-  return Array.from(registry.values());
+  return Array.from(getRegistry().values());
 }

@@ -6,7 +6,7 @@ import { getOrderById, updateOrderStatus } from "@server/services/orderService.j
 import { getDb } from "@server/db/index.js";
 import { getServiceType } from "@server/service-types/index.js";
 import { verifyEscrowPayment } from "@server/facilitator/verifier.js";
-import { settleEscrow } from "@server/facilitator/settler.js";
+import { getChainAdapter } from "@/lib/chain";
 
 export async function POST(
   request: Request,
@@ -137,7 +137,7 @@ export async function POST(
 
   // Submit on-chain
   try {
-    const { txHash, escrowId } = await settleEscrow(payload);
+    const { txHash, escrowId } = await getChainAdapter().settleEscrow(payload);
 
     // Update order status
     updateOrderStatus(order.id, {
@@ -181,6 +181,9 @@ export async function POST(
       Math.floor(Date.now() / 1000),
       order.id
     );
-    return NextResponse.json({ error: "Payment settlement failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Payment settlement failed", details: err instanceof Error ? err.message : String(err) },
+      { status: 500 }
+    );
   }
 }

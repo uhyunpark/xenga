@@ -4,15 +4,32 @@ import { useReducer, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { useInspector } from "@/lib/protocol-inspector/context";
+import { useOperatorAddress } from "@/lib/hooks/useOperatorAddress";
 import {
   requestPayment,
   signPayment,
   submitPayment,
   AlreadyPaidError,
 } from "@/lib/api/payment-flow";
+import type { PaymentRequired, PaymentPayload } from "@/lib/api/payment-flow";
+import { Badge } from "@/components/ui/Badge";
+import { AddressDisplay } from "@/components/ui/AddressDisplay";
+import { formatUsdc, shortenAddress } from "@/lib/utils";
 import { ProductGrid, type Product } from "./ProductGrid";
 import { StepTracker, type DemoStep } from "./StepTracker";
 import { SellerPanel } from "./SellerPanel";
+
+function formatReleaseWindow(seconds: number): string {
+  if (seconds >= 86400) {
+    const days = Math.floor(seconds / 86400);
+    return `${days} day${days !== 1 ? "s" : ""}`;
+  }
+  if (seconds >= 3600) {
+    const hours = Math.floor(seconds / 3600);
+    return `${hours} hour${hours !== 1 ? "s" : ""}`;
+  }
+  return `${seconds}s`;
+}
 
 interface FlowState {
   step: DemoStep;
@@ -24,6 +41,8 @@ interface FlowState {
   loading: boolean;
   orderData: any | null;
   disputeFiled: boolean;
+  paymentRequired: PaymentRequired | null;
+  paymentPayload: PaymentPayload | null;
 }
 
 type FlowAction =
@@ -34,7 +53,9 @@ type FlowAction =
   | { type: "SET_ERROR"; error: string }
   | { type: "SET_LOADING"; loading: boolean }
   | { type: "FILE_DISPUTE" }
-  | { type: "RESET" };
+  | { type: "RESET" }
+  | { type: "SET_PAYMENT_REQUIRED"; paymentRequired: PaymentRequired }
+  | { type: "SET_PAYMENT_PAYLOAD"; paymentPayload: PaymentPayload };
 
 function reducer(state: FlowState, action: FlowAction): FlowState {
   switch (action.type) {
@@ -54,6 +75,10 @@ function reducer(state: FlowState, action: FlowAction): FlowState {
       return { ...state, disputeFiled: true };
     case "RESET":
       return initialState;
+    case "SET_PAYMENT_REQUIRED":
+      return { ...state, paymentRequired: action.paymentRequired, step: "sign", loading: false, error: null };
+    case "SET_PAYMENT_PAYLOAD":
+      return { ...state, paymentPayload: action.paymentPayload, step: "submit", loading: false, error: null };
     default:
       return state;
   }
@@ -69,30 +94,58 @@ const initialState: FlowState = {
   loading: false,
   orderData: null,
   disputeFiled: false,
+  paymentRequired: null,
+  paymentPayload: null,
 };
 
 export function PaymentFlow() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const { walletClient, address, type: walletType, connectDemo, fundDemoWallet, usdcBalance } = useWallet();
   const inspector = useInspector();
+  const operatorAddress = useOperatorAddress();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Session storage for refresh recovery
+  // Session storage for refresh recovery — validate orderId still exists on server
   useEffect(() => {
     const saved = sessionStorage.getItem("x402-marketplace-state");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed.orderId && parsed.step !== "select") {
+    if (!saved) return;
+
+    try {
+      const parsed = JSON.parse(saved);
+      if (!parsed.orderId || parsed.step === "select") return;
+
+      // Validate the order still exists on the server before restoring
+      fetch("/api/orders")
+        .then((res) => res.json())
+        .then((orders: any[]) => {
+          if (!orders.find((o: any) => o.id === parsed.orderId)) {
+            // Order no longer exists (server restarted) — clear stale state
+            sessionStorage.removeItem("x402-marketplace-state");
+            return;
+          }
+
+          // Order exists — restore state
           dispatch({ type: "SET_ORDER", orderId: parsed.orderId, orderData: parsed.orderData });
-          if (parsed.step === "escrowed" || parsed.step === "delivery" || parsed.step === "complete") {
+
+          if (parsed.step === "sign" && parsed.paymentRequired) {
+            dispatch({ type: "SET_PAYMENT_REQUIRED", paymentRequired: parsed.paymentRequired });
+          } else if (parsed.step === "submit" && parsed.paymentPayload) {
+            if (parsed.paymentRequired) {
+              dispatch({ type: "SET_PAYMENT_REQUIRED", paymentRequired: parsed.paymentRequired });
+            }
+            dispatch({ type: "SET_PAYMENT_PAYLOAD", paymentPayload: parsed.paymentPayload });
+          } else if (parsed.step === "escrowed" || parsed.step === "delivery" || parsed.step === "complete") {
             dispatch({ type: "SET_ESCROWED", escrowId: parsed.escrowId, txHash: parsed.txHash });
             dispatch({ type: "SET_STEP", step: parsed.step });
           }
-        }
-      } catch {
-        // ignore
-      }
+          // If step is "request_payment", SET_ORDER already sets that step
+        })
+        .catch(() => {
+          // Server unreachable — clear stale state
+          sessionStorage.removeItem("x402-marketplace-state");
+        });
+    } catch {
+      // ignore malformed JSON
     }
   }, []);
 
@@ -104,49 +157,70 @@ export function PaymentFlow() {
         escrowId: state.escrowId,
         txHash: state.txHash,
         orderData: state.orderData,
+        paymentRequired: state.paymentRequired,
+        paymentPayload: state.paymentPayload,
       }));
     }
-  }, [state.step, state.orderId, state.escrowId, state.txHash, state.orderData]);
+  }, [state.step, state.orderId, state.escrowId, state.txHash, state.orderData, state.paymentRequired, state.paymentPayload]);
 
   // When escrow is created, transition to delivery and start polling
   const escrowedOrderId = state.step === "escrowed" ? state.orderId : null;
 
   useEffect(() => {
     if (!escrowedOrderId) return;
+    let cancelled = false;
 
-    // Move to delivery step
-    dispatch({ type: "SET_STEP", step: "delivery" });
+    // Show "Funds Escrowed" card for 2s before transitioning to delivery
+    const timeout = setTimeout(() => {
+      if (cancelled) return;
 
-    // Trigger server-side confirm-delivery (seller simulation)
-    fetch(`/api/orders/${escrowedOrderId}/confirm-delivery`, {
-      method: "POST",
-    }).catch((err) => {
-      console.warn("[PaymentFlow] confirm-delivery failed:", err);
-    });
+      dispatch({ type: "SET_STEP", step: "delivery" });
 
-    // Poll until delivery is confirmed on-chain
-    let delivered = false;
-    const interval = setInterval(async () => {
-      if (delivered) return;
-      try {
-        const res = await fetch(`/api/orders?status=delivery_confirmed`);
-        const orders = await res.json();
-        const found = orders.find((o: any) => o.id === escrowedOrderId);
-        if (found) {
-          delivered = true;
+      // Trigger server-side confirm-delivery (seller simulation)
+      fetch(`/api/orders/${escrowedOrderId}/confirm-delivery`, {
+        method: "POST",
+      }).catch((err) => {
+        console.warn("[PaymentFlow] confirm-delivery failed:", err);
+      });
+
+      // Poll until delivery is confirmed on-chain (max ~3 min)
+      let delivered = false;
+      let attempts = 0;
+      const maxAttempts = 60;
+      const interval = setInterval(async () => {
+        if (delivered || cancelled) return;
+        attempts++;
+        if (attempts > maxAttempts) {
           clearInterval(interval);
-          inspector.addEvent({
-            type: "state_change",
-            label: "Delivery Confirmed",
-            data: { previousState: "Active", newState: "DeliveryConfirmed" },
-          });
+          dispatch({ type: "SET_ERROR", error: "Delivery confirmation timed out. Try refreshing." });
+          return;
         }
-      } catch {
-        // Retry on next interval
-      }
-    }, 3000);
+        try {
+          const res = await fetch(`/api/orders?status=delivery_confirmed`);
+          const orders = await res.json();
+          const found = orders.find((o: any) => o.id === escrowedOrderId);
+          if (found) {
+            delivered = true;
+            clearInterval(interval);
+            inspector.addEvent({
+              type: "state_change",
+              label: "Delivery Confirmed",
+              data: { previousState: "Active", newState: "DeliveryConfirmed" },
+            });
+          }
+        } catch {
+          // Retry on next interval
+        }
+      }, 3000);
 
-    return () => clearInterval(interval);
+      pollRef.current = interval;
+    }, 2000);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
   }, [escrowedOrderId, inspector]);
 
   const handleSelectProduct = useCallback((product: Product) => {
@@ -156,7 +230,7 @@ export function PaymentFlow() {
   }, [inspector]);
 
   const handleCreateOrder = useCallback(async () => {
-    if (!state.product || !address) return;
+    if (!state.product || !address || !operatorAddress) return;
     dispatch({ type: "SET_LOADING", loading: true });
 
     try {
@@ -170,7 +244,7 @@ export function PaymentFlow() {
             title: state.product.title,
             price: state.product.price,
             serviceType: "marketplace",
-            sellerAddress: address, // Demo: operator is seller
+            sellerAddress: operatorAddress,
           },
         },
       });
@@ -183,7 +257,7 @@ export function PaymentFlow() {
           description: state.product.description,
           price: state.product.price,
           serviceType: "marketplace",
-          sellerAddress: address,
+          sellerAddress: operatorAddress,
         }),
       });
 
@@ -201,45 +275,27 @@ export function PaymentFlow() {
     } finally {
       dispatch({ type: "SET_LOADING", loading: false });
     }
-  }, [state.product, address, inspector]);
+  }, [state.product, address, operatorAddress, inspector]);
 
-  const handlePayment = useCallback(async () => {
+  // Step 3: Request payment — sends POST without X-PAYMENT, gets 402
+  const handleRequestPayment = useCallback(async () => {
     if (!state.orderId || !walletClient) return;
     dispatch({ type: "SET_LOADING", loading: true });
 
     try {
-      // Step 1: Request payment (get 402)
-      dispatch({ type: "SET_STEP", step: "request_payment" });
       const { paymentRequired } = await requestPayment(
         state.orderId,
         inspector.addEvent
       );
-
-      // Step 2: Sign EIP-712
-      dispatch({ type: "SET_STEP", step: "sign" });
-      const payload = await signPayment(
-        walletClient,
-        paymentRequired,
-        inspector.addEvent
-      );
-
-      // Step 3: Submit payment
-      dispatch({ type: "SET_STEP", step: "submit" });
-      const result = await submitPayment(
-        state.orderId,
-        payload,
-        inspector.addEvent
-      );
-
-      dispatch({
-        type: "SET_ESCROWED",
-        escrowId: result.payment.escrowId,
-        txHash: result.payment.txHash,
-      });
+      dispatch({ type: "SET_PAYMENT_REQUIRED", paymentRequired });
     } catch (err: any) {
       if (err instanceof AlreadyPaidError) {
-        // Order was already paid, try to recover
-        dispatch({ type: "SET_STEP", step: "escrowed" });
+        const p = err.data?.payment;
+        if (p?.escrowId && p?.txHash) {
+          dispatch({ type: "SET_ESCROWED", escrowId: p.escrowId, txHash: p.txHash });
+        } else {
+          dispatch({ type: "SET_STEP", step: "escrowed" });
+        }
       } else {
         dispatch({ type: "SET_ERROR", error: err.message });
       }
@@ -247,6 +303,48 @@ export function PaymentFlow() {
       dispatch({ type: "SET_LOADING", loading: false });
     }
   }, [state.orderId, walletClient, inspector]);
+
+  // Step 4: Sign EIP-712 ReceiveWithAuthorization
+  const handleSignPayment = useCallback(async () => {
+    if (!state.paymentRequired || !walletClient) return;
+    dispatch({ type: "SET_LOADING", loading: true });
+
+    try {
+      const payload = await signPayment(
+        walletClient,
+        state.paymentRequired,
+        inspector.addEvent
+      );
+      dispatch({ type: "SET_PAYMENT_PAYLOAD", paymentPayload: payload });
+    } catch (err: any) {
+      dispatch({ type: "SET_ERROR", error: err.message });
+    } finally {
+      dispatch({ type: "SET_LOADING", loading: false });
+    }
+  }, [state.paymentRequired, walletClient, inspector]);
+
+  // Step 5: Submit payment on-chain
+  const handleSubmitPayment = useCallback(async () => {
+    if (!state.orderId || !state.paymentPayload) return;
+    dispatch({ type: "SET_LOADING", loading: true });
+
+    try {
+      const result = await submitPayment(
+        state.orderId,
+        state.paymentPayload,
+        inspector.addEvent
+      );
+      dispatch({
+        type: "SET_ESCROWED",
+        escrowId: result.payment.escrowId,
+        txHash: result.payment.txHash,
+      });
+    } catch (err: any) {
+      dispatch({ type: "SET_ERROR", error: err.message });
+    } finally {
+      dispatch({ type: "SET_LOADING", loading: false });
+    }
+  }, [state.orderId, state.paymentPayload, inspector]);
 
   const handleRelease = useCallback(async () => {
     if (!state.escrowId) return;
@@ -303,6 +401,13 @@ export function PaymentFlow() {
     dispatch({ type: "RESET" });
   }, [inspector]);
 
+  const handleStepClick = useCallback((step: DemoStep) => {
+    // Only allow navigating back to "select" from pre-payment steps
+    if (step === "select" && (state.step === "create_order" || state.step === "request_payment")) {
+      handleReset();
+    }
+  }, [state.step, handleReset]);
+
   // Ensure wallet is connected
   const needsWallet = !address;
   const needsFunding = walletType === "demo" && usdcBalance !== null && parseFloat(usdcBalance) < 1;
@@ -311,7 +416,10 @@ export function PaymentFlow() {
     <div className="flex flex-col gap-6 lg:flex-row">
       {/* Left sidebar - Step tracker */}
       <div className="hidden lg:block lg:w-48 shrink-0">
-        <StepTracker currentStep={state.step} />
+        <StepTracker
+          currentStep={state.step}
+          onStepClick={state.step === "create_order" || state.step === "request_payment" ? handleStepClick : undefined}
+        />
         {state.step !== "select" && (
           <button
             onClick={handleReset}
@@ -390,6 +498,15 @@ export function PaymentFlow() {
                   exit={{ opacity: 0 }}
                   className="rounded-xl border border-border-default bg-bg-secondary p-4"
                 >
+                  <button
+                    onClick={handleReset}
+                    className="mb-2 flex items-center gap-1 text-xs text-text-tertiary transition-colors hover:text-text-primary"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M7.5 9.5l-3.5-3.5 3.5-3.5" />
+                    </svg>
+                    Back to products
+                  </button>
                   <h3 className="mb-2 text-sm font-semibold">
                     {state.product.title}
                   </h3>
@@ -412,16 +529,24 @@ export function PaymentFlow() {
                 </motion.div>
               )}
 
-              {(state.step === "request_payment" ||
-                state.step === "sign" ||
-                state.step === "submit") && (
+              {/* Step 3: Request Payment */}
+              {state.step === "request_payment" && (
                 <motion.div
-                  key="payment"
+                  key="request_payment"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
                   className="rounded-xl border border-border-default bg-bg-secondary p-4"
                 >
+                  <button
+                    onClick={handleReset}
+                    className="mb-2 flex items-center gap-1 text-xs text-text-tertiary transition-colors hover:text-text-primary"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M7.5 9.5l-3.5-3.5 3.5-3.5" />
+                    </svg>
+                    Back to products
+                  </button>
                   <h3 className="mb-3 text-sm font-semibold">Pay with USDC</h3>
                   <div className="mb-4 space-y-2 text-xs">
                     <div className="flex justify-between">
@@ -439,22 +564,130 @@ export function PaymentFlow() {
                       <span>marketplace</span>
                     </div>
                   </div>
-                  {state.step === "request_payment" ? (
-                    <button
-                      onClick={handlePayment}
-                      disabled={state.loading}
-                      className="glow-blue w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-accent/90 disabled:opacity-50"
-                    >
-                      {state.loading ? "Processing..." : "Sign & Pay"}
-                    </button>
-                  ) : (
-                    <div className="flex items-center justify-center gap-2 rounded-lg bg-bg-tertiary py-2.5 text-sm text-text-secondary">
-                      <div className="h-3 w-3 animate-spin rounded-full border-2 border-accent border-t-transparent" />
-                      {state.step === "sign"
-                        ? "Signing authorization..."
-                        : "Submitting on-chain..."}
+                  <button
+                    onClick={handleRequestPayment}
+                    disabled={state.loading}
+                    className="glow-blue w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-accent/90 disabled:opacity-50"
+                  >
+                    {state.loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        Requesting...
+                      </span>
+                    ) : (
+                      "Request Payment"
+                    )}
+                  </button>
+                </motion.div>
+              )}
+
+              {/* Step 4: Sign — shows 402 result + sign button */}
+              {state.step === "sign" && state.paymentRequired && (
+                <motion.div
+                  key="sign"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="rounded-xl border border-border-default bg-bg-secondary p-4"
+                >
+                  <div className="mb-3 rounded-lg border border-accent/20 bg-accent/5 p-3">
+                    <div className="mb-2 flex items-center gap-2">
+                      <Badge variant="info">402 Payment Required</Badge>
                     </div>
-                  )}
+                    <div className="space-y-1.5 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-text-tertiary">Amount</span>
+                        <span className="font-mono text-accent">
+                          {formatUsdc(state.paymentRequired.amount)} USDC
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-text-tertiary">Escrow Contract</span>
+                        <AddressDisplay address={state.paymentRequired.escrowContract} />
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-text-tertiary">Service Type</span>
+                        <span>{state.paymentRequired.serviceType}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-text-tertiary">Release Window</span>
+                        <span>{formatReleaseWindow(state.paymentRequired.releaseWindow)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="mb-3 text-[11px] text-text-tertiary">
+                    See the HTTP tab for the raw 402 response headers.
+                  </p>
+                  <button
+                    onClick={handleSignPayment}
+                    disabled={state.loading}
+                    className="glow-blue w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-accent/90 disabled:opacity-50"
+                  >
+                    {state.loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        Signing...
+                      </span>
+                    ) : (
+                      "Sign Authorization"
+                    )}
+                  </button>
+                </motion.div>
+              )}
+
+              {/* Step 5: Submit — shows signature result + submit button */}
+              {state.step === "submit" && state.paymentPayload && (
+                <motion.div
+                  key="submit"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="rounded-xl border border-border-default bg-bg-secondary p-4"
+                >
+                  <div className="mb-3 rounded-lg border border-success/20 bg-success/5 p-3">
+                    <div className="mb-2 flex items-center gap-2">
+                      <Badge variant="success">Authorization Signed</Badge>
+                    </div>
+                    <div className="space-y-1.5 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-text-tertiary">From</span>
+                        <AddressDisplay address={state.paymentPayload.from} />
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-text-tertiary">Signature v</span>
+                        <span className="font-mono">{state.paymentPayload.signature.v}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-text-tertiary">Signature r</span>
+                        <span className="font-mono text-text-secondary">
+                          {shortenAddress(state.paymentPayload.signature.r, 6)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-text-tertiary">Signature s</span>
+                        <span className="font-mono text-text-secondary">
+                          {shortenAddress(state.paymentPayload.signature.s, 6)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="mb-3 text-[11px] text-text-tertiary">
+                    See the Signatures tab for the full EIP-712 typed data.
+                  </p>
+                  <button
+                    onClick={handleSubmitPayment}
+                    disabled={state.loading}
+                    className="glow-blue w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-accent/90 disabled:opacity-50"
+                  >
+                    {state.loading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        Submitting on-chain...
+                      </span>
+                    ) : (
+                      "Submit Payment"
+                    )}
+                  </button>
                 </motion.div>
               )}
 

@@ -1,29 +1,7 @@
 import { NextResponse } from "next/server";
-import {
-  createWalletClient,
-  createPublicClient,
-  http,
-  parseEther,
-  parseUnits,
-  type Address,
-} from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import { config } from "@server/config.js";
-import { CHAIN, USDC_DECIMALS } from "@shared/constants.js";
-
-// Simple ERC-20 transfer ABI
-const erc20TransferAbi = [
-  {
-    type: "function",
-    name: "transfer",
-    inputs: [
-      { name: "to", type: "address" },
-      { name: "amount", type: "uint256" },
-    ],
-    outputs: [{ name: "", type: "bool" }],
-    stateMutability: "nonpayable",
-  },
-] as const;
+import { parseUnits, type Address } from "viem";
+import { USDC_DECIMALS } from "@shared/constants.js";
+import { getChainAdapter } from "@/lib/chain";
 
 // Rate limiting: IP+address -> { amount: bigint, resetAt: number }
 const rateLimitMap = new Map<string, { amount: bigint; resetAt: number }>();
@@ -72,35 +50,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const account = privateKeyToAccount(config.privateKey);
-    const walletClient = createWalletClient({
-      chain: CHAIN,
-      transport: http(config.rpcUrl),
-      account,
-    });
-    const publicClient = createPublicClient({
-      chain: CHAIN,
-      transport: http(config.rpcUrl),
-    });
-
-    // Transfer 10 USDC
-    const usdcTx = await walletClient.writeContract({
-      address: config.usdcAddress,
-      abi: erc20TransferAbi,
-      functionName: "transfer",
-      args: [address, fundAmount],
-    });
-
-    // Transfer 0.005 ETH for gas
-    const ethTx = await walletClient.sendTransaction({
-      to: address,
-      value: parseEther("0.005"),
-    });
-
-    await Promise.all([
-      publicClient.waitForTransactionReceipt({ hash: usdcTx }),
-      publicClient.waitForTransactionReceipt({ hash: ethTx }),
-    ]);
+    const { usdcTx, ethTx } = await getChainAdapter().fundWallet(address);
 
     return NextResponse.json({
       message: "Funded successfully: 10 USDC + 0.005 ETH",

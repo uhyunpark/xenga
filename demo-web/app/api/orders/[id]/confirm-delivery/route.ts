@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-import { createWalletClient, createPublicClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { config } from "@server/config.js";
 import { getOrderById } from "@server/services/orderService.js";
-import { escrowVaultAbi } from "@shared/abi.js";
-import { CHAIN } from "@shared/constants.js";
+import { getChainAdapter } from "@/lib/chain";
 
 export async function POST(
   _request: Request,
@@ -24,36 +22,21 @@ export async function POST(
     );
   }
 
-  const account = privateKeyToAccount(config.privateKey);
+  const adapter = getChainAdapter();
 
-  // Verify the operator is the seller (demo only)
-  if (order.sellerAddress.toLowerCase() !== account.address.toLowerCase()) {
-    return NextResponse.json(
-      { error: "Only the seller can confirm delivery (demo: operator must be seller)" },
-      { status: 403 }
-    );
+  // In real mode, verify the operator is the seller
+  if (!adapter.isMock) {
+    const account = privateKeyToAccount(config.privateKey);
+    if (order.sellerAddress.toLowerCase() !== account.address.toLowerCase()) {
+      return NextResponse.json(
+        { error: "Only the seller can confirm delivery (demo: operator must be seller)" },
+        { status: 403 }
+      );
+    }
   }
 
   try {
-    const walletClient = createWalletClient({
-      chain: CHAIN,
-      transport: http(config.rpcUrl),
-      account,
-    });
-
-    const publicClient = createPublicClient({
-      chain: CHAIN,
-      transport: http(config.rpcUrl),
-    });
-
-    const txHash = await walletClient.writeContract({
-      address: config.escrowVaultAddress,
-      abi: escrowVaultAbi,
-      functionName: "confirmDelivery",
-      args: [BigInt(order.escrowId)],
-    });
-
-    await publicClient.waitForTransactionReceipt({ hash: txHash });
+    const txHash = await adapter.confirmDelivery(order.escrowId);
 
     return NextResponse.json({
       message: "Delivery confirmed on-chain",

@@ -61,7 +61,7 @@ Service types (`src/server/service-types/`) define escrow parameters per use cas
 
 ## Demo Web (`demo-web/`)
 
-Next.js 15 App Router app that replaces the Express server for demo purposes. Imports existing server logic directly via webpack aliases — no code duplication.
+Next.js 15 App Router app that replaces the Express server for demo purposes. Imports existing server logic directly via webpack aliases — no code duplication. See `demo-web/CLAUDE.md` for full context on the chain adapter, wallet system, protocol inspector, and payment flow internals.
 
 ### Structure
 

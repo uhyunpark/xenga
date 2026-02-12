@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { ResolveDisputeRequest } from "@shared/types.js";
 import { getDb } from "@server/db/index.js";
-import { resolveDisputeOnChain } from "@server/facilitator/settler.js";
+import { getChainAdapter } from "@/lib/chain";
 
 export async function POST(
   request: Request,
@@ -10,7 +10,8 @@ export async function POST(
   const { id: disputeId } = await params;
 
   const db = getDb();
-  const dispute = db.prepare("SELECT * FROM disputes WHERE id = ?").get(disputeId) as any;
+  const dispute = db.prepare("SELECT * FROM disputes WHERE id = ?").get(disputeId) as
+    { id: string; escrow_id: number; order_id: string; status: string } | undefined;
 
   if (!dispute) {
     return NextResponse.json({ error: "Dispute not found" }, { status: 404 });
@@ -25,7 +26,7 @@ export async function POST(
   }
 
   try {
-    const txHash = await resolveDisputeOnChain(dispute.escrow_id, body.buyerPct);
+    const txHash = await getChainAdapter().resolveDispute(dispute.escrow_id, body.buyerPct);
 
     const now = Math.floor(Date.now() / 1000);
     db.prepare(

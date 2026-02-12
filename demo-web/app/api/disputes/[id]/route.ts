@@ -15,9 +15,9 @@ export async function POST(
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
 
-  if (order.status !== "delivery_confirmed" && order.status !== "escrowed") {
+  if (order.status !== "delivery_confirmed") {
     return NextResponse.json(
-      { error: "Order is not in a disputable state" },
+      { error: "Order is not in a disputable state (must be delivery_confirmed)" },
       { status: 400 }
     );
   }
@@ -31,10 +31,17 @@ export async function POST(
   const id = uuidv4();
   const now = Math.floor(Date.now() / 1000);
 
+  if (!order.escrowId || !order.buyerAddress) {
+    return NextResponse.json(
+      { error: "Order is missing escrow or buyer data" },
+      { status: 400 }
+    );
+  }
+
   db.prepare(
     `INSERT INTO disputes (id, escrow_id, order_id, filed_by, reason, status, created_at)
      VALUES (?, ?, ?, ?, ?, 'open', ?)`
-  ).run(id, order.escrowId ?? 0, order.id, order.buyerAddress ?? "unknown", body.reason, now);
+  ).run(id, order.escrowId, order.id, order.buyerAddress, body.reason, now);
 
   return NextResponse.json({ message: "Dispute filed", disputeId: id }, { status: 201 });
 }

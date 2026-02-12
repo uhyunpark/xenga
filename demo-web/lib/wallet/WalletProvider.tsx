@@ -64,6 +64,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const refreshBalances = useCallback(async () => {
     if (!address) return;
+
+    // In mock mode, return hardcoded balances (no RPC needed)
+    if (process.env.NEXT_PUBLIC_MOCK_CHAIN === "true") {
+      setEthBalance("1.0000");
+      setUsdcBalance("1000.00");
+      return;
+    }
+
     try {
       const eth = await publicClient.getBalance({ address });
       setEthBalance((Number(eth) / 1e18).toFixed(4));

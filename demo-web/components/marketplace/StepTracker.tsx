@@ -23,10 +23,11 @@ const steps: { key: DemoStep; label: string }[] = [
 
 interface StepTrackerProps {
   currentStep: DemoStep;
+  onStepClick?: (step: DemoStep) => void;
   className?: string;
 }
 
-export function StepTracker({ currentStep, className = "" }: StepTrackerProps) {
+export function StepTracker({ currentStep, onStepClick, className = "" }: StepTrackerProps) {
   const currentIndex = steps.findIndex((s) => s.key === currentStep);
 
   return (
@@ -34,17 +35,19 @@ export function StepTracker({ currentStep, className = "" }: StepTrackerProps) {
       {steps.map((step, i) => {
         const isPast = i < currentIndex;
         const isCurrent = i === currentIndex;
+        const isClickable = isPast && !!onStepClick;
 
         return (
           <div
             key={step.key}
+            onClick={isClickable ? () => onStepClick(step.key) : undefined}
             className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-xs transition-colors ${
               isCurrent
                 ? "bg-accent/10 text-accent font-medium"
                 : isPast
                   ? "text-success"
                   : "text-text-tertiary"
-            }`}
+            } ${isClickable ? "cursor-pointer hover:bg-success/10" : ""}`}
           >
             <div
               className={`flex h-5 w-5 items-center justify-center rounded-full border text-[10px] font-bold ${

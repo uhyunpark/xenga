@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { useInspector } from "@/lib/protocol-inspector/context";
+import { useOperatorAddress } from "@/lib/hooks/useOperatorAddress";
 import {
   requestPayment,
   signPayment,
@@ -62,6 +63,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const { walletClient, address, connectDemo, fundDemoWallet, usdcBalance, type: walletType } = useWallet();
   const inspector = useInspector();
+  const operatorAddress = useOperatorAddress();
 
   const scrollToBottom = useCallback(() => {
     if (terminalRef.current) {
@@ -81,7 +83,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
   );
 
   const runDemo = useCallback(async () => {
-    if (!walletClient || !address) return;
+    if (!walletClient || !address || !operatorAddress) return;
     setIsRunning(true);
     setLines([]);
     setCurrentStep(0);
@@ -120,7 +122,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
           description: "1-hour premium API access",
           price: 2.5,
           serviceType: "agent-service",
-          sellerAddress: address,
+          sellerAddress: operatorAddress,
         }),
       });
       const orderData = await orderRes.json();
@@ -151,12 +153,12 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
       await wait(500);
       addLine({ type: "info", text: "[pay] Received escrow payment requirements", delay: 0 });
       addLine({ type: "info", text: `[pay] scheme=escrow, amount=${paymentRequired.amount}, asset=USDC`, delay: 0 });
-      await wait(1000);
+      await wait(1500);
 
       // Step 4: Sign
       addLine({ type: "dim", text: "", delay: 0 });
       addLine({ type: "info", text: "[sign] Signing EIP-712 ReceiveWithAuthorization...", delay: 0 });
-      await wait(500);
+      await wait(1500);
 
       const payload = await signPayment(
         walletClient,
@@ -165,7 +167,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
       );
 
       addLine({ type: "success", text: `[sign] Signature: v=${payload.signature.v}, r=${payload.signature.r.slice(0, 8)}..., s=${payload.signature.s.slice(0, 8)}...`, delay: 0 });
-      await wait(800);
+      await wait(1200);
 
       // Step 5: Submit
       addLine({ type: "dim", text: "", delay: 0 });
@@ -179,18 +181,25 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
       setTxHash(result.payment.txHash);
 
       addLine({ type: "request", text: `POST /api/orders/${orderData.id.slice(0, 8)}.../pay [X-PAYMENT] → 200 OK`, delay: 0 });
-      await wait(500);
+      await wait(800);
       addLine({ type: "success", text: "[settle] Escrow created on-chain!", delay: 0 });
+      await wait(400);
       addLine({ type: "success", text: `[settle] Tx: ${result.payment.txHash.slice(0, 14)}...`, delay: 0 });
+      await wait(400);
       addLine({ type: "success", text: `[settle] Escrow ID: ${result.payment.escrowId}`, delay: 0 });
-      await wait(1000);
+      await wait(1500);
 
       // Step 6: Auto-verify
       addLine({ type: "dim", text: "", delay: 0 });
       addLine({ type: "info", text: "[verify] Server auto-verifying delivery...", delay: 0 });
 
       // Trigger confirm delivery
-      fetch(`/api/orders/${orderData.id}/confirm-delivery`, { method: "POST" }).catch(() => {});
+      try {
+        const cdRes = await fetch(`/api/orders/${orderData.id}/confirm-delivery`, { method: "POST" });
+        if (!cdRes.ok) console.warn("[agent] confirm-delivery responded", cdRes.status);
+      } catch (err) {
+        console.warn("[agent] confirm-delivery failed:", err);
+      }
       await wait(5000 / speed);
 
       addLine({ type: "success", text: "[verify] Delivery confirmed by operator", delay: 0 });
@@ -219,7 +228,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
     } finally {
       setIsRunning(false);
     }
-  }, [walletClient, address, speed, inspector, addLine]);
+  }, [walletClient, address, operatorAddress, speed, inspector, addLine]);
 
   const needsWallet = !address;
   const needsFunding = walletType === "demo" && usdcBalance !== null && parseFloat(usdcBalance) < 1;
@@ -255,9 +264,10 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
           {!isRunning && !isComplete && (
             <button
               onClick={runDemo}
-              className="glow-purple rounded-lg bg-accent-purple px-6 py-2.5 text-sm font-semibold text-white transition-all hover:bg-accent-purple/90"
+              disabled={!operatorAddress}
+              className="glow-purple rounded-lg bg-accent-purple px-6 py-2.5 text-sm font-semibold text-white transition-all hover:bg-accent-purple/90 disabled:opacity-50"
             >
-              Run Agent Demo
+              {operatorAddress ? "Run Agent Demo" : "Loading..."}
             </button>
           )}
           {isComplete && (

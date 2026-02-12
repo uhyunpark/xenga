@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_MOCK_CHAIN: process.env.MOCK_CHAIN || "false",
+  },
   serverExternalPackages: ["better-sqlite3"],
   typescript: {
     ignoreBuildErrors: false,

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getEscrow, isReleasable } from "@server/services/escrowService.js";
+import { getChainAdapter } from "@/lib/chain";
 import { EscrowState } from "@shared/types.js";
 
 export async function GET(
@@ -14,13 +14,14 @@ export async function GET(
   }
 
   try {
-    const escrow = await getEscrow(escrowId);
+    const adapter = getChainAdapter();
+    const escrow = await adapter.getEscrow(escrowId);
 
     if (escrow.state === EscrowState.None) {
       return NextResponse.json({ error: "Escrow not found" }, { status: 404 });
     }
 
-    const releasable = await isReleasable(escrowId);
+    const releasable = await adapter.isReleasable(escrowId);
 
     return NextResponse.json({
       escrowId,
