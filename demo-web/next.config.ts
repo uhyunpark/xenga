@@ -15,8 +15,6 @@ const nextConfig: NextConfig = {
       ...config.resolve.alias,
       "@server": path.resolve(__dirname, "../src/server"),
       "@shared": path.resolve(__dirname, "../src/shared"),
-      // Deduplicate viem to single copy (prevents type conflicts)
-      viem: path.resolve(__dirname, "node_modules/viem"),
     };
 
     // Resolve .js imports to .ts files (existing server code uses .js extensions for Node ESM)
