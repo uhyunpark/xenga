@@ -51,12 +51,6 @@ export function HeroSection() {
                 <path d="M3 8h10M9 4l4 4-4 4" />
               </svg>
             </Link>
-            <Link
-              href="/explorer"
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border-default px-6 py-3 text-sm font-semibold text-text-primary transition-all hover:border-border-active hover:bg-bg-tertiary"
-            >
-              Inspect Escrow State
-            </Link>
           </div>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-3">

@@ -17,6 +17,7 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const { isOpen, toggle, events } = useInspector();
+  const isMockChain = process.env.NEXT_PUBLIC_MOCK_CHAIN === "true";
 
   useEffect(() => {
     fetch("/api/health")
@@ -31,6 +32,10 @@ export function Navbar() {
   }, [pathname]);
 
   const protocolCount = events.length;
+  const chainLabel = isMockChain ? "Mock Chain Mode" : "Base Sepolia";
+  const chainBadgeClass = isMockChain
+    ? "border-accent-purple/35 bg-accent-purple/10 text-accent-purple"
+    : "border-warning/30 bg-warning/10 text-warning";
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border-default bg-bg-primary/85 backdrop-blur-xl">
@@ -59,8 +64,15 @@ export function Navbar() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <span className="hidden rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning lg:inline-flex">
-              Base Sepolia
+            <span
+              className={`hidden rounded-full border px-2 py-0.5 text-xs font-medium lg:inline-flex ${chainBadgeClass}`}
+              title={
+                isMockChain
+                  ? "Simulated chain mode. No live blockchain settlement."
+                  : "Live testnet mode on Base Sepolia."
+              }
+            >
+              {chainLabel}
             </span>
             <HealthDot status={healthOk} />
             <button
@@ -113,6 +125,16 @@ export function Navbar() {
 
         {mobileOpen && (
           <div className="space-y-3 border-t border-border-default py-3 md:hidden">
+            <div className="flex items-center justify-between rounded-lg border border-border-default bg-bg-secondary/60 px-3 py-2">
+              <span className="text-xs font-medium text-text-secondary">
+                Chain Environment
+              </span>
+              <span
+                className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${chainBadgeClass}`}
+              >
+                {chainLabel}
+              </span>
+            </div>
             <div className="flex items-center justify-between rounded-lg border border-border-default bg-bg-secondary/60 px-3 py-2">
               <span className="text-xs font-medium text-text-secondary">
                 Protocol Inspector
