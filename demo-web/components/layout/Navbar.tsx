@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: "/marketplace", label: "Marketplace" },
   { href: "/agent", label: "Agent" },
   { href: "/explorer", label: "Explorer" },
+  { href: "/metrics", label: "Metrics" },
 ];
 
 export function Navbar() {

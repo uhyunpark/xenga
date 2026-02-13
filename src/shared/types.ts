@@ -56,6 +56,20 @@ export interface OnChainEscrow {
   disputeWindow: bigint;
 }
 
+// ──────────────────────── Stats ────────────────────────
+
+export interface Stats {
+  totalEscrows: bigint;
+  totalAmount: bigint;
+  completedCount: bigint;
+  completedAmount: bigint;
+  disputedCount: bigint;
+  disputedAmount: bigint;
+  resolvedCount: bigint;
+  refundedCount: bigint;
+  refundedAmount: bigint;
+}
+
 // ──────────────────────── Dispute ────────────────────────
 
 export interface Dispute {

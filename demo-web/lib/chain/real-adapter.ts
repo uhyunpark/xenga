@@ -8,7 +8,7 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import type { ChainAdapter } from "./types";
-import type { EscrowPaymentPayload, OnChainEscrow } from "@shared/types.js";
+import type { EscrowPaymentPayload, OnChainEscrow, Stats } from "@shared/types.js";
 import { CHAIN, USDC_DECIMALS } from "@shared/constants.js";
 import { config } from "@server/config.js";
 import {
@@ -19,6 +19,10 @@ import {
   getEscrow as realGetEscrow,
   isReleasable as realIsReleasable,
 } from "@server/services/escrowService.js";
+import {
+  getOnChainSellerStats,
+  getOnChainServiceStats,
+} from "@server/services/metricsService.js";
 import { startEventListener as realStartEventListener } from "@server/services/eventListener.js";
 import { escrowVaultAbi } from "@shared/abi.js";
 
@@ -123,6 +127,14 @@ export class RealChainAdapter implements ChainAdapter {
     ]);
 
     return { usdcTx, ethTx };
+  }
+
+  async getSellerStats(seller: Address): Promise<Stats> {
+    return getOnChainSellerStats(seller);
+  }
+
+  async getServiceTypeStats(serviceType: string): Promise<Stats> {
+    return getOnChainServiceStats(serviceType);
   }
 
   startEventListener(): void {

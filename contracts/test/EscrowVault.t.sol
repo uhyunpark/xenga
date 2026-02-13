@@ -593,6 +593,142 @@ contract EscrowVaultTest is Test {
 
     // ──────────── Test: Fuzz — create escrow ────────────
 
+    // ──────────── Test: Stats tracking ────────────
+
+    function test_statsOnCreate() public {
+        _createStandardEscrow();
+
+        EscrowVault.Stats memory ss = vault.getSellerStats(seller);
+        assertEq(ss.totalEscrows, 1);
+        assertEq(ss.totalAmount, AMOUNT);
+        assertEq(ss.completedCount, 0);
+
+        EscrowVault.Stats memory svc = vault.getServiceTypeStats("marketplace");
+        assertEq(svc.totalEscrows, 1);
+        assertEq(svc.totalAmount, AMOUNT);
+    }
+
+    function test_statsOnRelease() public {
+        uint256 escrowId = _createStandardEscrow();
+
+        vm.prank(buyer);
+        vault.releaseFunds(escrowId);
+
+        EscrowVault.Stats memory ss = vault.getSellerStats(seller);
+        assertEq(ss.completedCount, 1);
+        assertEq(ss.completedAmount, AMOUNT);
+
+        EscrowVault.Stats memory svc = vault.getServiceTypeStats("marketplace");
+        assertEq(svc.completedCount, 1);
+        assertEq(svc.completedAmount, AMOUNT);
+    }
+
+    function test_statsOnAutoRelease() public {
+        vm.warp(1000);
+        vm.startPrank(buyer);
+        usdc.approve(address(vault), AMOUNT);
+        uint256 escrowId = vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW);
+        vm.stopPrank();
+
+        vm.warp(1000 + RELEASE_WINDOW + DISPUTE_WINDOW + 1);
+        vault.autoRelease(escrowId);
+
+        EscrowVault.Stats memory ss = vault.getSellerStats(seller);
+        assertEq(ss.completedCount, 1);
+        assertEq(ss.completedAmount, AMOUNT);
+    }
+
+    function test_statsOnDispute() public {
+        uint256 escrowId = _createStandardEscrow();
+
+        vm.prank(seller);
+        vault.confirmDelivery(escrowId);
+
+        vm.prank(buyer);
+        vault.dispute(escrowId);
+
+        EscrowVault.Stats memory ss = vault.getSellerStats(seller);
+        assertEq(ss.disputedCount, 1);
+        assertEq(ss.disputedAmount, AMOUNT);
+
+        EscrowVault.Stats memory svc = vault.getServiceTypeStats("marketplace");
+        assertEq(svc.disputedCount, 1);
+        assertEq(svc.disputedAmount, AMOUNT);
+    }
+
+    function test_statsOnResolve() public {
+        uint256 escrowId = _createStandardEscrow();
+
+        vm.prank(seller);
+        vault.confirmDelivery(escrowId);
+
+        vm.prank(buyer);
+        vault.dispute(escrowId);
+
+        vm.prank(arbiter);
+        vault.resolveDispute(escrowId, 50);
+
+        EscrowVault.Stats memory ss = vault.getSellerStats(seller);
+        assertEq(ss.resolvedCount, 1);
+
+        EscrowVault.Stats memory svc = vault.getServiceTypeStats("marketplace");
+        assertEq(svc.resolvedCount, 1);
+    }
+
+    function test_statsOnRefund() public {
+        uint256 escrowId = _createStandardEscrow();
+
+        vm.prank(seller);
+        vault.refund(escrowId);
+
+        EscrowVault.Stats memory ss = vault.getSellerStats(seller);
+        assertEq(ss.refundedCount, 1);
+        assertEq(ss.refundedAmount, AMOUNT);
+
+        EscrowVault.Stats memory svc = vault.getServiceTypeStats("marketplace");
+        assertEq(svc.refundedCount, 1);
+        assertEq(svc.refundedAmount, AMOUNT);
+    }
+
+    function test_statsMultipleEscrows() public {
+        _createStandardEscrow();
+
+        usdc.mint(buyer, 100_000_000);
+        vm.startPrank(buyer);
+        usdc.approve(address(vault), 10_000_000);
+        vault.createEscrow(keccak256("order-2"), seller, 10_000_000, "marketplace", RELEASE_WINDOW);
+        vm.stopPrank();
+
+        EscrowVault.Stats memory ss = vault.getSellerStats(seller);
+        assertEq(ss.totalEscrows, 2);
+        assertEq(ss.totalAmount, AMOUNT + 10_000_000);
+    }
+
+    function test_statsAcrossServiceTypes() public {
+        _createStandardEscrow(); // marketplace
+
+        usdc.mint(buyer, 100_000_000);
+        vm.startPrank(buyer);
+        usdc.approve(address(vault), 10_000_000);
+        vault.createEscrow(keccak256("order-2"), seller, 10_000_000, "agent-service", 1 hours);
+        vm.stopPrank();
+
+        EscrowVault.Stats memory mp = vault.getServiceTypeStats("marketplace");
+        assertEq(mp.totalEscrows, 1);
+        assertEq(mp.totalAmount, AMOUNT);
+
+        EscrowVault.Stats memory ag = vault.getServiceTypeStats("agent-service");
+        assertEq(ag.totalEscrows, 1);
+        assertEq(ag.totalAmount, 10_000_000);
+
+        // Seller stats should aggregate both
+        EscrowVault.Stats memory ss = vault.getSellerStats(seller);
+        assertEq(ss.totalEscrows, 2);
+        assertEq(ss.totalAmount, AMOUNT + 10_000_000);
+    }
+
+    // ──────────── Test: Fuzz ────────────
+
     function testFuzz_createEscrow(uint256 amount) public {
         vm.assume(amount > 0 && amount < 1e18);
 

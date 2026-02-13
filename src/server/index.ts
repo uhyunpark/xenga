@@ -10,6 +10,7 @@ import { agentServiceType } from "./service-types/agent-service.js";
 import ordersRouter from "./routes/orders.js";
 import disputesRouter from "./routes/disputes.js";
 import escrowsRouter from "./routes/escrows.js";
+import metricsRouter from "./routes/metrics.js";
 import { startEventListener } from "./services/eventListener.js";
 
 // ──────────── Bootstrap ────────────
@@ -58,6 +59,7 @@ app.get("/health", (_req, res) => {
 app.use("/api/orders", ordersRouter);
 app.use("/api/disputes", disputesRouter);
 app.use("/api/escrows", escrowsRouter);
+app.use("/api/metrics", metricsRouter);
 
 // ──────────── Start ────────────
 
@@ -78,6 +80,7 @@ const server = app.listen(config.port, () => {
     GET  /api/disputes
     POST /api/disputes/:disputeId/resolve  (auth required)
     GET  /api/escrows/:escrowId
+    GET  /api/metrics/disputes
   `);
 });
 

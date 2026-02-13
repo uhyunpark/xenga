@@ -57,6 +57,21 @@ contract EscrowVault is Ownable2Step, Pausable {
 
     uint256 public constant DEFAULT_DISPUTE_WINDOW = 3 days;
 
+    struct Stats {
+        uint256 totalEscrows;
+        uint256 totalAmount;
+        uint256 completedCount;    // releaseFunds + autoRelease
+        uint256 completedAmount;
+        uint256 disputedCount;
+        uint256 disputedAmount;
+        uint256 resolvedCount;
+        uint256 refundedCount;
+        uint256 refundedAmount;
+    }
+
+    mapping(address => Stats) public sellerStats;
+    mapping(string => Stats) public serviceStats;
+
     // ──────────────────────────── Events ───────────────────────────
 
     event EscrowCreated(
@@ -195,6 +210,11 @@ contract EscrowVault is Ownable2Step, Pausable {
             disputeWindow: DEFAULT_DISPUTE_WINDOW
         });
 
+        sellerStats[seller].totalEscrows++;
+        sellerStats[seller].totalAmount += amount;
+        serviceStats[serviceType].totalEscrows++;
+        serviceStats[serviceType].totalAmount += amount;
+
         emit EscrowCreated(escrowId, orderId, buyer, seller, amount, serviceType);
     }
 
@@ -221,6 +241,12 @@ contract EscrowVault is Ownable2Step, Pausable {
         }
 
         e.state = EscrowState.Completed;
+
+        sellerStats[e.seller].completedCount++;
+        sellerStats[e.seller].completedAmount += e.amount;
+        serviceStats[e.serviceType].completedCount++;
+        serviceStats[e.serviceType].completedAmount += e.amount;
+
         usdc.safeTransfer(e.seller, e.amount);
 
         emit EscrowReleased(escrowId, msg.sender);
@@ -254,6 +280,12 @@ contract EscrowVault is Ownable2Step, Pausable {
         }
 
         e.state = EscrowState.AutoReleased;
+
+        sellerStats[e.seller].completedCount++;
+        sellerStats[e.seller].completedAmount += e.amount;
+        serviceStats[e.serviceType].completedCount++;
+        serviceStats[e.serviceType].completedAmount += e.amount;
+
         usdc.safeTransfer(e.seller, e.amount);
 
         emit EscrowAutoReleased(escrowId);
@@ -285,6 +317,11 @@ contract EscrowVault is Ownable2Step, Pausable {
 
         e.state = EscrowState.Disputed;
 
+        sellerStats[e.seller].disputedCount++;
+        sellerStats[e.seller].disputedAmount += e.amount;
+        serviceStats[e.serviceType].disputedCount++;
+        serviceStats[e.serviceType].disputedAmount += e.amount;
+
         emit EscrowDisputed(escrowId, msg.sender);
     }
 
@@ -301,6 +338,9 @@ contract EscrowVault is Ownable2Step, Pausable {
 
         Escrow storage e = escrows[escrowId];
         e.state = EscrowState.Resolved;
+
+        sellerStats[e.seller].resolvedCount++;
+        serviceStats[e.serviceType].resolvedCount++;
 
         uint256 buyerAmount = (e.amount * buyerPct) / 100;
         uint256 sellerAmount = e.amount - buyerAmount;
@@ -326,6 +366,12 @@ contract EscrowVault is Ownable2Step, Pausable {
         }
 
         e.state = EscrowState.Refunded;
+
+        sellerStats[e.seller].refundedCount++;
+        sellerStats[e.seller].refundedAmount += e.amount;
+        serviceStats[e.serviceType].refundedCount++;
+        serviceStats[e.serviceType].refundedAmount += e.amount;
+
         usdc.safeTransfer(e.buyer, e.amount);
 
         emit EscrowRefunded(escrowId);
@@ -365,6 +411,14 @@ contract EscrowVault is Ownable2Step, Pausable {
             return true;
         }
         return false;
+    }
+
+    function getSellerStats(address seller) external view returns (Stats memory) {
+        return sellerStats[seller];
+    }
+
+    function getServiceTypeStats(string calldata serviceType) external view returns (Stats memory) {
+        return serviceStats[serviceType];
     }
 
     // ──────────────────────── Admin ───────────────────────────────

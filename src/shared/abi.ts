@@ -340,6 +340,138 @@ export const escrowVaultAbi = [
   },
   {
     "type": "function",
+    "name": "getSellerStats",
+    "inputs": [
+      {
+        "name": "seller",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct EscrowVault.Stats",
+        "components": [
+          {
+            "name": "totalEscrows",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "totalAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "completedCount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "completedAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "disputedCount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "disputedAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "resolvedCount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "refundedCount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "refundedAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getServiceTypeStats",
+    "inputs": [
+      {
+        "name": "serviceType",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct EscrowVault.Stats",
+        "components": [
+          {
+            "name": "totalEscrows",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "totalAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "completedCount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "completedAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "disputedCount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "disputedAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "resolvedCount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "refundedCount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "refundedAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "isReleasable",
     "inputs": [
       {
@@ -466,6 +598,124 @@ export const escrowVaultAbi = [
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "sellerStats",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "totalEscrows",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "totalAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "completedCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "completedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "disputedCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "disputedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "resolvedCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "refundedCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "refundedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "serviceStats",
+    "inputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "totalEscrows",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "totalAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "completedCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "completedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "disputedCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "disputedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "resolvedCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "refundedCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "refundedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",

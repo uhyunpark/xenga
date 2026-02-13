@@ -1,6 +1,6 @@
 import type { Address, Hash } from "viem";
 import type { ChainAdapter } from "./types";
-import type { EscrowPaymentPayload } from "@shared/types.js";
+import type { EscrowPaymentPayload, Stats } from "@shared/types.js";
 import { EscrowState } from "@shared/types.js";
 import { MARKETPLACE_DISPUTE_WINDOW } from "@shared/constants.js";
 import { getServiceType } from "@server/service-types/index.js";
@@ -87,7 +87,29 @@ export class MockChainAdapter implements ChainAdapter {
     return { usdcTx: fakeTxHash(), ethTx: fakeTxHash() };
   }
 
+  async getSellerStats(_seller: Address): Promise<Stats> {
+    return zeroStats();
+  }
+
+  async getServiceTypeStats(_serviceType: string): Promise<Stats> {
+    return zeroStats();
+  }
+
   startEventListener(): void {
     console.log("[MockChain] Event listener skipped (mock mode)");
   }
+}
+
+function zeroStats(): Stats {
+  return {
+    totalEscrows: 0n,
+    totalAmount: 0n,
+    completedCount: 0n,
+    completedAmount: 0n,
+    disputedCount: 0n,
+    disputedAmount: 0n,
+    resolvedCount: 0n,
+    refundedCount: 0n,
+    refundedAmount: 0n,
+  };
 }

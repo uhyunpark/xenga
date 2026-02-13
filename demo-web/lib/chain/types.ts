@@ -1,5 +1,5 @@
 import type { Address, Hash } from "viem";
-import type { EscrowPaymentPayload, OnChainEscrow } from "@shared/types.js";
+import type { EscrowPaymentPayload, OnChainEscrow, Stats } from "@shared/types.js";
 
 export interface SettleResult {
   txHash: Hash;
@@ -13,6 +13,8 @@ export interface ChainAdapter {
   getEscrow(escrowId: number): Promise<OnChainEscrow>;
   isReleasable(escrowId: number): Promise<boolean>;
   fundWallet(address: Address): Promise<{ usdcTx: Hash; ethTx: Hash }>;
+  getSellerStats(seller: Address): Promise<Stats>;
+  getServiceTypeStats(serviceType: string): Promise<Stats>;
   startEventListener(): void;
   readonly isMock: boolean;
 }
