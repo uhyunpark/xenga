@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useInspector } from "@/lib/protocol-inspector/context";
+import { useAutoScroll } from "@/lib/protocol-inspector/useAutoScroll";
 import { TxLink } from "@/components/ui/TxLink";
 import { Badge } from "@/components/ui/Badge";
 
@@ -13,6 +14,8 @@ export function OnChainTab() {
     [events]
   );
 
+  const scrollRef = useAutoScroll(txEvents.length);
+
   if (txEvents.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-text-tertiary text-sm">
@@ -22,7 +25,7 @@ export function OnChainTab() {
   }
 
   return (
-    <div className="space-y-3 overflow-y-auto max-h-full p-1">
+    <div ref={scrollRef} className="space-y-3 overflow-y-auto max-h-full p-1">
       {/* Info callout */}
       <div className="rounded-xl bg-accent/5 border border-accent/20 px-4 py-3 flex items-start gap-2">
         <svg className="h-4 w-4 text-accent shrink-0 mt-0.5" viewBox="0 0 16 16" fill="currentColor">
@@ -45,7 +48,7 @@ function TxEventCard({ event }: { event: any }) {
   const isConfirmed = type === "tx_confirmed";
 
   return (
-    <div className="rounded-xl border border-border-default overflow-hidden">
+    <div className="rounded-xl border border-border-default overflow-hidden animate-inspector-flash">
       <div className="flex items-center gap-2 px-3 py-2 bg-bg-tertiary border-b border-border-default">
         <Badge variant={isConfirmed ? "success" : "info"}>
           {isConfirmed ? "Confirmed" : "Submitted"}

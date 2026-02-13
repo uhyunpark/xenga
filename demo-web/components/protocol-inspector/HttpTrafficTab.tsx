@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useInspector } from "@/lib/protocol-inspector/context";
+import { useAutoScroll } from "@/lib/protocol-inspector/useAutoScroll";
 import { Badge } from "@/components/ui/Badge";
 import { JsonViewer } from "@/components/ui/JsonViewer";
 import { decodeBase64 } from "@/lib/utils";
 
 export function HttpTrafficTab() {
   const { events } = useInspector();
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   const httpEvents = useMemo(
     () => events.filter((e) => e.type === "http_request" || e.type === "http_response"),
@@ -37,9 +37,7 @@ export function HttpTrafficTab() {
     return result;
   }, [httpEvents]);
 
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [httpEvents.length]);
+  const scrollRef = useAutoScroll(httpEvents.length);
 
   if (pairs.length === 0) {
     return (
@@ -66,7 +64,7 @@ function HttpPair({
   index: number;
 }) {
   return (
-    <div className="rounded-xl border border-border-default overflow-hidden">
+    <div className="rounded-xl border border-border-default overflow-hidden animate-inspector-flash">
       {pair.request && <RequestBlock event={pair.request} index={index} />}
       {pair.response && <ResponseBlock event={pair.response} />}
     </div>

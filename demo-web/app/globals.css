@@ -98,6 +98,20 @@ body {
   background: rgba(255, 255, 255, 0.2);
 }
 
+/* Inspector flash animation for new events */
+@keyframes inspector-flash {
+  from {
+    background-color: rgba(59, 130, 246, 0.15);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+.animate-inspector-flash {
+  animation: inspector-flash 600ms ease-out;
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

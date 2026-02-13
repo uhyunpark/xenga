@@ -33,7 +33,7 @@ export function SignatureTab() {
   const { domain, message } = latestSign.data;
 
   return (
-    <div className="space-y-4 overflow-y-auto max-h-full p-1">
+    <div className="space-y-4 overflow-y-auto max-h-full p-1 animate-inspector-flash">
       {/* EIP-712 Domain */}
       <section>
         <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-2">
