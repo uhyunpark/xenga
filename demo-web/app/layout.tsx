@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
 import { WalletProvider } from "@/lib/wallet/WalletProvider";
@@ -36,6 +37,7 @@ export default function RootLayout({
             <main>{children}</main>
           </InspectorProvider>
         </WalletProvider>
+        <Analytics />
       </body>
     </html>
   );
