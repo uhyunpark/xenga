@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { privateKeyToAccount } from "viem/accounts";
 import { config } from "@server/config.js";
-import { getOrderById } from "@server/services/orderService.js";
+import { getOrderById, updateOrderStatus } from "@server/services/orderService.js";
 import { getChainAdapter } from "@/lib/chain";
 
 export async function POST(
@@ -37,6 +37,7 @@ export async function POST(
 
   try {
     const txHash = await adapter.confirmDelivery(order.escrowId);
+    updateOrderStatus(id, { status: "delivery_confirmed" });
 
     return NextResponse.json({
       message: "Delivery confirmed on-chain",

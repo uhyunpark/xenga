@@ -41,6 +41,7 @@ interface FlowState {
   loading: boolean;
   orderData: any | null;
   disputeFiled: boolean;
+  deliveryConfirmed: boolean;
   paymentRequired: PaymentRequired | null;
   paymentPayload: PaymentPayload | null;
 }
@@ -53,6 +54,7 @@ type FlowAction =
   | { type: "SET_ERROR"; error: string }
   | { type: "SET_LOADING"; loading: boolean }
   | { type: "FILE_DISPUTE" }
+  | { type: "DELIVERY_CONFIRMED" }
   | { type: "RESET" }
   | { type: "SET_PAYMENT_REQUIRED"; paymentRequired: PaymentRequired }
   | { type: "SET_PAYMENT_PAYLOAD"; paymentPayload: PaymentPayload };
@@ -73,6 +75,8 @@ function reducer(state: FlowState, action: FlowAction): FlowState {
       return { ...state, loading: action.loading };
     case "FILE_DISPUTE":
       return { ...state, disputeFiled: true };
+    case "DELIVERY_CONFIRMED":
+      return { ...state, deliveryConfirmed: true };
     case "RESET":
       return initialState;
     case "SET_PAYMENT_REQUIRED":
@@ -94,6 +98,7 @@ const initialState: FlowState = {
   loading: false,
   orderData: null,
   disputeFiled: false,
+  deliveryConfirmed: false,
   paymentRequired: null,
   paymentPayload: null,
 };
@@ -105,7 +110,7 @@ export function PaymentFlow() {
   const operatorAddress = useOperatorAddress();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Session storage for refresh recovery — validate orderId still exists on server
+  // Session storage for refresh recovery — use server order status as source of truth
   useEffect(() => {
     const saved = sessionStorage.getItem("x402-marketplace-state");
     if (!saved) return;
@@ -118,27 +123,61 @@ export function PaymentFlow() {
       fetch("/api/orders")
         .then((res) => res.json())
         .then((orders: any[]) => {
-          if (!orders.find((o: any) => o.id === parsed.orderId)) {
-            // Order no longer exists (server restarted) — clear stale state
+          const found = orders.find((o: any) => o.id === parsed.orderId);
+          if (!found) {
             sessionStorage.removeItem("x402-marketplace-state");
             return;
           }
 
-          // Order exists — restore state
+          // Server's order status is the source of truth
+          const serverStatus = found.status;
+
           dispatch({ type: "SET_ORDER", orderId: parsed.orderId, orderData: parsed.orderData });
 
-          if (parsed.step === "sign" && parsed.paymentRequired) {
-            dispatch({ type: "SET_PAYMENT_REQUIRED", paymentRequired: parsed.paymentRequired });
-          } else if (parsed.step === "submit" && parsed.paymentPayload) {
-            if (parsed.paymentRequired) {
-              dispatch({ type: "SET_PAYMENT_REQUIRED", paymentRequired: parsed.paymentRequired });
-            }
-            dispatch({ type: "SET_PAYMENT_PAYLOAD", paymentPayload: parsed.paymentPayload });
-          } else if (parsed.step === "escrowed" || parsed.step === "delivery" || parsed.step === "complete") {
-            dispatch({ type: "SET_ESCROWED", escrowId: parsed.escrowId, txHash: parsed.txHash });
-            dispatch({ type: "SET_STEP", step: parsed.step });
+          switch (serverStatus) {
+            case "created":
+            case "pending_payment":
+              // Pre-payment: restore client-side progress if available
+              if (parsed.step === "sign" && parsed.paymentRequired) {
+                dispatch({ type: "SET_PAYMENT_REQUIRED", paymentRequired: parsed.paymentRequired });
+              } else if (parsed.step === "submit" && parsed.paymentPayload) {
+                if (parsed.paymentRequired) {
+                  dispatch({ type: "SET_PAYMENT_REQUIRED", paymentRequired: parsed.paymentRequired });
+                }
+                dispatch({ type: "SET_PAYMENT_PAYLOAD", paymentPayload: parsed.paymentPayload });
+              }
+              // Otherwise SET_ORDER already set step to "request_payment"
+              break;
+
+            case "escrowed":
+              // Restore to escrowed — useEffect re-triggers delivery + polling
+              dispatch({ type: "SET_ESCROWED", escrowId: found.escrowId, txHash: found.txHash });
+              break;
+
+            case "delivery_confirmed":
+              // Jump to delivery with deliveryConfirmed already true
+              dispatch({ type: "SET_ESCROWED", escrowId: found.escrowId, txHash: found.txHash });
+              dispatch({ type: "SET_STEP", step: "delivery" });
+              dispatch({ type: "DELIVERY_CONFIRMED" });
+              break;
+
+            case "completed":
+              dispatch({ type: "SET_ESCROWED", escrowId: found.escrowId, txHash: found.txHash });
+              dispatch({ type: "SET_STEP", step: "complete" });
+              break;
+
+            case "disputed":
+              dispatch({ type: "SET_ESCROWED", escrowId: found.escrowId, txHash: found.txHash });
+              dispatch({ type: "SET_STEP", step: "delivery" });
+              dispatch({ type: "DELIVERY_CONFIRMED" });
+              dispatch({ type: "FILE_DISPUTE" });
+              break;
+
+            default:
+              // resolved, refunded, or unknown — clear stale state
+              sessionStorage.removeItem("x402-marketplace-state");
+              break;
           }
-          // If step is "request_payment", SET_ORDER already sets that step
         })
         .catch(() => {
           // Server unreachable — clear stale state
@@ -163,65 +202,66 @@ export function PaymentFlow() {
     }
   }, [state.step, state.orderId, state.escrowId, state.txHash, state.orderData, state.paymentRequired, state.paymentPayload]);
 
-  // When escrow is created, transition to delivery and start polling
-  const escrowedOrderId = state.step === "escrowed" ? state.orderId : null;
+  // When escrow is created, show "Funds Escrowed" for 2s then transition to delivery
+  useEffect(() => {
+    if (state.step !== "escrowed" || !state.orderId) return;
+    const timeout = setTimeout(() => {
+      dispatch({ type: "SET_STEP", step: "delivery" });
+    }, 2000);
+    return () => clearTimeout(timeout);
+  }, [state.step, state.orderId]);
+
+  // When in delivery step and not yet confirmed, trigger confirm-delivery + poll
+  // Keyed on deliveryOrderId which stays stable throughout the polling phase
+  // (unlike the old escrowedOrderId which flipped to null when step changed)
+  const deliveryOrderId = state.step === "delivery" && !state.deliveryConfirmed ? state.orderId : null;
 
   useEffect(() => {
-    if (!escrowedOrderId) return;
+    if (!deliveryOrderId) return;
     let cancelled = false;
 
-    // Show "Funds Escrowed" card for 2s before transitioning to delivery
-    const timeout = setTimeout(() => {
+    // Trigger server-side confirm-delivery (seller simulation) — may 400 if already confirmed
+    fetch(`/api/orders/${deliveryOrderId}/confirm-delivery`, {
+      method: "POST",
+    }).catch((err) => {
+      console.warn("[PaymentFlow] confirm-delivery failed:", err);
+    });
+
+    // Poll until delivery is confirmed on-chain (max ~3 min)
+    let attempts = 0;
+    const maxAttempts = 60;
+    const interval = setInterval(async () => {
       if (cancelled) return;
-
-      dispatch({ type: "SET_STEP", step: "delivery" });
-
-      // Trigger server-side confirm-delivery (seller simulation)
-      fetch(`/api/orders/${escrowedOrderId}/confirm-delivery`, {
-        method: "POST",
-      }).catch((err) => {
-        console.warn("[PaymentFlow] confirm-delivery failed:", err);
-      });
-
-      // Poll until delivery is confirmed on-chain (max ~3 min)
-      let delivered = false;
-      let attempts = 0;
-      const maxAttempts = 60;
-      const interval = setInterval(async () => {
-        if (delivered || cancelled) return;
-        attempts++;
-        if (attempts > maxAttempts) {
+      attempts++;
+      if (attempts > maxAttempts) {
+        clearInterval(interval);
+        dispatch({ type: "SET_ERROR", error: "Delivery confirmation timed out. Try refreshing." });
+        return;
+      }
+      try {
+        const res = await fetch(`/api/orders?status=delivery_confirmed`);
+        const orders = await res.json();
+        if (orders.find((o: any) => o.id === deliveryOrderId)) {
           clearInterval(interval);
-          dispatch({ type: "SET_ERROR", error: "Delivery confirmation timed out. Try refreshing." });
-          return;
+          dispatch({ type: "DELIVERY_CONFIRMED" });
+          inspector.addEvent({
+            type: "state_change",
+            label: "Delivery Confirmed",
+            data: { previousState: "Active", newState: "DeliveryConfirmed" },
+          });
         }
-        try {
-          const res = await fetch(`/api/orders?status=delivery_confirmed`);
-          const orders = await res.json();
-          const found = orders.find((o: any) => o.id === escrowedOrderId);
-          if (found) {
-            delivered = true;
-            clearInterval(interval);
-            inspector.addEvent({
-              type: "state_change",
-              label: "Delivery Confirmed",
-              data: { previousState: "Active", newState: "DeliveryConfirmed" },
-            });
-          }
-        } catch {
-          // Retry on next interval
-        }
-      }, 3000);
+      } catch {
+        // Retry on next interval
+      }
+    }, 3000);
 
-      pollRef.current = interval;
-    }, 2000);
+    pollRef.current = interval;
 
     return () => {
       cancelled = true;
-      clearTimeout(timeout);
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [escrowedOrderId, inspector]);
+  }, [deliveryOrderId, inspector]);
 
   const handleSelectProduct = useCallback((product: Product) => {
     inspector.clear();
@@ -732,27 +772,58 @@ export function PaymentFlow() {
                   </div>
 
                   {state.step === "delivery" && !state.disputeFiled && (
-                    <div className="space-y-2">
-                      <p className="text-xs text-text-secondary">
-                        Waiting for delivery confirmation...
-                      </p>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={handleRelease}
-                          disabled={state.loading}
-                          className="flex-1 rounded-lg bg-success px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-success/90 disabled:opacity-50"
+                    <AnimatePresence mode="wait">
+                      {!state.deliveryConfirmed ? (
+                        <motion.div
+                          key="waiting-delivery"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="flex items-center gap-3 py-2"
                         >
-                          Release Funds
-                        </button>
-                        <button
-                          onClick={handleDispute}
-                          disabled={state.loading}
-                          className="flex-1 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-50"
+                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+                          <p className="text-xs text-text-secondary">
+                            Waiting for seller to confirm delivery...
+                          </p>
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="delivery-confirmed"
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="space-y-3"
                         >
-                          Dispute
-                        </button>
-                      </div>
-                    </div>
+                          <div className="flex items-center gap-2 rounded-lg border border-success/20 bg-success/5 p-2.5">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#22C55E" strokeWidth="2">
+                              <circle cx="8" cy="8" r="6" />
+                              <path d="M5 8l2 2 4-4" />
+                            </svg>
+                            <span className="text-xs font-medium text-success">
+                              Seller confirmed delivery
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-text-tertiary">
+                            You can release funds to the seller or file a dispute.
+                          </p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={handleRelease}
+                              disabled={state.loading}
+                              className="flex-1 rounded-lg bg-success px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-success/90 disabled:opacity-50"
+                            >
+                              Release Funds
+                            </button>
+                            <button
+                              onClick={handleDispute}
+                              disabled={state.loading}
+                              className="flex-1 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-50"
+                            >
+                              Dispute
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   )}
 
                   {state.disputeFiled && (
@@ -800,7 +871,7 @@ export function PaymentFlow() {
 
           {/* Seller panel */}
           <div>
-            <SellerPanel step={state.step} productTitle={state.product?.title} />
+            <SellerPanel step={state.step} productTitle={state.product?.title} deliveryConfirmed={state.deliveryConfirmed} />
           </div>
         </div>
       </div>

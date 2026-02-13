@@ -40,8 +40,10 @@ const baseSteps: Omit<TerminalLine, "id">[] = [
   { type: "success", text: "[settle] Tx: {txHash}", delay: 500 },
   { type: "success", text: "[settle] Escrow ID: {escrowId}", delay: 300 },
   { type: "dim", text: "", delay: 300 },
-  { type: "info", text: "[verify] Server auto-verifying delivery...", delay: 5000 },
-  { type: "success", text: "[verify] Delivery confirmed by operator", delay: 500 },
+  { type: "info", text: "[verify] Waiting for seller to confirm delivery...", delay: 2000 },
+  { type: "info", text: "[verify] Seller is shipping item...", delay: 2000 },
+  { type: "info", text: "[verify] Delivery confirmation submitted on-chain", delay: 1500 },
+  { type: "success", text: "[verify] ✓ Delivery confirmed by operator", delay: 1500 },
   { type: "dim", text: "", delay: 300 },
   { type: "info", text: "[release] Auto-release window: 1 hour", delay: 1000 },
   { type: "success", text: "[complete] Transaction complete. Funds available for seller.", delay: 1000 },
@@ -191,7 +193,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
 
       // Step 6: Auto-verify
       addLine({ type: "dim", text: "", delay: 0 });
-      addLine({ type: "info", text: "[verify] Server auto-verifying delivery...", delay: 0 });
+      addLine({ type: "info", text: "[verify] Waiting for seller to confirm delivery...", delay: 0 });
 
       // Trigger confirm delivery
       try {
@@ -200,15 +202,19 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
       } catch (err) {
         console.warn("[agent] confirm-delivery failed:", err);
       }
-      await wait(5000 / speed);
+      await wait(2000);
+      addLine({ type: "info", text: "[verify] Seller is shipping item...", delay: 0 });
+      await wait(2000);
+      addLine({ type: "info", text: "[verify] Delivery confirmation submitted on-chain", delay: 0 });
+      await wait(1500);
 
-      addLine({ type: "success", text: "[verify] Delivery confirmed by operator", delay: 0 });
+      addLine({ type: "success", text: "[verify] ✓ Delivery confirmed by operator", delay: 0 });
       inspector.addEvent({
         type: "state_change",
         label: "Delivery Confirmed",
         data: { previousState: "Active", newState: "DeliveryConfirmed" },
       });
-      await wait(1000);
+      await wait(1500);
 
       // Step 7: Complete
       addLine({ type: "dim", text: "", delay: 0 });

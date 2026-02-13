@@ -6,6 +6,7 @@ import type { DemoStep } from "./StepTracker";
 interface SellerPanelProps {
   step: DemoStep;
   productTitle?: string;
+  deliveryConfirmed?: boolean;
 }
 
 const sellerMessages: Record<DemoStep, { text: string; status: "idle" | "active" | "done" }> = {
@@ -15,12 +16,14 @@ const sellerMessages: Record<DemoStep, { text: string; status: "idle" | "active"
   sign: { text: "Buyer is signing payment...", status: "active" },
   submit: { text: "Processing payment...", status: "active" },
   escrowed: { text: "Payment received! Preparing to ship...", status: "active" },
-  delivery: { text: "Confirming delivery...", status: "active" },
+  delivery: { text: "Shipping item & confirming delivery...", status: "active" },
   complete: { text: "Funds received! Order complete.", status: "done" },
 };
 
-export function SellerPanel({ step, productTitle }: SellerPanelProps) {
-  const message = sellerMessages[step];
+export function SellerPanel({ step, productTitle, deliveryConfirmed }: SellerPanelProps) {
+  const message = step === "delivery" && deliveryConfirmed
+    ? { text: "Delivery confirmed!", status: "done" as const }
+    : sellerMessages[step];
 
   return (
     <div className="rounded-xl border border-border-default bg-bg-secondary p-4">
@@ -37,7 +40,7 @@ export function SellerPanel({ step, productTitle }: SellerPanelProps) {
 
       <AnimatePresence mode="wait">
         <motion.div
-          key={step}
+          key={`${step}-${deliveryConfirmed}`}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
@@ -72,9 +75,15 @@ export function SellerPanel({ step, productTitle }: SellerPanelProps) {
             </span>
           </div>
 
-          {step === "delivery" && (
+          {step === "delivery" && !deliveryConfirmed && (
             <div className="rounded-lg border border-warning/20 bg-warning/5 p-2 text-xs text-warning">
               Auto-confirming delivery in ~5 seconds...
+            </div>
+          )}
+
+          {step === "delivery" && deliveryConfirmed && (
+            <div className="rounded-lg border border-success/20 bg-success/5 p-2 text-xs text-success">
+              Delivery has been confirmed on-chain. Waiting for buyer to release funds.
             </div>
           )}
 
