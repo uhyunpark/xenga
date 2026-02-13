@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { useEffect, useState } from "react";
 
 const codeLines = [
   'import { escrowFetch } from "x402-escrow";',
@@ -82,18 +81,6 @@ export function HeroSection() {
 }
 
 function CodeSnippet() {
-  const [visibleLines, setVisibleLines] = useState(0);
-
-  useEffect(() => {
-    if (visibleLines < codeLines.length) {
-      const timer = setTimeout(
-        () => setVisibleLines((v) => v + 1),
-        visibleLines === 0 ? 800 : 150
-      );
-      return () => clearTimeout(timer);
-    }
-  }, [visibleLines]);
-
   return (
     <div className="code-block overflow-hidden p-4 text-left">
       <div className="mb-2 flex items-center gap-1.5">
@@ -103,19 +90,9 @@ function CodeSnippet() {
         <span className="ml-2 text-xs text-text-tertiary">payment.ts</span>
       </div>
       <pre className="text-[13px] leading-relaxed">
-        {codeLines.slice(0, visibleLines).map((line, i) => (
-          <div key={i}>
-            {highlightCode(line)}
-            {i === visibleLines - 1 && visibleLines < codeLines.length && (
-              <span className="inline-block h-4 w-[2px] animate-pulse bg-text-primary" />
-            )}
-          </div>
+        {codeLines.map((line, i) => (
+          <div key={i}>{highlightCode(line)}</div>
         ))}
-        {visibleLines >= codeLines.length && (
-          <div>
-            <span className="inline-block h-4 w-[2px] animate-pulse bg-text-primary" />
-          </div>
-        )}
       </pre>
     </div>
   );
