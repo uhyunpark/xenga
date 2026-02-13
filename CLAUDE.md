@@ -26,7 +26,7 @@ bun run build:contracts && bun run sync-abi
 
 ## Architecture
 
-x402 HTTP 402 escrow payment system on Base Sepolia using USDC (ERC-3009 gasless transfers).
+x402 escrow payment system on Base Sepolia using USDC (ERC-3009 gasless transfers).
 
 **Four layers:**
 - **`contracts/`** — Foundry project: EscrowVault (escrow state machine), AutoReleaseKeeper (Chainlink automation), MockUSDC (test token)

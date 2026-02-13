@@ -35,10 +35,10 @@ export function HeroSection() {
             className="gradient-text mt-5 text-4xl font-bold tracking-tight md:text-6xl lg:text-7xl"
             style={{ textWrap: "balance" }}
           >
-            Escrowed x402 payments for autonomous commerce
+            New standard of Agentic commerce
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-text-secondary md:text-xl">
-            Integrate x402 while guaranteeing settlement with on-chain escrow state, signed USDC authorization, and programmable release logic.
+            Experience the future of payments with escrowed x402 payment protocol.
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -53,11 +53,6 @@ export function HeroSection() {
             </Link>
           </div>
 
-          <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            <TrustMetric label="Buyer Gas Cost" value="$0" />
-            <TrustMetric label="Settlement" value="Base Sepolia" />
-            <TrustMetric label="Flow Trigger" value="HTTP 402" />
-          </div>
         </motion.div>
 
         <motion.div
