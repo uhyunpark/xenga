@@ -8,7 +8,7 @@ const demos = [
   {
     title: "Marketplace Demo",
     description:
-      "P2P escrow with 7-day release window, manual delivery confirmation, and dispute resolution.",
+      "P2P escrow, manual delivery confirmation, and dispute resolution.",
     href: "/marketplace",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -23,7 +23,7 @@ const demos = [
   {
     title: "Agent Service Demo",
     description:
-      "Machine-to-machine payments with 1-hour auto-release and auto-verified delivery.",
+      "Machine-to-machine payments and auto-verified delivery.",
     href: "/agent",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">

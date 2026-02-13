@@ -30,7 +30,7 @@ export function HeroSection() {
           className="gradient-text text-4xl font-bold tracking-tight md:text-6xl lg:text-7xl"
           style={{ textWrap: "balance" }}
         >
-          Escrow Payments for the Open Web
+          Escrow Payments for the Agentic world
         </motion.h1>
 
         <motion.p
@@ -39,7 +39,7 @@ export function HeroSection() {
           transition={{ duration: 0.6, delay: 0.1 }}
           className="mx-auto mt-6 max-w-2xl text-lg text-text-secondary md:text-xl"
         >
-          HTTP 402 + on-chain escrow. Trustless commerce in one fetch call.
+          On-chain escrow. Trustless commerce in one fetch call.
         </motion.p>
 
         <motion.div

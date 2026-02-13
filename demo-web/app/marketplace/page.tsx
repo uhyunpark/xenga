@@ -13,7 +13,7 @@ export default function MarketplacePage() {
             <h1 className="text-2xl font-bold">Marketplace Demo</h1>
             <p className="mt-1 text-sm text-text-secondary">
               Experience the full escrow lifecycle — payment, delivery, and
-              release — with a 7-day release window.
+              release
             </p>
           </div>
           <PaymentFlow />
