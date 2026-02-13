@@ -85,9 +85,11 @@ export function ProductGrid({ onSelect, disabled }: ProductGridProps) {
           transition={{ delay: i * 0.05 }}
           onClick={() => onSelect(product)}
           disabled={disabled}
-          className="group rounded-xl border border-border-default bg-bg-secondary p-4 text-left transition-all hover:border-border-active hover:scale-[1.01] disabled:opacity-50 disabled:pointer-events-none"
+          className="panel-surface group rounded-xl p-4 text-left transition-all hover:border-border-active hover:scale-[1.01] disabled:pointer-events-none disabled:opacity-50"
         >
-          <div className="mb-3 text-accent">{iconMap[product.image]}</div>
+          <div className="mb-3 inline-flex rounded-lg border border-accent/25 bg-accent/10 p-2.5 text-accent">
+            {iconMap[product.image]}
+          </div>
           <h3 className="mb-1 text-sm font-semibold">{product.title}</h3>
           <p className="mb-3 text-xs text-text-tertiary">
             {product.description}
@@ -96,7 +98,7 @@ export function ProductGrid({ onSelect, disabled }: ProductGridProps) {
             <span className="font-mono text-sm font-semibold text-accent">
               {product.price.toFixed(2)} USDC
             </span>
-            <span className="text-xs text-text-tertiary group-hover:text-text-primary transition-colors">
+            <span className="text-xs text-text-tertiary transition-colors group-hover:text-text-primary">
               Buy Now &rarr;
             </span>
           </div>

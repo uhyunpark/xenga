@@ -8,7 +8,7 @@ const demos = [
   {
     title: "Marketplace Demo",
     description:
-      "P2P escrow, manual delivery confirmation, and dispute resolution.",
+      "Buyer-driven escrow checkout with delivery confirmation and dispute controls.",
     href: "/marketplace",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -17,13 +17,14 @@ const demos = [
         <path d="M16 10a4 4 0 01-8 0" />
       </svg>
     ),
-    badge: "Interactive",
+    badge: "Human-in-the-loop",
+    highlights: ["Manual release/dispute", "Step-by-step protocol view"],
     color: "accent",
   },
   {
     title: "Agent Service Demo",
     description:
-      "Machine-to-machine payments and auto-verified delivery.",
+      "Autonomous machine-to-machine payments with simulated operator verification.",
     href: "/agent",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -33,7 +34,8 @@ const demos = [
         <path d="M9 15h6" />
       </svg>
     ),
-    badge: "Auto-advancing",
+    badge: "Autonomous",
+    highlights: ["Auto-advancing run", "Signed authorization + on-chain settle"],
     color: "accent-purple",
   },
 ];
@@ -50,7 +52,7 @@ export function DemoCards() {
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           className="mb-4 text-center text-2xl font-semibold md:text-3xl"
         >
-          Try the Demos
+          Choose Your Demo Path
         </motion.h2>
         <motion.p
           initial={{ opacity: 0, y: 20 }}
@@ -58,8 +60,7 @@ export function DemoCards() {
           transition={{ delay: 0.1 }}
           className="mb-10 text-center text-text-secondary"
         >
-          Experience the full escrow lifecycle with real on-chain transactions on
-          Base Sepolia.
+          Test interactive and autonomous escrow flows with real protocol events on Base Sepolia.
         </motion.p>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -71,7 +72,7 @@ export function DemoCards() {
               transition={{ delay: 0.2 + i * 0.1 }}
             >
               <Link href={demo.href} className="group block">
-                <div className="rounded-2xl border border-border-default bg-bg-secondary p-6 transition-all duration-200 hover:border-border-active hover:scale-[1.01] group-hover:shadow-lg">
+                <div className="panel-surface rounded-2xl p-6 transition-all duration-200 hover:border-border-active hover:scale-[1.01] group-hover:shadow-lg">
                   <div className="mb-4 flex items-center justify-between">
                     <div
                       className={`rounded-lg p-2.5 ${
@@ -92,10 +93,21 @@ export function DemoCards() {
                       {demo.badge}
                     </span>
                   </div>
+                  <div className="mb-3 inline-flex rounded-full border border-border-default bg-bg-primary/70 px-2 py-0.5 text-[10px] uppercase tracking-wide text-text-tertiary">
+                    Base Sepolia Testnet
+                  </div>
                   <h3 className="mb-2 text-lg font-semibold">{demo.title}</h3>
                   <p className="text-sm text-text-secondary">
                     {demo.description}
                   </p>
+                  <div className="mt-4 space-y-1.5">
+                    {demo.highlights.map((item) => (
+                      <div key={item} className="flex items-center gap-2 text-xs text-text-secondary">
+                        <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+                        <span>{item}</span>
+                      </div>
+                    ))}
+                  </div>
                   <div className="mt-4 flex items-center gap-1 text-sm font-medium text-text-tertiary group-hover:text-text-primary transition-colors">
                     Start Demo
                     <svg

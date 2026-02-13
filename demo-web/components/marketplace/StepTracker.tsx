@@ -10,7 +10,7 @@ export type DemoStep =
   | "delivery"
   | "complete";
 
-const steps: { key: DemoStep; label: string }[] = [
+export const DEMO_STEPS: { key: DemoStep; label: string }[] = [
   { key: "select", label: "Select Product" },
   { key: "create_order", label: "Create Order" },
   { key: "request_payment", label: "Request Payment" },
@@ -28,11 +28,11 @@ interface StepTrackerProps {
 }
 
 export function StepTracker({ currentStep, onStepClick, className = "" }: StepTrackerProps) {
-  const currentIndex = steps.findIndex((s) => s.key === currentStep);
+  const currentIndex = DEMO_STEPS.findIndex((s) => s.key === currentStep);
 
   return (
     <div className={`space-y-1 ${className}`}>
-      {steps.map((step, i) => {
+      {DEMO_STEPS.map((step, i) => {
         const isPast = i < currentIndex;
         const isCurrent = i === currentIndex;
         const isClickable = isPast && !!onStepClick;
@@ -41,18 +41,18 @@ export function StepTracker({ currentStep, onStepClick, className = "" }: StepTr
           <div
             key={step.key}
             onClick={isClickable ? () => onStepClick(step.key) : undefined}
-            className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-xs transition-colors ${
+            className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs transition-colors ${
               isCurrent
-                ? "bg-accent/10 text-accent font-medium"
+                ? "border-accent/30 bg-accent/10 text-accent font-medium"
                 : isPast
-                  ? "text-success"
-                  : "text-text-tertiary"
-            } ${isClickable ? "cursor-pointer hover:bg-success/10" : ""}`}
+                  ? "border-success/25 bg-success/5 text-success"
+                  : "border-transparent text-text-tertiary"
+            } ${isClickable ? "cursor-pointer hover:border-success/35 hover:bg-success/10" : ""}`}
           >
             <div
               className={`flex h-5 w-5 items-center justify-center rounded-full border text-[10px] font-bold ${
                 isCurrent
-                  ? "border-accent bg-accent text-white"
+                  ? "border-accent bg-accent text-[#031018]"
                   : isPast
                     ? "border-success bg-success/20 text-success"
                     : "border-border-default"

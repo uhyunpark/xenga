@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/Badge";
 import { AddressDisplay } from "@/components/ui/AddressDisplay";
 import { formatUsdc, shortenAddress } from "@/lib/utils";
 import { ProductGrid, type Product } from "./ProductGrid";
-import { StepTracker, type DemoStep } from "./StepTracker";
+import { DEMO_STEPS, StepTracker, type DemoStep } from "./StepTracker";
 import { SellerPanel } from "./SellerPanel";
 
 function formatReleaseWindow(seconds: number): string {
@@ -101,6 +101,17 @@ const initialState: FlowState = {
   deliveryConfirmed: false,
   paymentRequired: null,
   paymentPayload: null,
+};
+
+const STEP_HINTS: Record<DemoStep, string> = {
+  select: "Choose an item to initialize the escrow payment flow.",
+  create_order: "Create an off-chain order before requesting payment terms.",
+  request_payment: "Request payment terms and expect an HTTP 402 response.",
+  sign: "Review required fields, then sign the typed USDC authorization.",
+  submit: "Submit the signed payload to settle escrow on-chain.",
+  escrowed: "Escrow has been created and is waiting for delivery confirmation.",
+  delivery: "Decide whether to release funds or open a dispute.",
+  complete: "Payment flow completed and seller settlement finalized.",
 };
 
 export function PaymentFlow() {
@@ -451,45 +462,90 @@ export function PaymentFlow() {
   // Ensure wallet is connected
   const needsWallet = !address;
   const needsFunding = walletType === "demo" && usdcBalance !== null && parseFloat(usdcBalance) < 1;
+  const currentStepIndex = Math.max(
+    0,
+    DEMO_STEPS.findIndex((step) => step.key === state.step)
+  );
+  const currentStepLabel = DEMO_STEPS[currentStepIndex]?.label ?? "Progress";
+  const progressPercent =
+    ((currentStepIndex + 1) / DEMO_STEPS.length) * 100;
+  const stepHint = STEP_HINTS[state.step];
+  const primaryButtonClass =
+    "w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-[#031018] transition-all hover:bg-accent/90 disabled:opacity-50";
+  const primaryGlowButtonClass =
+    "glow-blue w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-[#031018] transition-all hover:bg-accent/90 disabled:opacity-50";
 
   return (
     <div className="flex flex-col gap-6 lg:flex-row">
       {/* Left sidebar - Step tracker */}
-      <div className="hidden lg:block lg:w-48 shrink-0">
-        <StepTracker
-          currentStep={state.step}
-          onStepClick={state.step === "create_order" || state.step === "request_payment" ? handleStepClick : undefined}
-        />
-        {state.step !== "select" && (
-          <button
-            onClick={handleReset}
-            className="mt-4 w-full rounded-md border border-border-default px-3 py-1.5 text-xs text-text-tertiary transition-colors hover:text-text-primary hover:border-border-active"
-          >
-            Start Over
-          </button>
-        )}
+      <div className="hidden shrink-0 lg:block lg:w-56">
+        <div className="panel-surface sticky top-20 rounded-xl p-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
+            Flow Map
+          </p>
+          <StepTracker
+            currentStep={state.step}
+            className="mt-2"
+            onStepClick={state.step === "create_order" || state.step === "request_payment" ? handleStepClick : undefined}
+          />
+          <p className="mt-3 rounded-lg border border-border-default bg-bg-primary/55 p-2 text-[11px] text-text-tertiary">
+            {stepHint}
+          </p>
+          {state.step !== "select" && (
+            <button
+              onClick={handleReset}
+              className="mt-3 w-full rounded-md border border-border-default px-3 py-1.5 text-xs text-text-tertiary transition-colors hover:border-border-active hover:text-text-primary"
+            >
+              Start Over
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Main content area */}
       <div className="flex-1 space-y-4">
-        {/* Info banner */}
-        <div className="rounded-lg border border-accent/20 bg-accent/5 p-3 text-xs text-text-secondary">
-          In production, buyer and seller are different people. Here, the server
-          plays the seller so you can experience the full flow.
+        <div className="panel-surface rounded-xl p-3 lg:hidden">
+          <div className="flex items-center justify-between text-xs text-text-secondary">
+            <span>Escrow flow progress</span>
+            <span className="font-mono">
+              {currentStepIndex + 1}/{DEMO_STEPS.length}
+            </span>
+          </div>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-bg-tertiary">
+            <div
+              className="h-full rounded-full bg-accent transition-all duration-300"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+          <p className="mt-2 text-sm font-medium text-text-primary">
+            {currentStepLabel}
+          </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        {/* Info banner */}
+        <div className="panel-surface rounded-lg p-3 text-xs text-text-secondary">
+          <span className="font-semibold text-accent">Simulation mode:</span> in production, buyer and seller are different people.
+          Here, the server plays the seller so you can experience the full escrow lifecycle safely.
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
           {/* Buyer panel */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-accent/20 text-accent">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <circle cx="7" cy="5" r="3" />
-                  <path d="M2 13c0-2.8 2.2-5 5-5s5 2.2 5 5" />
-                </svg>
+            <div className="panel-surface rounded-xl p-3">
+              <div className="flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-accent/20 text-accent">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <circle cx="7" cy="5" r="3" />
+                    <path d="M2 13c0-2.8 2.2-5 5-5s5 2.2 5 5" />
+                  </svg>
+                </div>
+                <span className="text-sm font-semibold">Buyer</span>
+                <span className="text-xs text-text-tertiary">(You)</span>
+                <span className="ml-auto rounded-full border border-border-default bg-bg-primary/50 px-2 py-0.5 text-[10px] uppercase tracking-wide text-text-tertiary">
+                  {currentStepLabel}
+                </span>
               </div>
-              <span className="text-sm font-medium">Buyer</span>
-              <span className="text-xs text-text-tertiary">(You)</span>
+              <p className="mt-2 text-xs text-text-tertiary">{stepHint}</p>
             </div>
 
             <AnimatePresence mode="wait">
@@ -501,25 +557,25 @@ export function PaymentFlow() {
                   exit={{ opacity: 0 }}
                 >
                   {needsWallet ? (
-                    <div className="rounded-xl border border-border-default bg-bg-secondary p-6 text-center">
+                    <div className="panel-surface rounded-xl p-6 text-center">
                       <p className="mb-3 text-sm text-text-secondary">
                         Connect a wallet to start the demo
                       </p>
                       <button
                         onClick={connectDemo}
-                        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90"
+                        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-[#031018] transition-colors hover:bg-accent/90"
                       >
                         Create Demo Wallet
                       </button>
                     </div>
                   ) : needsFunding ? (
-                    <div className="rounded-xl border border-border-default bg-bg-secondary p-6 text-center">
+                    <div className="panel-surface rounded-xl p-6 text-center">
                       <p className="mb-3 text-sm text-text-secondary">
                         Your demo wallet needs USDC to continue
                       </p>
                       <button
                         onClick={fundDemoWallet}
-                        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90"
+                        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-[#031018] transition-colors hover:bg-accent/90"
                       >
                         Fund Wallet with Test USDC
                       </button>
@@ -536,7 +592,7 @@ export function PaymentFlow() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
-                  className="rounded-xl border border-border-default bg-bg-secondary p-4"
+                  className="panel-surface rounded-xl p-4"
                 >
                   <button
                     onClick={handleReset}
@@ -562,7 +618,7 @@ export function PaymentFlow() {
                   <button
                     onClick={handleCreateOrder}
                     disabled={state.loading}
-                    className="w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-accent/90 disabled:opacity-50"
+                    className={primaryButtonClass}
                   >
                     {state.loading ? "Creating Order..." : "Buy Now"}
                   </button>
@@ -576,7 +632,7 @@ export function PaymentFlow() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
-                  className="rounded-xl border border-border-default bg-bg-secondary p-4"
+                  className="panel-surface rounded-xl p-4"
                 >
                   <button
                     onClick={handleReset}
@@ -607,11 +663,11 @@ export function PaymentFlow() {
                   <button
                     onClick={handleRequestPayment}
                     disabled={state.loading}
-                    className="glow-blue w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-accent/90 disabled:opacity-50"
+                    className={primaryGlowButtonClass}
                   >
                     {state.loading ? (
                       <span className="flex items-center justify-center gap-2">
-                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-[#031018] border-t-transparent" />
                         Requesting...
                       </span>
                     ) : (
@@ -628,7 +684,7 @@ export function PaymentFlow() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
-                  className="rounded-xl border border-border-default bg-bg-secondary p-4"
+                  className="panel-surface rounded-xl p-4"
                 >
                   <div className="mb-3 rounded-lg border border-accent/20 bg-accent/5 p-3">
                     <div className="mb-2 flex items-center gap-2">
@@ -661,11 +717,11 @@ export function PaymentFlow() {
                   <button
                     onClick={handleSignPayment}
                     disabled={state.loading}
-                    className="glow-blue w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-accent/90 disabled:opacity-50"
+                    className={primaryGlowButtonClass}
                   >
                     {state.loading ? (
                       <span className="flex items-center justify-center gap-2">
-                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-[#031018] border-t-transparent" />
                         Signing...
                       </span>
                     ) : (
@@ -682,7 +738,7 @@ export function PaymentFlow() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
-                  className="rounded-xl border border-border-default bg-bg-secondary p-4"
+                  className="panel-surface rounded-xl p-4"
                 >
                   <div className="mb-3 rounded-lg border border-success/20 bg-success/5 p-3">
                     <div className="mb-2 flex items-center gap-2">
@@ -717,11 +773,11 @@ export function PaymentFlow() {
                   <button
                     onClick={handleSubmitPayment}
                     disabled={state.loading}
-                    className="glow-blue w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-accent/90 disabled:opacity-50"
+                    className={primaryGlowButtonClass}
                   >
                     {state.loading ? (
                       <span className="flex items-center justify-center gap-2">
-                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-[#031018] border-t-transparent" />
                         Submitting on-chain...
                       </span>
                     ) : (
@@ -809,7 +865,7 @@ export function PaymentFlow() {
                             <button
                               onClick={handleRelease}
                               disabled={state.loading}
-                              className="flex-1 rounded-lg bg-success px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-success/90 disabled:opacity-50"
+                              className="flex-1 rounded-lg bg-success px-3 py-2 text-sm font-medium text-[#041610] transition-colors hover:bg-success/90 disabled:opacity-50"
                             >
                               Release Funds
                             </button>
@@ -870,11 +926,55 @@ export function PaymentFlow() {
           </div>
 
           {/* Seller panel */}
-          <div>
-            <SellerPanel step={state.step} productTitle={state.product?.title} deliveryConfirmed={state.deliveryConfirmed} />
+          <div className="space-y-4">
+            <SellerPanel
+              step={state.step}
+              productTitle={state.product?.title}
+              deliveryConfirmed={state.deliveryConfirmed}
+            />
+            <div className="panel-surface rounded-xl p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
+                Protocol Snapshot
+              </p>
+              <div className="mt-3 space-y-2">
+                <MetaRow
+                  label="Order"
+                  value={state.orderId ? `${state.orderId.slice(0, 8)}...` : "Not created"}
+                />
+                <MetaRow
+                  label="Escrow"
+                  value={state.escrowId ? `#${state.escrowId}` : "Pending"}
+                />
+                <MetaRow
+                  label="Tx Hash"
+                  value={state.txHash ? `${state.txHash.slice(0, 12)}...` : "Pending"}
+                  mono
+                />
+                <MetaRow label="Current Step" value={currentStepLabel} />
+              </div>
+            </div>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function MetaRow({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 border-b border-border-default pb-2 last:border-0 last:pb-0">
+      <span className="text-xs text-text-tertiary">{label}</span>
+      <span className={`text-right text-xs text-text-primary ${mono ? "font-mono" : ""}`}>
+        {value}
+      </span>
     </div>
   );
 }

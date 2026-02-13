@@ -25,40 +25,56 @@ export function ProtocolFlow() {
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           className="mb-12 text-center text-2xl font-semibold md:text-3xl"
         >
-          The x402 Payment Flow
+          End-to-End x402 Escrow Flow
         </motion.h2>
 
-        <div className="relative flex items-start justify-between overflow-x-auto pb-4">
-          {/* Connection line */}
-          <div className="absolute left-0 right-0 top-6 h-[2px] bg-border-default" />
-
-          {steps.map((step, i) => (
-            <motion.div
-              key={step.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ delay: i * 0.1 }}
-              className="relative z-10 flex min-w-[80px] flex-col items-center px-1 md:min-w-[100px]"
-            >
-              <div
-                className={`flex h-12 w-12 items-center justify-center rounded-full border-2 text-xs font-bold transition-all duration-500 ${
-                  isInView
-                    ? step.icon === "402"
-                      ? "border-warning bg-warning/20 text-warning"
-                      : "border-accent bg-accent/20 text-accent"
-                    : "border-border-default bg-bg-secondary text-text-tertiary"
-                }`}
+        <div className="panel-surface overflow-x-auto rounded-2xl p-4 md:p-5">
+          <div className="flex min-w-max items-stretch gap-3 pb-1">
+            {steps.map((step, i) => (
+              <motion.div
+                key={step.label}
+                initial={{ opacity: 0, y: 20 }}
+                animate={isInView ? { opacity: 1, y: 0 } : {}}
+                transition={{ delay: i * 0.08 }}
+                className="relative flex min-h-[108px] w-[170px] shrink-0 rounded-xl border border-border-default bg-bg-secondary/70 p-3"
               >
-                {step.icon}
-              </div>
-              <span className="mt-2 text-center text-xs font-medium text-text-primary">
-                {step.label}
-              </span>
-              <span className="mt-1 text-center text-[10px] text-text-tertiary hidden md:block">
-                {step.desc}
-              </span>
-            </motion.div>
-          ))}
+                <div className="flex h-full flex-col">
+                  <span
+                    className={`inline-flex w-fit rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                      step.icon === "402"
+                        ? "border-warning/40 bg-warning/15 text-warning"
+                        : "border-accent/40 bg-accent/10 text-accent"
+                    }`}
+                  >
+                    {step.icon}
+                  </span>
+                  <span className="mt-2 text-sm font-semibold text-text-primary">
+                    {step.label}
+                  </span>
+                  <span className="mt-1 text-xs text-text-secondary">
+                    {step.desc}
+                  </span>
+                </div>
+                {i < steps.length - 1 && (
+                  <span className="absolute -right-2 top-1/2 hidden -translate-y-1/2 text-text-tertiary md:block">
+                    <svg
+                      width="10"
+                      height="10"
+                      viewBox="0 0 10 10"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                    >
+                      <path d="M1.5 5h7M5.5 1.5L9 5 5.5 8.5" />
+                    </svg>
+                  </span>
+                )}
+              </motion.div>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-text-tertiary">
+            Sequence: 402 negotiation, typed-data signature, and escrow settlement all visible in the protocol inspector.
+          </p>
         </div>
       </div>
     </section>

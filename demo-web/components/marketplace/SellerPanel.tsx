@@ -26,16 +26,31 @@ export function SellerPanel({ step, productTitle, deliveryConfirmed }: SellerPan
     : sellerMessages[step];
 
   return (
-    <div className="rounded-xl border border-border-default bg-bg-secondary p-4">
+    <div className="panel-surface rounded-xl p-4">
       <div className="mb-3 flex items-center gap-2">
-        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-accent-purple/20 text-accent-purple">
+        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-accent-purple/20 text-accent-purple">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
             <circle cx="7" cy="5" r="3" />
             <path d="M2 13c0-2.8 2.2-5 5-5s5 2.2 5 5" />
           </svg>
         </div>
-        <span className="text-sm font-medium">Seller</span>
+        <span className="text-sm font-semibold">Seller Operator</span>
         <span className="text-xs text-text-tertiary">(Auto-simulated)</span>
+        <span
+          className={`ml-auto rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+            message.status === "done"
+              ? "border-success/30 bg-success/10 text-success"
+              : message.status === "active"
+                ? "border-warning/30 bg-warning/10 text-warning"
+                : "border-border-default bg-bg-primary/55 text-text-tertiary"
+          }`}
+        >
+          {message.status === "done"
+            ? "Settled"
+            : message.status === "active"
+              ? "In progress"
+              : "Idle"}
+        </span>
       </div>
 
       <AnimatePresence mode="wait">
@@ -47,32 +62,34 @@ export function SellerPanel({ step, productTitle, deliveryConfirmed }: SellerPan
           className="space-y-3"
         >
           {productTitle && step !== "select" && (
-            <div className="rounded-lg bg-bg-tertiary p-3 text-xs text-text-secondary">
+            <div className="rounded-lg border border-border-default bg-bg-primary/55 p-3 text-xs text-text-secondary">
               Order: {productTitle}
             </div>
           )}
 
-          <div className="flex items-center gap-2">
-            {message.status === "active" && (
-              <div className="h-2 w-2 animate-pulse rounded-full bg-warning" />
-            )}
-            {message.status === "done" && (
-              <div className="h-2 w-2 rounded-full bg-success" />
-            )}
-            {message.status === "idle" && (
-              <div className="h-2 w-2 rounded-full bg-text-tertiary" />
-            )}
-            <span
-              className={`text-sm ${
-                message.status === "done"
-                  ? "text-success"
-                  : message.status === "active"
-                    ? "text-text-primary"
-                    : "text-text-tertiary"
-              }`}
-            >
-              {message.text}
-            </span>
+          <div className="rounded-lg border border-border-default bg-bg-secondary/50 p-3">
+            <div className="flex items-center gap-2">
+              {message.status === "active" && (
+                <div className="h-2 w-2 animate-pulse rounded-full bg-warning" />
+              )}
+              {message.status === "done" && (
+                <div className="h-2 w-2 rounded-full bg-success" />
+              )}
+              {message.status === "idle" && (
+                <div className="h-2 w-2 rounded-full bg-text-tertiary" />
+              )}
+              <span
+                className={`text-sm ${
+                  message.status === "done"
+                    ? "text-success"
+                    : message.status === "active"
+                      ? "text-text-primary"
+                      : "text-text-tertiary"
+                }`}
+              >
+                {message.text}
+              </span>
+            </div>
           </div>
 
           {step === "delivery" && !deliveryConfirmed && (

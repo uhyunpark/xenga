@@ -26,23 +26,12 @@ export function InspectorPanel() {
     return counts;
   }, [events]);
 
-  // Mobile: floating pill button when collapsed
   if (!isOpen) {
     return (
-      <button
-        onClick={toggle}
-        className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full bg-bg-secondary border border-border-active px-4 py-2.5 shadow-lg shadow-black/40 hover:border-accent/40 transition-all cursor-pointer md:hidden"
-      >
-        <svg className="h-4 w-4 text-accent" viewBox="0 0 16 16" fill="currentColor">
-          <path d="M1 2.75A.75.75 0 011.75 2h12.5a.75.75 0 010 1.5H1.75A.75.75 0 011 2.75zm0 5A.75.75 0 011.75 7h12.5a.75.75 0 010 1.5H1.75A.75.75 0 011 7.75zm0 5a.75.75 0 01.75-.75h12.5a.75.75 0 010 1.5H1.75a.75.75 0 01-.75-.75z" />
-        </svg>
-        <span className="text-sm font-medium text-text-primary">Protocol</span>
-        {events.length > 0 && (
-          <span className="flex items-center justify-center h-5 min-w-5 rounded-full bg-accent/20 text-accent text-xs font-semibold px-1.5">
-            {events.length}
-          </span>
-        )}
-      </button>
+      <>
+        <CollapsedToggle onClick={toggle} count={events.length} mobile />
+        <CollapsedToggle onClick={toggle} count={events.length} />
+      </>
     );
   }
 
@@ -53,26 +42,58 @@ export function InspectorPanel() {
         {/* Backdrop */}
         <div className="absolute inset-0 bg-black/50" onClick={toggle} />
         {/* Sheet */}
-        <div className="absolute bottom-0 left-0 right-0 max-h-[70vh] flex flex-col rounded-t-2xl bg-bg-secondary border-t border-border-default">
+        <div className="absolute bottom-0 left-0 right-0 flex max-h-[75vh] flex-col rounded-t-2xl border-t border-border-default bg-bg-secondary">
           <PanelContent
             activeTab={activeTab}
             setTab={setTab}
             eventCounts={eventCounts}
             onClose={toggle}
+            totalEvents={events.length}
           />
         </div>
       </div>
 
       {/* Desktop side panel */}
-      <div className="hidden md:flex flex-col w-[420px] shrink-0 rounded-2xl bg-bg-secondary border border-border-default overflow-hidden">
+      <div className="panel-surface hidden h-[calc(100vh-4rem)] w-[430px] shrink-0 flex-col overflow-hidden border-l border-border-default md:flex">
         <PanelContent
           activeTab={activeTab}
           setTab={setTab}
           eventCounts={eventCounts}
           onClose={toggle}
+          totalEvents={events.length}
         />
       </div>
     </>
+  );
+}
+
+function CollapsedToggle({
+  onClick,
+  count,
+  mobile = false,
+}: {
+  onClick: () => void;
+  count: number;
+  mobile?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "fixed right-4 z-40 flex items-center gap-2 rounded-full border border-border-active bg-bg-secondary px-4 py-2.5 shadow-lg shadow-black/40 transition-colors hover:border-accent/40",
+        mobile ? "bottom-4 md:hidden" : "bottom-4 hidden md:flex"
+      )}
+    >
+      <svg className="h-4 w-4 text-accent" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M1 2.75A.75.75 0 011.75 2h12.5a.75.75 0 010 1.5H1.75A.75.75 0 011 2.75zm0 5A.75.75 0 011.75 7h12.5a.75.75 0 010 1.5H1.75A.75.75 0 011 7.75zm0 5a.75.75 0 01.75-.75h12.5a.75.75 0 010 1.5H1.75a.75.75 0 01-.75-.75z" />
+      </svg>
+      <span className="text-sm font-medium text-text-primary">Protocol</span>
+      {count > 0 && (
+        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent/20 px-1.5 text-xs font-semibold text-accent">
+          {count}
+        </span>
+      )}
+    </button>
   );
 }
 
@@ -81,20 +102,28 @@ function PanelContent({
   setTab,
   eventCounts,
   onClose,
+  totalEvents,
 }: {
   activeTab: string;
   setTab: (tab: any) => void;
   eventCounts: Record<string, number>;
   onClose: () => void;
+  totalEvents: number;
 }) {
   return (
     <>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border-default shrink-0">
-        <h2 className="text-sm font-semibold text-text-primary">Protocol Inspector</h2>
+      <div className="flex items-center justify-between border-b border-border-default px-4 py-3 shrink-0">
+        <div className="space-y-0.5">
+          <h2 className="text-sm font-semibold text-text-primary">Protocol Inspector</h2>
+          <p className="text-[11px] text-text-tertiary">
+            {totalEvents} event{totalEvents === 1 ? "" : "s"} captured
+          </p>
+        </div>
         <button
           onClick={onClose}
-          className="rounded-lg p-1 hover:bg-bg-tertiary text-text-tertiary hover:text-text-primary transition-colors cursor-pointer"
+          className="cursor-pointer rounded-lg p-1 text-text-tertiary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
+          aria-label="Close inspector"
         >
           <svg className="h-4 w-4" viewBox="0 0 16 16" fill="currentColor">
             <path d="M3.72 3.72a.75.75 0 011.06 0L8 6.94l3.22-3.22a.75.75 0 111.06 1.06L9.06 8l3.22 3.22a.75.75 0 11-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 01-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 010-1.06z" />
@@ -103,13 +132,13 @@ function PanelContent({
       </div>
 
       {/* Tab bar */}
-      <div className="flex border-b border-border-default shrink-0 overflow-x-auto">
+      <div className="flex shrink-0 overflow-x-auto border-b border-border-default bg-bg-primary/60">
         {TABS.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setTab(tab.key)}
             className={cn(
-              "relative flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium transition-colors whitespace-nowrap cursor-pointer",
+              "relative flex cursor-pointer items-center gap-1.5 whitespace-nowrap px-3 py-2.5 text-xs font-medium transition-colors",
               activeTab === tab.key
                 ? "text-text-primary"
                 : "text-text-tertiary hover:text-text-secondary"
@@ -137,7 +166,7 @@ function PanelContent({
       </div>
 
       {/* Tab content */}
-      <div className="flex-1 overflow-hidden p-3 min-h-0">
+      <div className="min-h-0 flex-1 overflow-hidden p-3">
         {activeTab === "http" && <HttpTrafficTab />}
         {activeTab === "signatures" && <SignatureTab />}
         {activeTab === "onchain" && <OnChainTab />}

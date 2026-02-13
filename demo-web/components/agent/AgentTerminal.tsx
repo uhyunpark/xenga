@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { useInspector } from "@/lib/protocol-inspector/context";
@@ -18,49 +18,14 @@ interface TerminalLine {
   delay: number;
 }
 
-const baseSteps: Omit<TerminalLine, "id">[] = [
-  { type: "dim", text: "$ x402-agent discover --service weather-api", delay: 500 },
-  { type: "info", text: "[discover] Found service: Weather API Premium", delay: 1000 },
-  { type: "info", text: "[discover] Price: 2.50 USDC | Type: agent-service | Auto-release: 1 hour", delay: 500 },
-  { type: "dim", text: "", delay: 300 },
-  { type: "dim", text: "$ x402-agent order --create", delay: 500 },
-  { type: "request", text: "POST /api/orders → 201 Created", delay: 1000 },
-  { type: "info", text: "[order] Created order: {orderId}", delay: 500 },
-  { type: "dim", text: "", delay: 300 },
-  { type: "dim", text: "$ x402-agent pay --order {orderId}", delay: 500 },
-  { type: "request", text: "POST /api/orders/{orderId}/pay → 402 Payment Required", delay: 2000 },
-  { type: "info", text: "[pay] Received escrow payment requirements", delay: 500 },
-  { type: "info", text: "[pay] scheme=escrow, amount=2500000, asset=USDC", delay: 300 },
-  { type: "dim", text: "", delay: 300 },
-  { type: "info", text: "[sign] Signing EIP-712 ReceiveWithAuthorization...", delay: 1500 },
-  { type: "success", text: "[sign] Signature: v=27, r=0xab...cd, s=0xef...12", delay: 500 },
-  { type: "dim", text: "", delay: 300 },
-  { type: "request", text: "POST /api/orders/{orderId}/pay [X-PAYMENT] → 200 OK", delay: 1000 },
-  { type: "success", text: "[settle] Escrow created on-chain!", delay: 500 },
-  { type: "success", text: "[settle] Tx: {txHash}", delay: 500 },
-  { type: "success", text: "[settle] Escrow ID: {escrowId}", delay: 300 },
-  { type: "dim", text: "", delay: 300 },
-  { type: "info", text: "[verify] Waiting for seller to confirm delivery...", delay: 2000 },
-  { type: "info", text: "[verify] Seller is shipping item...", delay: 2000 },
-  { type: "info", text: "[verify] Delivery confirmation submitted on-chain", delay: 1500 },
-  { type: "success", text: "[verify] ✓ Delivery confirmed by operator", delay: 1500 },
-  { type: "dim", text: "", delay: 300 },
-  { type: "info", text: "[release] Auto-release window: 1 hour", delay: 1000 },
-  { type: "success", text: "[complete] Transaction complete. Funds available for seller.", delay: 1000 },
-];
-
 interface AgentTerminalProps {
   speed: number;
 }
 
 export function AgentTerminal({ speed }: AgentTerminalProps) {
   const [lines, setLines] = useState<TerminalLine[]>([]);
-  const [currentStep, setCurrentStep] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
-  const [orderId, setOrderId] = useState<string | null>(null);
-  const [escrowId, setEscrowId] = useState<number | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
   const { walletClient, address, connectDemo, fundDemoWallet, usdcBalance, type: walletType } = useWallet();
@@ -88,7 +53,6 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
     if (!walletClient || !address || !operatorAddress) return;
     setIsRunning(true);
     setLines([]);
-    setCurrentStep(0);
     setIsComplete(false);
     inspector.clear();
     inspector.setOpen(true);
@@ -128,7 +92,6 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
         }),
       });
       const orderData = await orderRes.json();
-      setOrderId(orderData.id);
 
       inspector.addEvent({
         type: "http_response",
@@ -178,8 +141,6 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
         payload,
         inspector.addEvent
       );
-
-      setEscrowId(result.payment.escrowId);
       setTxHash(result.payment.txHash);
 
       addLine({ type: "request", text: `POST /api/orders/${orderData.id.slice(0, 8)}.../pay [X-PAYMENT] → 200 OK`, delay: 0 });
@@ -238,40 +199,62 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
 
   const needsWallet = !address;
   const needsFunding = walletType === "demo" && usdcBalance !== null && parseFloat(usdcBalance) < 1;
+  const terminalStatus = isRunning ? "Running" : isComplete ? "Complete" : "Ready";
 
   return (
     <div className="space-y-4">
       {needsWallet ? (
-        <div className="rounded-xl border border-border-default bg-bg-secondary p-6 text-center">
+        <div className="panel-surface rounded-xl p-6 text-center">
           <p className="mb-3 text-sm text-text-secondary">
             Connect a wallet to run the agent demo
           </p>
           <button
             onClick={connectDemo}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white"
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-[#031018]"
           >
             Create Demo Wallet
           </button>
         </div>
       ) : needsFunding ? (
-        <div className="rounded-xl border border-border-default bg-bg-secondary p-6 text-center">
+        <div className="panel-surface rounded-xl p-6 text-center">
           <p className="mb-3 text-sm text-text-secondary">
             Fund your wallet to run the demo
           </p>
           <button
             onClick={fundDemoWallet}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white"
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-[#031018]"
           >
             Fund Wallet
           </button>
         </div>
       ) : (
-        <>
+        <div className="panel-surface flex flex-wrap items-center gap-3 rounded-xl p-3">
+          <span className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
+            Agent Runtime
+          </span>
+          <span
+            className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+              terminalStatus === "Running"
+                ? "border-warning/30 bg-warning/10 text-warning"
+                : terminalStatus === "Complete"
+                  ? "border-success/30 bg-success/10 text-success"
+                  : "border-border-default bg-bg-primary/55 text-text-tertiary"
+            }`}
+          >
+            {terminalStatus}
+          </span>
+          <span className="rounded-full border border-border-default bg-bg-primary/55 px-2 py-0.5 text-[10px] uppercase tracking-wide text-text-tertiary">
+            Speed {speed}x
+          </span>
+          <span className="rounded-full border border-border-default bg-bg-primary/55 px-2 py-0.5 text-[10px] uppercase tracking-wide text-text-tertiary">
+            {lines.length} log lines
+          </span>
+
           {!isRunning && !isComplete && (
             <button
               onClick={runDemo}
               disabled={!operatorAddress}
-              className="glow-purple rounded-lg bg-accent-purple px-6 py-2.5 text-sm font-semibold text-white transition-all hover:bg-accent-purple/90 disabled:opacity-50"
+              className="glow-purple ml-auto rounded-lg bg-accent-purple px-6 py-2.5 text-sm font-semibold text-[#03140f] transition-all hover:bg-accent-purple/90 disabled:opacity-50"
             >
               {operatorAddress ? "Run Agent Demo" : "Loading..."}
             </button>
@@ -279,27 +262,30 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
           {isComplete && (
             <button
               onClick={runDemo}
-              className="rounded-lg border border-border-default px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-bg-tertiary"
+              className="ml-auto rounded-lg border border-border-default px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-bg-tertiary"
             >
               Replay
             </button>
           )}
-        </>
+        </div>
       )}
 
       {/* Terminal */}
-      <div className="overflow-hidden rounded-xl border border-border-default bg-[#0C0C0E]">
-        <div className="flex items-center gap-1.5 border-b border-border-default px-4 py-2">
+      <div className="panel-surface overflow-hidden rounded-xl">
+        <div className="flex items-center gap-1.5 border-b border-border-default bg-bg-primary/55 px-4 py-2">
           <div className="h-3 w-3 rounded-full bg-error/60" />
           <div className="h-3 w-3 rounded-full bg-warning/60" />
           <div className="h-3 w-3 rounded-full bg-success/60" />
           <span className="ml-2 font-mono text-xs text-text-tertiary">
             x402-agent
           </span>
+          <span className="ml-auto text-[11px] text-text-tertiary">
+            stream: protocol-events.log
+          </span>
         </div>
         <div
           ref={terminalRef}
-          className="max-h-[500px] overflow-y-auto p-4 font-mono text-[13px] leading-relaxed"
+          className="max-h-[500px] overflow-y-auto bg-[#050910] p-4 font-mono text-[13px] leading-relaxed"
         >
           {lines.length === 0 && !isRunning && (
             <div className="text-text-tertiary">
@@ -335,7 +321,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
       </div>
 
       {txHash && (
-        <div className="flex items-center gap-2 text-xs text-text-tertiary">
+        <div className="panel-surface flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-text-tertiary">
           <span>View on BaseScan:</span>
           <a
             href={`https://sepolia.basescan.org/tx/${txHash}`}
