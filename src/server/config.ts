@@ -9,6 +9,8 @@ export const config = {
   rpcUrl: process.env.BASE_SEPOLIA_RPC || DEFAULT_RPC,
   usdcAddress: (process.env.USDC_ADDRESS || USDC_ADDRESS) as Address,
   escrowVaultAddress: process.env.ESCROW_VAULT_ADDRESS as Address,
+  sessionEscrowAddress: process.env.SESSION_ESCROW_ADDRESS as Address | undefined,
+  facilitatorUrl: process.env.FACILITATOR_URL as string | undefined,
 };
 
 export function validateConfig() {

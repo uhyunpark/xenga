@@ -5,7 +5,7 @@ import { config } from "@server/config.js";
 import { getOrderById, updateOrderStatus } from "@server/services/orderService.js";
 import { getDb } from "@server/db/index.js";
 import { getServiceType } from "@server/service-types/index.js";
-import { verifyEscrowPayment } from "@server/facilitator/verifier.js";
+import { verifyViaFacilitator } from "@server/facilitator/dispatch.js";
 import { getChainAdapter } from "@/lib/chain";
 
 export async function POST(
@@ -33,6 +33,7 @@ export async function POST(
       txHash: order.txHash!,
       escrowId: order.escrowId!,
     };
+    const encoded = Buffer.from(JSON.stringify(paymentResponse)).toString("base64");
     return NextResponse.json(
       {
         message: "Payment successful — funds are now in escrow",
@@ -46,7 +47,8 @@ export async function POST(
       {
         status: 200,
         headers: {
-          "X-PAYMENT-RESPONSE": Buffer.from(JSON.stringify(paymentResponse)).toString("base64"),
+          "PAYMENT-RESPONSE": encoded,
+          "X-PAYMENT-RESPONSE": encoded,
         },
       }
     );
@@ -60,7 +62,10 @@ export async function POST(
     );
   }
 
-  const paymentHeader = request.headers.get("x-payment");
+  // Read payment header: prefer standard, fallback to legacy
+  const paymentHeader =
+    request.headers.get("payment-signature") ??
+    request.headers.get("x-payment");
 
   if (!paymentHeader) {
     // Return 402 Payment Required
@@ -84,12 +89,18 @@ export async function POST(
       serviceType: order.serviceType,
     };
 
+    // x402 standard: array format
+    const paymentRequirements = [paymentRequired];
+    const encodedArray = Buffer.from(JSON.stringify(paymentRequirements)).toString("base64");
+    const encodedSingle = Buffer.from(JSON.stringify(paymentRequired)).toString("base64");
+
     return NextResponse.json(
-      { error: "Payment required", paymentRequired },
+      { error: "Payment required", paymentRequired, paymentRequirements },
       {
         status: 402,
         headers: {
-          "X-PAYMENT-REQUIRED": Buffer.from(JSON.stringify(paymentRequired)).toString("base64"),
+          "PAYMENT-REQUIRED": encodedArray,
+          "X-PAYMENT-REQUIRED": encodedSingle,
         },
       }
     );
@@ -101,7 +112,7 @@ export async function POST(
     const decoded = Buffer.from(paymentHeader, "base64").toString("utf-8");
     payload = JSON.parse(decoded);
   } catch {
-    return NextResponse.json({ error: "Invalid X-PAYMENT header" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid payment header" }, { status: 400 });
   }
 
   if (payload.scheme !== "escrow") {
@@ -111,8 +122,20 @@ export async function POST(
     );
   }
 
-  // Verify signature off-chain
-  const verification = await verifyEscrowPayment(payload);
+  // Verify signature via facilitator
+  const paymentRequired: EscrowPaymentRequired = {
+    scheme: "escrow",
+    network: "base-sepolia",
+    escrowContract: config.escrowVaultAddress,
+    asset: config.usdcAddress,
+    amount: payload.value,
+    orderId: payload.orderId,
+    sellerAddress: payload.sellerAddress,
+    releaseWindow: payload.releaseWindow,
+    serviceType: payload.serviceType,
+  };
+
+  const verification = await verifyViaFacilitator(payload, paymentRequired);
   if (!verification.valid) {
     return NextResponse.json(
       { error: "Payment verification failed", details: verification.error },
@@ -154,6 +177,7 @@ export async function POST(
     };
 
     const updatedOrder = getOrderById(order.id);
+    const encoded = Buffer.from(JSON.stringify(paymentResponse)).toString("base64");
 
     return NextResponse.json(
       {
@@ -170,7 +194,8 @@ export async function POST(
       {
         status: 200,
         headers: {
-          "X-PAYMENT-RESPONSE": Buffer.from(JSON.stringify(paymentResponse)).toString("base64"),
+          "PAYMENT-RESPONSE": encoded,
+          "X-PAYMENT-RESPONSE": encoded,
         },
       }
     );

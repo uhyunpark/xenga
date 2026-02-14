@@ -9,6 +9,7 @@ import { useInspector } from "@/lib/protocol-inspector/context";
 const NAV_ITEMS = [
   { href: "/marketplace", label: "Marketplace" },
   { href: "/agent", label: "Agent" },
+  { href: "/session", label: "Session" },
   { href: "/explorer", label: "Explorer" },
   { href: "/metrics", label: "Metrics" },
 ];

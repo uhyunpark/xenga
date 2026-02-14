@@ -1,9 +1,15 @@
 import type { Address, Hash } from "viem";
-import type { EscrowPaymentPayload, OnChainEscrow, Stats } from "@shared/types.js";
+import type { EscrowPaymentPayload, OnChainEscrow, OnChainSession, SessionPaymentPayload, Stats } from "@shared/types.js";
 
 export interface SettleResult {
   txHash: Hash;
   escrowId: number;
+}
+
+export interface SessionCreateResult {
+  txHash: Hash;
+  sessionId: number;
+  expiresAt: number;
 }
 
 export interface ChainAdapter {
@@ -16,5 +22,12 @@ export interface ChainAdapter {
   getSellerStats(seller: Address): Promise<Stats>;
   getServiceTypeStats(serviceType: string): Promise<Stats>;
   startEventListener(): void;
+
+  // Session micropayments
+  createSession(payload: SessionPaymentPayload): Promise<SessionCreateResult>;
+  captureSession(sessionId: number, amount: bigint): Promise<Hash>;
+  settleSession(sessionId: number, finalAmount: bigint): Promise<Hash>;
+  getSessionOnChain(sessionId: number): Promise<OnChainSession>;
+
   readonly isMock: boolean;
 }

@@ -8,7 +8,8 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import type { ChainAdapter } from "./types";
-import type { EscrowPaymentPayload, OnChainEscrow, Stats } from "@shared/types.js";
+import type { EscrowPaymentPayload, OnChainEscrow, OnChainSession, SessionPaymentPayload, Stats } from "@shared/types.js";
+import { SessionState } from "@shared/types.js";
 import { CHAIN, USDC_DECIMALS } from "@shared/constants.js";
 import { config } from "@server/config.js";
 import {
@@ -139,5 +140,35 @@ export class RealChainAdapter implements ChainAdapter {
 
   startEventListener(): void {
     realStartEventListener();
+  }
+
+  // ──────────── Session Methods ────────────
+  // Real on-chain session operations require a deployed SessionEscrow contract.
+  // For now these throw — enable when SessionEscrow is deployed and ABI is synced.
+
+  async createSession(
+    _payload: SessionPaymentPayload
+  ): Promise<{ txHash: Hash; sessionId: number; expiresAt: number }> {
+    throw new Error("SessionEscrow not yet deployed — use mock mode for sessions");
+  }
+
+  async captureSession(_sessionId: number, _amount: bigint): Promise<Hash> {
+    throw new Error("SessionEscrow not yet deployed — use mock mode for sessions");
+  }
+
+  async settleSession(_sessionId: number, _finalAmount: bigint): Promise<Hash> {
+    throw new Error("SessionEscrow not yet deployed — use mock mode for sessions");
+  }
+
+  async getSessionOnChain(_sessionId: number): Promise<OnChainSession> {
+    return {
+      buyer: "0x0000000000000000000000000000000000000000",
+      seller: "0x0000000000000000000000000000000000000000",
+      depositAmount: 0n,
+      capturedAmount: 0n,
+      createdAt: 0n,
+      expiresAt: 0n,
+      state: SessionState.None,
+    };
   }
 }

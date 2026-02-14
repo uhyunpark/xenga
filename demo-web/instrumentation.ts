@@ -6,11 +6,19 @@ export async function register() {
       const { registerServiceType } = await import(
         "@server/service-types/index.js"
       );
+      const { registerScheme } = await import("@shared/schemes.js");
       const { marketplaceServiceType } = await import(
         "@server/service-types/marketplace.js"
       );
       const { agentServiceType } = await import(
         "@server/service-types/agent-service.js"
+      );
+      const { escrowScheme } = await import("@server/schemes/escrow.js");
+      const { sessionEscrowScheme } = await import(
+        "@server/schemes/session-escrow.js"
+      );
+      const { sessionApiServiceType } = await import(
+        "@server/service-types/session-api.js"
       );
       const { getDb } = await import("@server/db/index.js");
       const { getChainAdapter, isMockChain } = await import("@/lib/chain");
@@ -28,6 +36,11 @@ export async function register() {
       // Register service types
       registerServiceType(marketplaceServiceType);
       registerServiceType(agentServiceType);
+      registerServiceType(sessionApiServiceType);
+
+      // Register payment schemes
+      registerScheme(escrowScheme);
+      registerScheme(sessionEscrowScheme);
 
       // Initialize DB
       getDb();

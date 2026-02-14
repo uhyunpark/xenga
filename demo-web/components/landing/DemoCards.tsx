@@ -38,6 +38,21 @@ const demos = [
     highlights: ["Auto-advancing run", "Signed authorization + on-chain settle"],
     color: "accent-purple",
   },
+  {
+    title: "Session Demo",
+    description:
+      "Authorize once, make multiple API calls without signing, then settle. Ideal for high-frequency micropayments.",
+    href: "/session",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+        <circle cx="12" cy="12" r="4" />
+      </svg>
+    ),
+    badge: "Micropayments",
+    highlights: ["1 signature for N requests", "Real-time balance tracking"],
+    color: "accent-green",
+  },
 ];
 
 export function DemoCards() {
@@ -46,7 +61,7 @@ export function DemoCards() {
 
   return (
     <section className="px-4 py-20" ref={ref}>
-      <div className="mx-auto max-w-4xl">
+      <div className="mx-auto max-w-6xl">
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -63,7 +78,7 @@ export function DemoCards() {
           Test interactive and autonomous escrow flows with real protocol events on Base Sepolia.
         </motion.p>
 
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-3">
           {demos.map((demo, i) => (
             <motion.div
               key={demo.title}
@@ -78,7 +93,9 @@ export function DemoCards() {
                       className={`rounded-lg p-2.5 ${
                         demo.color === "accent"
                           ? "bg-accent/10 text-accent"
-                          : "bg-accent-purple/10 text-accent-purple"
+                          : demo.color === "accent-green"
+                            ? "bg-success/10 text-success"
+                            : "bg-accent-purple/10 text-accent-purple"
                       }`}
                     >
                       {demo.icon}
@@ -87,7 +104,9 @@ export function DemoCards() {
                       className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
                         demo.color === "accent"
                           ? "bg-accent/10 text-accent"
-                          : "bg-accent-purple/10 text-accent-purple"
+                          : demo.color === "accent-green"
+                            ? "bg-success/10 text-success"
+                            : "bg-accent-purple/10 text-accent-purple"
                       }`}
                     >
                       {demo.badge}

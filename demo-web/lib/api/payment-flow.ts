@@ -39,7 +39,9 @@ export interface PaymentResponse {
 type EventEmitter = (event: Omit<InspectorEvent, "id" | "timestamp">) => void;
 
 /**
- * Step 1: Request payment — sends POST without X-PAYMENT, expects 402
+ * Step 1: Request payment — sends POST without payment header, expects 402
+ *
+ * Reads both standard (PAYMENT-REQUIRED) and legacy (X-PAYMENT-REQUIRED) headers.
  */
 export async function requestPayment(
   orderId: string,
@@ -60,35 +62,45 @@ export async function requestPayment(
     headers: { "Content-Type": "application/json" },
   });
 
-  const rawHeader = res.headers.get("X-PAYMENT-REQUIRED") || "";
+  // Prefer standard header, fallback to legacy
+  const rawHeader =
+    res.headers.get("PAYMENT-REQUIRED") ||
+    res.headers.get("X-PAYMENT-REQUIRED") ||
+    "";
 
   if (res.status === 402 && rawHeader) {
-    const decoded = JSON.parse(atob(rawHeader)) as PaymentRequired;
+    const decoded = JSON.parse(atob(rawHeader));
+    // Handle array format (x402 standard) or single object (legacy)
+    const paymentRequired: PaymentRequired = Array.isArray(decoded)
+      ? decoded.find((r: { scheme: string }) => r.scheme === "escrow")
+      : decoded;
 
     emit?.({
       type: "http_response",
       label: "402 Payment Required",
       data: {
         status: 402,
-        headers: { "X-PAYMENT-REQUIRED": rawHeader },
-        decoded,
+        headers: { "PAYMENT-REQUIRED": rawHeader },
+        decoded: paymentRequired,
       },
     });
 
-    return { paymentRequired: decoded, rawHeader };
+    return { paymentRequired, rawHeader };
   }
 
   // Already paid or error
   if (res.ok) {
     const data = await res.json();
-    const paymentResponseHeader = res.headers.get("X-PAYMENT-RESPONSE");
+    const paymentResponseHeader =
+      res.headers.get("PAYMENT-RESPONSE") ||
+      res.headers.get("X-PAYMENT-RESPONSE");
     if (paymentResponseHeader) {
       emit?.({
         type: "http_response",
         label: "200 Already Paid",
         data: {
           status: 200,
-          headers: { "X-PAYMENT-RESPONSE": paymentResponseHeader },
+          headers: { "PAYMENT-RESPONSE": paymentResponseHeader },
           body: data,
         },
       });
@@ -204,7 +216,9 @@ export async function signPayment(
 }
 
 /**
- * Step 3: Submit payment — retries with X-PAYMENT header
+ * Step 3: Submit payment — retries with PAYMENT-SIGNATURE header
+ *
+ * Sends both standard and legacy headers for backward compatibility.
  */
 export async function submitPayment(
   orderId: string,
@@ -221,7 +235,7 @@ export async function submitPayment(
       url: `/api/orders/${orderId}/pay`,
       headers: {
         "Content-Type": "application/json",
-        "X-PAYMENT": encoded,
+        "PAYMENT-SIGNATURE": encoded,
       },
     },
   });
@@ -230,12 +244,15 @@ export async function submitPayment(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "PAYMENT-SIGNATURE": encoded,
       "X-PAYMENT": encoded,
     },
   });
 
   const data = await res.json();
-  const paymentResponseHeader = res.headers.get("X-PAYMENT-RESPONSE");
+  const paymentResponseHeader =
+    res.headers.get("PAYMENT-RESPONSE") ||
+    res.headers.get("X-PAYMENT-RESPONSE");
 
   if (!res.ok) {
     emit?.({
@@ -257,7 +274,7 @@ export async function submitPayment(
     data: {
       status: 200,
       headers: paymentResponseHeader
-        ? { "X-PAYMENT-RESPONSE": paymentResponseHeader }
+        ? { "PAYMENT-RESPONSE": paymentResponseHeader }
         : {},
       decoded: paymentResponse,
       body: data,
