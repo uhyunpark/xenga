@@ -1,4 +1,21 @@
 /**
+ * Escrow parameters that can be dynamically adjusted based on reputation
+ */
+export interface EscrowParams {
+  releaseWindow: number;
+}
+
+/**
+ * Counterparty reputation data passed to adjustParams
+ */
+export interface CounterpartyReputation {
+  buyerScore: number;
+  sellerScore: number;
+  buyerConfidence: "low" | "medium" | "high";
+  sellerConfidence: "low" | "medium" | "high";
+}
+
+/**
  * ServiceType plugin interface
  * Each service type defines its escrow parameters and verification logic
  */
@@ -20,6 +37,12 @@ export interface ServiceType {
    * Returns true if the service/product was delivered successfully
    */
   verifyDelivery?(escrowId: number, orderId: string): Promise<boolean>;
+
+  /**
+   * Dynamically adjust escrow parameters based on counterparty reputation.
+   * Called during 402 response to tailor escrow terms.
+   */
+  adjustParams?(params: EscrowParams, reputation: CounterpartyReputation): EscrowParams;
 }
 
 // ──────────── Registry ────────────

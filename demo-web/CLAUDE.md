@@ -154,6 +154,8 @@ Scripted auto-advancing terminal UI that plays through the agent-service flow au
 | `/api/disputes/[id]` | POST | File a dispute on an order |
 | `/api/disputes/[id]/resolve` | POST | Arbiter resolves dispute (buyerPercentage) |
 | `/api/escrows/[escrowId]` | GET | Read on-chain escrow state |
+| `/api/reputation/[address]` | GET | Compute reputation score for any wallet address |
+| `/api/reputation/[address]/history` | GET | Reputation history (query: `?days=90&bucket=7`) |
 | `/api/demo/fund` | POST | Faucet — sends 10 USDC + 0.005 ETH (requires `DEMO_MODE=true`) |
 
 ## File Structure
@@ -165,13 +167,14 @@ demo-web/
     marketplace/page.tsx              # Interactive marketplace demo
     agent/page.tsx                    # Auto-advancing agent service demo
     explorer/page.tsx                 # Escrow explorer (on-chain lookup)
+    reputation/page.tsx               # Reputation lookup (trust scores)
     api/                              # Route Handlers (replace Express routes)
   components/
     landing/                          # Hero, ProtocolFlow, DemoCards, HowItWorks, etc.
     marketplace/                      # PaymentFlow, ProductGrid, StepTracker, SellerPanel
     agent/                            # AgentTerminal
     protocol-inspector/               # InspectorPanel + 4 tab components
-    ui/                               # Badge, AddressDisplay, TxLink, UsdcAmount, etc.
+    ui/                               # Badge, AddressDisplay, TxLink, UsdcAmount, ReputationBadge, etc.
     layout/                           # Navbar
   lib/
     api/payment-flow.ts               # 3-step x402 client flow with inspector hooks

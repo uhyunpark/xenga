@@ -22,3 +22,6 @@ contracts/lib/
 # IDE
 .vscode/
 .idea/
+
+# Planning
+PLAN.md

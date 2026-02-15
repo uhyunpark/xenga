@@ -340,6 +340,131 @@ export const escrowVaultAbi = [
   },
   {
     "type": "function",
+    "name": "getBuyerStats",
+    "inputs": [
+      {
+        "name": "buyer",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct EscrowVault.Stats",
+        "components": [
+          {
+            "name": "totalEscrows",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "totalAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "completedCount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "completedAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "disputedCount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "disputedAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "resolvedCount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "refundedCount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "refundedAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "buyerStats",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "totalEscrows",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "totalAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "completedCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "completedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "disputedCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "disputedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "resolvedCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "refundedCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "refundedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getSellerStats",
     "inputs": [
       {

@@ -70,6 +70,7 @@ contract EscrowVault is Ownable2Step, Pausable {
     }
 
     mapping(address => Stats) public sellerStats;
+    mapping(address => Stats) public buyerStats;
     mapping(string => Stats) public serviceStats;
 
     // ──────────────────────────── Events ───────────────────────────
@@ -212,6 +213,8 @@ contract EscrowVault is Ownable2Step, Pausable {
 
         sellerStats[seller].totalEscrows++;
         sellerStats[seller].totalAmount += amount;
+        buyerStats[buyer].totalEscrows++;
+        buyerStats[buyer].totalAmount += amount;
         serviceStats[serviceType].totalEscrows++;
         serviceStats[serviceType].totalAmount += amount;
 
@@ -244,6 +247,8 @@ contract EscrowVault is Ownable2Step, Pausable {
 
         sellerStats[e.seller].completedCount++;
         sellerStats[e.seller].completedAmount += e.amount;
+        buyerStats[e.buyer].completedCount++;
+        buyerStats[e.buyer].completedAmount += e.amount;
         serviceStats[e.serviceType].completedCount++;
         serviceStats[e.serviceType].completedAmount += e.amount;
 
@@ -283,6 +288,8 @@ contract EscrowVault is Ownable2Step, Pausable {
 
         sellerStats[e.seller].completedCount++;
         sellerStats[e.seller].completedAmount += e.amount;
+        buyerStats[e.buyer].completedCount++;
+        buyerStats[e.buyer].completedAmount += e.amount;
         serviceStats[e.serviceType].completedCount++;
         serviceStats[e.serviceType].completedAmount += e.amount;
 
@@ -319,6 +326,8 @@ contract EscrowVault is Ownable2Step, Pausable {
 
         sellerStats[e.seller].disputedCount++;
         sellerStats[e.seller].disputedAmount += e.amount;
+        buyerStats[e.buyer].disputedCount++;
+        buyerStats[e.buyer].disputedAmount += e.amount;
         serviceStats[e.serviceType].disputedCount++;
         serviceStats[e.serviceType].disputedAmount += e.amount;
 
@@ -340,6 +349,7 @@ contract EscrowVault is Ownable2Step, Pausable {
         e.state = EscrowState.Resolved;
 
         sellerStats[e.seller].resolvedCount++;
+        buyerStats[e.buyer].resolvedCount++;
         serviceStats[e.serviceType].resolvedCount++;
 
         uint256 buyerAmount = (e.amount * buyerPct) / 100;
@@ -369,6 +379,8 @@ contract EscrowVault is Ownable2Step, Pausable {
 
         sellerStats[e.seller].refundedCount++;
         sellerStats[e.seller].refundedAmount += e.amount;
+        buyerStats[e.buyer].refundedCount++;
+        buyerStats[e.buyer].refundedAmount += e.amount;
         serviceStats[e.serviceType].refundedCount++;
         serviceStats[e.serviceType].refundedAmount += e.amount;
 
@@ -415,6 +427,10 @@ contract EscrowVault is Ownable2Step, Pausable {
 
     function getSellerStats(address seller) external view returns (Stats memory) {
         return sellerStats[seller];
+    }
+
+    function getBuyerStats(address buyer) external view returns (Stats memory) {
+        return buyerStats[buyer];
     }
 
     function getServiceTypeStats(string calldata serviceType) external view returns (Stats memory) {

@@ -727,6 +727,114 @@ contract EscrowVaultTest is Test {
         assertEq(ss.totalAmount, AMOUNT + 10_000_000);
     }
 
+    // ──────────── Test: Buyer Stats tracking ────────────
+
+    function test_buyerStatsOnCreate() public {
+        _createStandardEscrow();
+
+        EscrowVault.Stats memory bs = vault.getBuyerStats(buyer);
+        assertEq(bs.totalEscrows, 1);
+        assertEq(bs.totalAmount, AMOUNT);
+        assertEq(bs.completedCount, 0);
+    }
+
+    function test_buyerStatsOnRelease() public {
+        uint256 escrowId = _createStandardEscrow();
+
+        vm.prank(buyer);
+        vault.releaseFunds(escrowId);
+
+        EscrowVault.Stats memory bs = vault.getBuyerStats(buyer);
+        assertEq(bs.completedCount, 1);
+        assertEq(bs.completedAmount, AMOUNT);
+    }
+
+    function test_buyerStatsOnAutoRelease() public {
+        vm.warp(1000);
+        vm.startPrank(buyer);
+        usdc.approve(address(vault), AMOUNT);
+        uint256 escrowId = vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW);
+        vm.stopPrank();
+
+        vm.warp(1000 + RELEASE_WINDOW + DISPUTE_WINDOW + 1);
+        vault.autoRelease(escrowId);
+
+        EscrowVault.Stats memory bs = vault.getBuyerStats(buyer);
+        assertEq(bs.completedCount, 1);
+        assertEq(bs.completedAmount, AMOUNT);
+    }
+
+    function test_buyerStatsOnDispute() public {
+        uint256 escrowId = _createStandardEscrow();
+
+        vm.prank(seller);
+        vault.confirmDelivery(escrowId);
+
+        vm.prank(buyer);
+        vault.dispute(escrowId);
+
+        EscrowVault.Stats memory bs = vault.getBuyerStats(buyer);
+        assertEq(bs.disputedCount, 1);
+        assertEq(bs.disputedAmount, AMOUNT);
+    }
+
+    function test_buyerStatsOnResolve() public {
+        uint256 escrowId = _createStandardEscrow();
+
+        vm.prank(seller);
+        vault.confirmDelivery(escrowId);
+
+        vm.prank(buyer);
+        vault.dispute(escrowId);
+
+        vm.prank(arbiter);
+        vault.resolveDispute(escrowId, 50);
+
+        EscrowVault.Stats memory bs = vault.getBuyerStats(buyer);
+        assertEq(bs.resolvedCount, 1);
+    }
+
+    function test_buyerStatsOnRefund() public {
+        uint256 escrowId = _createStandardEscrow();
+
+        vm.prank(seller);
+        vault.refund(escrowId);
+
+        EscrowVault.Stats memory bs = vault.getBuyerStats(buyer);
+        assertEq(bs.refundedCount, 1);
+        assertEq(bs.refundedAmount, AMOUNT);
+    }
+
+    function test_buyerStatsMultipleEscrows() public {
+        _createStandardEscrow();
+
+        usdc.mint(buyer, 100_000_000);
+        vm.startPrank(buyer);
+        usdc.approve(address(vault), 10_000_000);
+        vault.createEscrow(keccak256("order-2"), seller, 10_000_000, "marketplace", RELEASE_WINDOW);
+        vm.stopPrank();
+
+        EscrowVault.Stats memory bs = vault.getBuyerStats(buyer);
+        assertEq(bs.totalEscrows, 2);
+        assertEq(bs.totalAmount, AMOUNT + 10_000_000);
+    }
+
+    function test_getBuyerStats() public {
+        uint256 escrowId = _createStandardEscrow();
+
+        // Release to get completed stats
+        vm.prank(buyer);
+        vault.releaseFunds(escrowId);
+
+        EscrowVault.Stats memory bs = vault.getBuyerStats(buyer);
+        assertEq(bs.totalEscrows, 1);
+        assertEq(bs.totalAmount, AMOUNT);
+        assertEq(bs.completedCount, 1);
+        assertEq(bs.completedAmount, AMOUNT);
+        assertEq(bs.disputedCount, 0);
+        assertEq(bs.refundedCount, 0);
+    }
+
     // ──────────── Test: Fuzz ────────────
 
     function testFuzz_createEscrow(uint256 amount) public {

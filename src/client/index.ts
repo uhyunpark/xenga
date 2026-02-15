@@ -7,7 +7,7 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { CHAIN } from "../shared/constants.js";
-import type { EscrowPaymentResponse, Order } from "../shared/types.js";
+import type { EscrowPaymentResponse, Order, ReputationScore } from "../shared/types.js";
 import { escrowVaultAbi } from "../shared/abi.js";
 import { escrowFetch } from "./escrowFetch.js";
 
@@ -156,6 +156,18 @@ export function createEscrowClient(config: EscrowClientConfig) {
         args: [BigInt(escrowId)],
       });
       return txHash;
+    },
+
+    /**
+     * Get reputation score for any address
+     */
+    async getReputation(address: Address): Promise<ReputationScore> {
+      const response = await fetch(`${baseUrl}/api/reputation/${address}`);
+      const body = (await response.json()) as any;
+      if (!response.ok) {
+        throw new Error(body.error ?? response.statusText);
+      }
+      return body;
     },
   };
 }

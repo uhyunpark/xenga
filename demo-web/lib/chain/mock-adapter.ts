@@ -1,6 +1,6 @@
 import type { Address, Hash } from "viem";
 import type { ChainAdapter } from "./types";
-import type { EscrowPaymentPayload, Stats } from "@shared/types.js";
+import type { EscrowPaymentPayload, OnChainSession, SessionPaymentPayload, Stats } from "@shared/types.js";
 import { EscrowState } from "@shared/types.js";
 import { MARKETPLACE_DISPUTE_WINDOW } from "@shared/constants.js";
 import { getServiceType } from "@server/service-types/index.js";
@@ -14,6 +14,12 @@ import {
   updateMockEscrowState,
   isMockReleasable,
 } from "./mock-escrow-store";
+import {
+  createMockSession,
+  getMockSession,
+  captureMockSession,
+  settleMockSession,
+} from "./mock-session-store";
 import { fakeTxHash } from "./mock-utils";
 
 export class MockChainAdapter implements ChainAdapter {
@@ -97,6 +103,39 @@ export class MockChainAdapter implements ChainAdapter {
 
   startEventListener(): void {
     console.log("[MockChain] Event listener skipped (mock mode)");
+  }
+
+  // ──────────── Session Methods ────────────
+
+  async createSession(
+    payload: SessionPaymentPayload
+  ): Promise<{ txHash: Hash; sessionId: number; expiresAt: number }> {
+    const sessionId = createMockSession({
+      buyer: payload.from,
+      seller: payload.sellerAddress,
+      depositAmount: payload.value,
+      duration: payload.duration,
+    });
+
+    const txHash = fakeTxHash();
+    const expiresAt = Math.floor(Date.now() / 1000) + payload.duration;
+
+    console.log(`[MockChain] Created session ${sessionId} for ${payload.from}`);
+    return { txHash, sessionId, expiresAt };
+  }
+
+  async captureSession(sessionId: number, amount: bigint): Promise<Hash> {
+    captureMockSession(sessionId, amount);
+    return fakeTxHash();
+  }
+
+  async settleSession(sessionId: number, finalAmount: bigint): Promise<Hash> {
+    settleMockSession(sessionId, finalAmount);
+    return fakeTxHash();
+  }
+
+  async getSessionOnChain(sessionId: number): Promise<OnChainSession> {
+    return getMockSession(sessionId);
   }
 }
 

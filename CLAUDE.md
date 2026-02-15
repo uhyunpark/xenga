@@ -31,10 +31,10 @@ x402 escrow payment system on Base Sepolia using USDC (ERC-3009 gasless transfer
 **Four layers:**
 - **`contracts/`** — Foundry project: EscrowVault (escrow state machine), AutoReleaseKeeper (Chainlink automation), MockUSDC (test token)
 - **`src/server/`** — Express server: x402 middleware intercepts requests, returns 402 with payment requirements, verifies EIP-712 signatures, settles on-chain
-- **`src/client/`** — SDK: `escrowFetch` wraps fetch to handle the 402 flow automatically, `escrowScheme` handles EIP-712 ReceiveWithAuthorization signing
+- **`src/client/`** — SDK: `escrowFetch` wraps fetch to handle the 402 flow automatically (with optional `onSellerReputation` callback), `escrowScheme` handles EIP-712 ReceiveWithAuthorization signing, `createEscrowClient` includes `getReputation()`
 - **`demo-web/`** — Next.js 15 App Router demo: interactive webpage showcasing the x402 escrow flow with Protocol Inspector
 
-**Shared code** (`src/shared/`): types, constants, EIP-712 domain/types, and auto-generated ABIs (`abi.ts` — never edit manually, use `sync-abi`).
+**Shared code** (`src/shared/`): types, constants, EIP-712 domain/types, and auto-generated ABIs (`abi.ts` — never edit manually, use `sync-abi`). Note: `getBuyerStats`/`buyerStats` ABI entries were manually added pending a `sync-abi` run after contract redeployment.
 
 ### x402 Payment Flow
 
@@ -50,6 +50,29 @@ x402 escrow payment system on Base Sepolia using USDC (ERC-3009 gasless transfer
 Service types (`src/server/service-types/`) define escrow parameters per use case:
 - **marketplace**: 7-day release window, manual delivery confirmation
 - **agent-service**: 1-hour release window, auto-verify delivery
+
+Each service type can implement `adjustParams(params, reputation)` to dynamically adjust escrow parameters (e.g. release window) based on counterparty reputation scores.
+
+### Reputation System
+
+On-chain credit scoring for agents/wallets, computed from escrow transaction history. The facilitator tracks both `sellerStats` and `buyerStats` on-chain (in `EscrowVault.sol`), and the server computes weighted reputation scores from this data.
+
+**Architecture:**
+- **On-chain**: `buyerStats[address]` and `sellerStats[address]` mappings in EscrowVault track totalEscrows, completedCount, disputedCount, refundedCount, resolvedCount, and amounts. Raw data is permissionless — anyone can read and compute their own scores.
+- **Off-chain**: `reputationService.ts` computes weighted scores (0-100) with confidence levels, cached 60s in-memory.
+- **Dynamic params**: Service types use `adjustParams()` to shorten/extend release windows based on counterparty reputation (e.g. high-trust pairs get 3-day instead of 7-day marketplace window).
+- **402 integration**: Seller reputation is included in 402 response body; clients can check via `onSellerReputation` callback before paying.
+
+**Scoring formulas:**
+- Seller: completionRate×40 + (1-disputeRate)×25 + (1-refundRate)×15 + resolutionFairness×10 + volumeBonus×10
+- Buyer: completionRate×45 + (1-disputeRate)×25 + (1-frivolousDisputeRate)×20 + volumeBonus×10
+- Confidence: `"low"` (<3 escrows), `"medium"` (3-9), `"high"` (≥10)
+
+**Key files:**
+- `contracts/src/EscrowVault.sol` — `buyerStats` mapping + `getBuyerStats()` view
+- `src/server/services/reputationService.ts` — `computeReputation()`, `computeReputationHistory()`
+- `src/server/routes/reputation.ts` — `GET /api/reputation/:address`, `GET /api/reputation/:address/history`
+- `src/shared/types.ts` — `ReputationScore`, `SellerReputation`, `BuyerReputation`
 
 ### Escrow Lifecycle (On-Chain)
 
@@ -72,6 +95,7 @@ demo-web/
     marketplace/page.tsx     # Interactive marketplace demo
     agent/page.tsx           # Auto-advancing agent service demo
     explorer/page.tsx        # Escrow explorer (on-chain lookup)
+    reputation/page.tsx      # Reputation lookup (trust scores from escrow history)
     api/                     # Route Handlers (replace Express routes)
       health/                # GET — server status
       orders/                # GET/POST orders
@@ -79,13 +103,14 @@ demo-web/
       orders/[id]/confirm-delivery/  # POST — demo delivery confirmation
       disputes/              # POST dispute, POST resolve
       escrows/[escrowId]/    # GET on-chain state
+      reputation/[address]/  # GET reputation score + GET history
       demo/fund/             # POST — faucet for demo wallets
   components/
     landing/                 # Hero, ProtocolFlow, DemoCards, HowItWorks, ComparisonTable, DevSection, Footer
     marketplace/             # PaymentFlow, ProductGrid, StepTracker, SellerPanel
     agent/                   # AgentTerminal
     protocol-inspector/      # InspectorPanel + 4 tab components
-    ui/                      # Badge, AddressDisplay, TxLink, UsdcAmount, JsonViewer, WalletSelector
+    ui/                      # Badge, AddressDisplay, TxLink, UsdcAmount, JsonViewer, WalletSelector, ReputationBadge
     layout/                  # Navbar
   lib/
     wallet/WalletProvider.tsx     # Demo wallet (sessionStorage) + browser wallet (MetaMask)

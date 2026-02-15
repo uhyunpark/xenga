@@ -15,7 +15,8 @@ import { config } from "../config.js";
  * Recovers the signer and validates it matches the `from` field
  */
 export async function verifyEscrowPayment(
-  payload: EscrowPaymentPayload
+  payload: EscrowPaymentPayload,
+  expectedTo?: Address
 ): Promise<{ valid: boolean; error?: string }> {
   try {
     // Reconstruct the EIP-712 message
@@ -28,9 +29,10 @@ export async function verifyEscrowPayment(
       nonce: payload.nonce,
     };
 
-    // Verify the to address is the escrow contract
+    // Verify the to address is the expected contract
+    const targetAddress = expectedTo ?? config.escrowVaultAddress;
     if (
-      payload.to.toLowerCase() !== config.escrowVaultAddress.toLowerCase()
+      payload.to.toLowerCase() !== targetAddress.toLowerCase()
     ) {
       return { valid: false, error: "Invalid escrow contract address" };
     }
