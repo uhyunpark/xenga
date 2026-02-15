@@ -1,14 +1,33 @@
 import "dotenv/config";
 import type { Address, Hex } from "viem";
+import { isAddress } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { DEFAULT_RPC, USDC_ADDRESS } from "../shared/constants.js";
+
+// Deterministic placeholder address for mock mode (no real chain interaction)
+const MOCK_ESCROW_VAULT_ADDRESS =
+  "0x1111111111111111111111111111111111111111" as Address;
+
+function resolveAddress(
+  envValue: string | undefined,
+  fallback: Address | undefined
+): Address {
+  if (envValue && isAddress(envValue)) return envValue;
+  if (fallback) return fallback;
+  return envValue as Address; // may be invalid; caught by validateConfig()
+}
+
+const isMock = process.env.MOCK_CHAIN === "true";
 
 export const config = {
   port: parseInt(process.env.PORT || "3000", 10),
   privateKey: process.env.PRIVATE_KEY as Hex,
   rpcUrl: process.env.BASE_SEPOLIA_RPC || DEFAULT_RPC,
-  usdcAddress: (process.env.USDC_ADDRESS || USDC_ADDRESS) as Address,
-  escrowVaultAddress: process.env.ESCROW_VAULT_ADDRESS as Address,
+  usdcAddress: resolveAddress(process.env.USDC_ADDRESS, USDC_ADDRESS as Address),
+  escrowVaultAddress: resolveAddress(
+    process.env.ESCROW_VAULT_ADDRESS,
+    isMock ? MOCK_ESCROW_VAULT_ADDRESS : undefined
+  ),
   sessionEscrowAddress: process.env.SESSION_ESCROW_ADDRESS as Address | undefined,
   facilitatorUrl: process.env.FACILITATOR_URL as string | undefined,
 };
@@ -22,6 +41,18 @@ export function validateConfig() {
   }
   if (!config.escrowVaultAddress) {
     throw new Error("ESCROW_VAULT_ADDRESS is required in .env");
+  }
+  if (!isAddress(config.escrowVaultAddress)) {
+    throw new Error(
+      `ESCROW_VAULT_ADDRESS "${config.escrowVaultAddress}" is not a valid Ethereum address. ` +
+      `Address must be a hex value of 20 bytes (40 hex characters), e.g. 0x1234...abcd`
+    );
+  }
+  if (!isAddress(config.usdcAddress)) {
+    throw new Error(
+      `USDC_ADDRESS "${config.usdcAddress}" is not a valid Ethereum address. ` +
+      `Address must be a hex value of 20 bytes (40 hex characters), e.g. 0x1234...abcd`
+    );
   }
 }
 
