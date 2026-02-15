@@ -17,6 +17,9 @@ import facilitatorRouter from "./routes/facilitator.js";
 import sessionsRouter from "./routes/sessions.js";
 import reputationRouter from "./routes/reputation.js";
 import { startEventListener } from "./services/eventListener.js";
+import { rateLimit } from "./middleware/rateLimit.js";
+import { logger } from "./services/logger.js";
+import { startWalletMonitor, getLastWalletStatus } from "./services/walletMonitor.js";
 
 // ──────────── Bootstrap ────────────
 
@@ -48,14 +51,28 @@ app.use((_req, res, next) => {
   next();
 });
 
+// ──────────── Rate Limiting ────────────
+
+const paymentLimiter = rateLimit({ windowMs: 60_000, max: 20, message: "Too many payment requests" });
+const reputationLimiter = rateLimit({ windowMs: 60_000, max: 30, message: "Too many reputation lookups" });
+const disputeLimiter = rateLimit({ windowMs: 60_000, max: 10, message: "Too many dispute requests" });
+const generalLimiter = rateLimit({ windowMs: 60_000, max: 60 });
+
 // ──────────── Routes ────────────
 
 app.get("/health", (_req, res) => {
+  const walletStatus = getLastWalletStatus();
   res.json({
-    status: "ok",
+    status: walletStatus?.isLow ? "degraded" : "ok",
     chain: "base-sepolia",
     escrowContract: config.escrowVaultAddress,
     sessionContract: config.sessionEscrowAddress ?? null,
+    operator: walletStatus ? {
+      address: walletStatus.address,
+      ethBalance: walletStatus.ethBalance,
+      isLow: walletStatus.isLow,
+      checkedAt: walletStatus.checkedAt,
+    } : undefined,
     serviceTypes: getAllServiceTypes().map((st) => ({
       name: st.name,
       releaseWindow: st.releaseWindow,
@@ -65,52 +82,34 @@ app.get("/health", (_req, res) => {
   });
 });
 
-app.use("/api/orders", ordersRouter);
-app.use("/api/disputes", disputesRouter);
-app.use("/api/escrows", escrowsRouter);
-app.use("/api/metrics", metricsRouter);
-app.use("/facilitator", facilitatorRouter);
-app.use("/api/sessions", sessionsRouter);
-app.use("/api/reputation", reputationRouter);
+app.use("/api/orders", paymentLimiter, ordersRouter);
+app.use("/api/disputes", disputeLimiter, disputesRouter);
+app.use("/api/escrows", generalLimiter, escrowsRouter);
+app.use("/api/metrics", generalLimiter, metricsRouter);
+app.use("/facilitator", paymentLimiter, facilitatorRouter);
+app.use("/api/sessions", paymentLimiter, sessionsRouter);
+app.use("/api/reputation", reputationLimiter, reputationRouter);
 
 // ──────────── Start ────────────
 
 const server = app.listen(config.port, () => {
-  console.log(`
-  x402 Escrow Server running on http://localhost:${config.port}
-
-  Escrow Contract:  ${config.escrowVaultAddress}
-  Session Contract: ${config.sessionEscrowAddress ?? "not configured"}
-  USDC:             ${config.usdcAddress}
-  Chain:            Base Sepolia (84532)
-  Facilitator:      ${config.facilitatorUrl ?? "internal"}
-
-  Endpoints:
-    GET  /health
-    GET  /api/orders
-    POST /api/orders
-    POST /api/orders/:id/pay          (x402 escrow flow)
-    POST /api/disputes/:orderId/dispute
-    GET  /api/disputes
-    POST /api/disputes/:disputeId/resolve  (auth required)
-    GET  /api/escrows/:escrowId
-    GET  /api/metrics/disputes
-    POST /facilitator/verify
-    POST /facilitator/settle
-    POST /api/sessions/use            (session micropayment)
-    GET  /api/sessions/:sessionId
-    POST /api/sessions/:sessionId/settle
-    GET  /api/reputation/:address
-    GET  /api/reputation/:address/history
-  `);
+  logger.info("server", `x402 Escrow Server running on http://localhost:${config.port}`);
+  logger.info("server", `Escrow Contract: ${config.escrowVaultAddress}`);
+  logger.info("server", `USDC: ${config.usdcAddress} | Chain: Base Sepolia (84532)`);
+  if (config.sessionEscrowAddress) {
+    logger.info("server", `Session Contract: ${config.sessionEscrowAddress}`);
+  }
 });
 
 // Start event listener for on-chain events
 startEventListener();
 
+// Start operator wallet balance monitor
+startWalletMonitor();
+
 // Graceful shutdown
 process.on("SIGINT", () => {
-  console.log("\nShutting down...");
+  logger.info("server", "Shutting down...");
   server.close();
   closeDb();
   process.exit(0);

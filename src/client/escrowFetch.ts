@@ -5,6 +5,31 @@ import type {
 } from "../shared/types.js";
 import { signEscrowPayment } from "./escrowScheme.js";
 
+// Universal base64 helpers (works in Node.js, browsers, and Bun)
+function encodeBase64(str: string): string {
+  if (typeof Buffer !== "undefined") {
+    return Buffer.from(str, "utf-8").toString("base64");
+  }
+  const bytes = new TextEncoder().encode(str);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+function decodeBase64(b64: string): string {
+  if (typeof Buffer !== "undefined") {
+    return Buffer.from(b64, "base64").toString("utf-8");
+  }
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new TextDecoder().decode(bytes);
+}
+
 interface SellerReputationInfo {
   score: number;
   confidence: string;
@@ -51,9 +76,7 @@ export async function escrowFetch(
   let paymentRequired: EscrowPaymentRequired;
 
   if (paymentRequiredHeader) {
-    const decoded = JSON.parse(
-      Buffer.from(paymentRequiredHeader, "base64").toString("utf-8")
-    );
+    const decoded = JSON.parse(decodeBase64(paymentRequiredHeader));
     // Handle array format (x402 standard) or single object (legacy)
     paymentRequired = Array.isArray(decoded)
       ? decoded.find((r: { scheme: string }) => r.scheme === "escrow")
@@ -107,9 +130,7 @@ export async function escrowFetch(
   console.log(`[x402] Signed receiveWithAuthorization from ${payload.from}`);
 
   // Retry with payment (send both standard and legacy headers)
-  const paymentHeader = Buffer.from(JSON.stringify(payload)).toString(
-    "base64"
-  );
+  const paymentHeader = encodeBase64(JSON.stringify(payload));
 
   const retryResponse = await fetch(url, {
     ...init,
@@ -127,9 +148,7 @@ export async function escrowFetch(
     retryResponse.headers.get("payment-response") ??
     retryResponse.headers.get("x-payment-response");
   if (paymentResponseHeader) {
-    payment = JSON.parse(
-      Buffer.from(paymentResponseHeader, "base64").toString("utf-8")
-    );
+    payment = JSON.parse(decodeBase64(paymentResponseHeader));
   }
 
   return { response: retryResponse, payment };

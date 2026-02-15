@@ -4,6 +4,7 @@ import {
   computeReputation,
   computeReputationHistory,
 } from "../services/reputationService.js";
+import { logger } from "../services/logger.js";
 
 const router = Router();
 
@@ -21,7 +22,7 @@ router.get("/:address", async (req, res) => {
     const reputation = await computeReputation(address as Address);
     res.json(reputation);
   } catch (err: any) {
-    console.error("[reputation] Error:", err.message);
+    logger.error("reputation", `Error computing reputation: ${err.message}`);
     res.status(500).json({ error: "Failed to compute reputation" });
   }
 });
@@ -50,7 +51,7 @@ router.get("/:address/history", async (req, res) => {
     const history = computeReputationHistory(address, days, bucket);
     res.json({ address, days, bucket, history });
   } catch (err: any) {
-    console.error("[reputation] History error:", err.message);
+    logger.error("reputation", `History computation error: ${err.message}`);
     res.status(500).json({ error: "Failed to compute reputation history" });
   }
 });

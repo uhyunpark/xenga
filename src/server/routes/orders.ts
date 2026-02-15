@@ -15,7 +15,7 @@ const VALID_STATUSES: OrderStatus[] = ["created", "pending_payment", "escrowed",
 
 // ──────────── List orders ────────────
 router.get("/", (req, res) => {
-  const filters: { status?: OrderStatus; sellerAddress?: Address } = {};
+  const filters: { status?: OrderStatus; sellerAddress?: Address; limit?: number; offset?: number } = {};
   if (req.query.status) {
     const status = req.query.status as string;
     if (!VALID_STATUSES.includes(status as OrderStatus)) {
@@ -25,15 +25,24 @@ router.get("/", (req, res) => {
   }
   if (req.query.seller)
     filters.sellerAddress = req.query.seller as Address;
+  if (req.query.limit)
+    filters.limit = parseInt(req.query.limit as string, 10);
+  if (req.query.offset)
+    filters.offset = parseInt(req.query.offset as string, 10);
 
-  const orders = listOrders(filters);
-  res.json(
-    orders.map((o) => ({
+  const result = listOrders(filters);
+  res.json({
+    orders: result.orders.map((o) => ({
       ...o,
       price: o.price.toString(),
       priceUsdc: Number(o.price) / 10 ** USDC_DECIMALS,
-    }))
-  );
+    })),
+    pagination: {
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+    },
+  });
 });
 
 // ──────────── Get order ────────────

@@ -326,6 +326,14 @@ contract EscrowVaultTest is Test {
         vm.stopPrank();
     }
 
+    function test_cannotCreateWithReleaseWindowTooShort() public {
+        vm.startPrank(buyer);
+        usdc.approve(address(vault), AMOUNT);
+        vm.expectRevert(EscrowVault.ReleaseWindowTooShort.selector);
+        vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", 1 hours);
+        vm.stopPrank();
+    }
+
     function test_disputeAfterWindowExpired() public {
         uint256 escrowId = _createStandardEscrow();
 
@@ -457,7 +465,7 @@ contract EscrowVaultTest is Test {
         usdc.mint(buyer, 100_000_000);
         vm.startPrank(buyer);
         usdc.approve(address(vault), 10_000_000);
-        uint256 id2 = vault.createEscrow(keccak256("order-2"), seller, 10_000_000, "agent-service", 1 hours);
+        uint256 id2 = vault.createEscrow(keccak256("order-2"), seller, 10_000_000, "agent-service", 3 days);
         vm.stopPrank();
 
         assertEq(id1, 1);
@@ -467,7 +475,7 @@ contract EscrowVaultTest is Test {
         EscrowVault.Escrow memory e2 = vault.getEscrow(id2);
 
         assertEq(e1.releaseWindow, RELEASE_WINDOW);
-        assertEq(e2.releaseWindow, 1 hours);
+        assertEq(e2.releaseWindow, 3 days);
     }
 
     // ──────────── Test: Buyer cannot equal seller ────────────
@@ -710,7 +718,7 @@ contract EscrowVaultTest is Test {
         usdc.mint(buyer, 100_000_000);
         vm.startPrank(buyer);
         usdc.approve(address(vault), 10_000_000);
-        vault.createEscrow(keccak256("order-2"), seller, 10_000_000, "agent-service", 1 hours);
+        vault.createEscrow(keccak256("order-2"), seller, 10_000_000, "agent-service", 3 days);
         vm.stopPrank();
 
         EscrowVault.Stats memory mp = vault.getServiceTypeStats("marketplace");

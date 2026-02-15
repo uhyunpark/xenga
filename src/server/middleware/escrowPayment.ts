@@ -12,6 +12,7 @@ import { getDb } from "../db/index.js";
 import { getServiceType } from "../service-types/index.js";
 import { verifyViaFacilitator, settleViaFacilitator } from "../facilitator/dispatch.js";
 import { computeReputation } from "../services/reputationService.js";
+import { logger } from "../services/logger.js";
 import type { Address } from "viem";
 
 export interface EscrowPaymentRequest extends Request {
@@ -101,7 +102,7 @@ export function escrowPaymentMiddleware() {
           releaseWindow = adjusted.releaseWindow;
         } catch (err) {
           // Reputation lookup failed — use defaults
-          console.warn("[EscrowPayment] Reputation lookup failed, using default params:", err);
+          logger.warn("payment", "Reputation lookup failed, using default params");
         }
       }
 
@@ -206,9 +207,10 @@ export function escrowPaymentMiddleware() {
       computeReputation(payload.from as Address)
         .then((buyerRep) => {
           if (buyerRep.buyer && buyerRep.buyer.score < 20 && buyerRep.confidence !== "low") {
-            console.warn(
-              `[Reputation] Low-reputation buyer ${payload.from}: score=${buyerRep.buyer.score}, disputeRate=${buyerRep.buyer.disputeRate}`
-            );
+            logger.warn("reputation", `Low-reputation buyer ${payload.from}`, {
+              score: buyerRep.buyer.score,
+              disputeRate: buyerRep.buyer.disputeRate,
+            });
           }
         })
         .catch(() => {}); // ignore reputation errors
@@ -218,7 +220,7 @@ export function escrowPaymentMiddleware() {
       (req as EscrowPaymentRequest).order = getOrderById(order.id) ?? undefined;
       next();
     } catch (err) {
-      console.error("[EscrowPayment] Settlement failed:", err);
+      logger.error("payment", `Settlement failed for order ${order.id}: ${(err as Error).message}`);
       // Revert status on failure
       db.prepare("UPDATE orders SET status = 'created', updated_at = ? WHERE id = ?")
         .run(Math.floor(Date.now() / 1000), order.id);

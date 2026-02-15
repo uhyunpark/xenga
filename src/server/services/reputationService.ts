@@ -62,16 +62,47 @@ export async function getOnChainSellerStats(
   return toStats(result);
 }
 
-// ──────────────────────── Cache ────────────────────────
+// ──────────────────────── LRU Cache ────────────────────────
 
 const CACHE_TTL_MS = 60_000;
 const MAX_CACHE_SIZE = 1000;
-const cache = new Map<
-  string,
-  { data: ReputationScore; expiresAt: number }
->();
 
-// Periodic cache cleanup every 5 minutes
+interface CacheEntry {
+  data: ReputationScore;
+  expiresAt: number;
+}
+
+/**
+ * LRU cache: Map preserves insertion order; on access, we delete and re-insert
+ * to move the entry to the end (most recently used). Eviction removes from the front.
+ */
+const cache = new Map<string, CacheEntry>();
+
+function cacheGet(key: string): CacheEntry | undefined {
+  const entry = cache.get(key);
+  if (!entry) return undefined;
+  if (entry.expiresAt <= Date.now()) {
+    cache.delete(key);
+    return undefined;
+  }
+  // Move to end (LRU: most recently used)
+  cache.delete(key);
+  cache.set(key, entry);
+  return entry;
+}
+
+function cacheSet(key: string, entry: CacheEntry) {
+  // If key already exists, delete first to refresh position
+  cache.delete(key);
+  // Evict least recently used (first entry) if at capacity
+  if (cache.size >= MAX_CACHE_SIZE) {
+    const lruKey = cache.keys().next().value;
+    if (lruKey) cache.delete(lruKey);
+  }
+  cache.set(key, entry);
+}
+
+// Periodic expired-entry cleanup every 5 minutes
 setInterval(() => {
   const now = Date.now();
   for (const [key, entry] of cache) {
@@ -208,8 +239,8 @@ export async function computeReputation(
   address: Address
 ): Promise<ReputationScore> {
   const cacheKey = address.toLowerCase();
-  const cached = cache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now()) {
+  const cached = cacheGet(cacheKey);
+  if (cached) {
     return cached.data;
   }
 
@@ -285,13 +316,7 @@ export async function computeReputation(
     updatedAt: Math.floor(Date.now() / 1000),
   };
 
-  // Evict oldest entry if cache is at capacity
-  if (cache.size >= MAX_CACHE_SIZE) {
-    const firstKey = cache.keys().next().value;
-    if (firstKey) cache.delete(firstKey);
-  }
-
-  cache.set(cacheKey, {
+  cacheSet(cacheKey, {
     data: result,
     expiresAt: Date.now() + CACHE_TTL_MS,
   });
