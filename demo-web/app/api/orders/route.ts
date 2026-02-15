@@ -20,7 +20,10 @@ export async function GET(request: Request) {
   const status = searchParams.get("status");
   const seller = searchParams.get("seller");
 
-  const filters: { status?: OrderStatus; sellerAddress?: Address } = {};
+  const limit = searchParams.get("limit");
+  const offset = searchParams.get("offset");
+
+  const filters: { status?: OrderStatus; sellerAddress?: Address; limit?: number; offset?: number } = {};
 
   if (status) {
     if (!VALID_STATUSES.includes(status as OrderStatus)) {
@@ -34,15 +37,22 @@ export async function GET(request: Request) {
   if (seller) {
     filters.sellerAddress = seller as Address;
   }
+  if (limit) filters.limit = parseInt(limit, 10);
+  if (offset) filters.offset = parseInt(offset, 10);
 
-  const orders = listOrders(filters);
-  return NextResponse.json(
-    orders.map((o) => ({
+  const result = listOrders(filters);
+  return NextResponse.json({
+    orders: result.orders.map((o) => ({
       ...o,
       price: o.price.toString(),
       priceUsdc: Number(o.price) / 10 ** USDC_DECIMALS,
-    }))
-  );
+    })),
+    pagination: {
+      total: result.total,
+      limit: result.limit,
+      offset: result.offset,
+    },
+  });
 }
 
 export async function POST(request: Request) {

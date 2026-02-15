@@ -63,25 +63,43 @@ export function getOrderByOrderId(orderId: Hash): Order | undefined {
   return row ? toOrder(row) : undefined;
 }
 
+export interface ListOrdersResult {
+  orders: Order[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export function listOrders(filters?: {
   status?: OrderStatus;
   sellerAddress?: Address;
-}): Order[] {
+  limit?: number;
+  offset?: number;
+}): ListOrdersResult {
   const db = getDb();
-  let sql = "SELECT * FROM orders WHERE 1=1";
+  const limit = Math.min(Math.max(filters?.limit ?? 50, 1), 200);
+  const offset = Math.max(filters?.offset ?? 0, 0);
+
+  let whereSql = "WHERE 1=1";
   const params: any[] = [];
 
   if (filters?.status) {
-    sql += " AND status = ?";
+    whereSql += " AND status = ?";
     params.push(filters.status);
   }
   if (filters?.sellerAddress) {
-    sql += " AND seller_address = ?";
+    whereSql += " AND seller_address = ?";
     params.push(filters.sellerAddress);
   }
 
-  sql += " ORDER BY created_at DESC";
-  return db.prepare(sql).all(...params).map(toOrder);
+  const countRow = db.prepare(`SELECT COUNT(*) as total FROM orders ${whereSql}`).get(...params) as { total: number };
+
+  const orders = db
+    .prepare(`SELECT * FROM orders ${whereSql} ORDER BY created_at DESC LIMIT ? OFFSET ?`)
+    .all(...params, limit, offset)
+    .map(toOrder);
+
+  return { orders, total: countRow.total, limit, offset };
 }
 
 export function updateOrderStatus(

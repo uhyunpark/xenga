@@ -105,6 +105,7 @@ contract EscrowVault is Ownable2Step, Pausable {
     error DisputeWindowActive();
     error DisputeWindowNotStarted();
     error InvalidPercentage();
+    error ReleaseWindowTooShort();
 
     // ──────────────────────────── Constructor ──────────────────────
 
@@ -195,6 +196,7 @@ contract EscrowVault is Ownable2Step, Pausable {
         uint256 releaseWindow
     ) internal returns (uint256 escrowId) {
         if (buyer == seller) revert InvalidAddress();
+        if (releaseWindow < DEFAULT_DISPUTE_WINDOW) revert ReleaseWindowTooShort();
 
         escrowId = nextEscrowId++;
 

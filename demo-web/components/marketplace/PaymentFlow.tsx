@@ -134,8 +134,9 @@ export function PaymentFlow() {
       // Validate the order still exists on the server before restoring
       fetch("/api/orders")
         .then((res) => res.json())
-        .then((orders: any[]) => {
-          const found = orders.find((o: any) => o.id === parsed.orderId);
+        .then((data: any) => {
+          const orderList = Array.isArray(data) ? data : data.orders ?? [];
+          const found = orderList.find((o: any) => o.id === parsed.orderId);
           if (!found) {
             sessionStorage.removeItem("x402-marketplace-state");
             return;
@@ -252,7 +253,8 @@ export function PaymentFlow() {
       }
       try {
         const res = await fetch(`/api/orders?status=delivery_confirmed`);
-        const orders = await res.json();
+        const data = await res.json();
+        const orders = Array.isArray(data) ? data : data.orders ?? [];
         if (orders.find((o: any) => o.id === deliveryOrderId)) {
           clearInterval(interval);
           dispatch({ type: "DELIVERY_CONFIRMED" });
