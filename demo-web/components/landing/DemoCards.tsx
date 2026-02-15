@@ -38,35 +38,6 @@ const demos = [
     highlights: ["Auto-advancing run", "Signed authorization + on-chain settle"],
     color: "accent-purple",
   },
-  {
-    title: "Session Demo",
-    description:
-      "Authorize once, make multiple API calls without signing, then settle. Ideal for high-frequency micropayments.",
-    href: "/session",
-    icon: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-        <circle cx="12" cy="12" r="4" />
-      </svg>
-    ),
-    badge: "Micropayments",
-    highlights: ["1 signature for N requests", "Real-time balance tracking"],
-    color: "accent-green",
-  },
-  {
-    title: "Reputation Lookup",
-    description:
-      "On-chain trust scores computed from escrow history — dispute rates, completion rates, and resolution fairness.",
-    href: "/reputation",
-    icon: (
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-      </svg>
-    ),
-    badge: "Trust Score",
-    highlights: ["On-chain dispute data", "Agent trust scoring"],
-    color: "warning",
-  },
 ];
 
 export function DemoCards() {
@@ -89,10 +60,10 @@ export function DemoCards() {
           transition={{ delay: 0.1 }}
           className="mb-10 text-center text-text-secondary"
         >
-          Test interactive and autonomous escrow flows with real protocol events on Base Sepolia.
+          Two demos, one protocol. Start with the manual marketplace flow, then watch it run autonomously.
         </motion.p>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-6 md:grid-cols-2">
           {demos.map((demo, i) => (
             <motion.div
               key={demo.title}
