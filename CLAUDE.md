@@ -94,8 +94,6 @@ demo-web/
     page.tsx                 # Landing page
     marketplace/page.tsx     # Interactive marketplace demo
     agent/page.tsx           # Auto-advancing agent service demo
-    explorer/page.tsx        # Escrow explorer (on-chain lookup)
-    reputation/page.tsx      # Reputation lookup (trust scores from escrow history)
     api/                     # Route Handlers (replace Express routes)
       health/                # GET — server status
       orders/                # GET/POST orders
@@ -106,7 +104,7 @@ demo-web/
       reputation/[address]/  # GET reputation score + GET history
       demo/fund/             # POST — faucet for demo wallets
   components/
-    landing/                 # Hero, ProtocolFlow, DemoCards, HowItWorks, ComparisonTable, DevSection, Footer
+    landing/                 # Hero, ProtocolFlow, DemoCards, HowItWorks, Footer
     marketplace/             # PaymentFlow, ProductGrid, StepTracker, SellerPanel
     agent/                   # AgentTerminal
     protocol-inspector/      # InspectorPanel + 4 tab components
