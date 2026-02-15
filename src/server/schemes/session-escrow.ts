@@ -1,6 +1,8 @@
 import type { PaymentScheme, PaymentRequirement, SettleResult } from "../../shared/schemes.js";
 import type { SessionPaymentPayload } from "../../shared/types.js";
+import type { Address } from "viem";
 import { verifyEscrowPayment } from "../facilitator/verifier.js";
+import { config } from "../config.js";
 
 export const sessionEscrowScheme: PaymentScheme = {
   name: "session-escrow",
@@ -19,14 +21,19 @@ export const sessionEscrowScheme: PaymentScheme = {
   },
 
   async verify(payload) {
-    // Same ERC-3009 signature verification as escrow scheme
-    // The signature targets the SessionEscrow contract address instead of EscrowVault
-    return verifyEscrowPayment(payload as any);
+    if (!config.sessionEscrowAddress) {
+      return { valid: false, error: "Session escrow contract not configured" };
+    }
+    // Same ERC-3009 signature verification, but targeting the SessionEscrow contract
+    return verifyEscrowPayment(payload as any, config.sessionEscrowAddress as Address);
   },
 
   async settle(_payload): Promise<SettleResult> {
-    // Session settlement is handled by the session middleware directly
-    // This method is not used in the normal flow
-    throw new Error("Session settle is handled by session middleware, not via facilitator");
+    // Session settlement uses the /api/sessions/:id/settle endpoint, not the facilitator
+    return {
+      success: false,
+      network: "base-sepolia",
+      error: "Session settlement uses the /api/sessions/:id/settle endpoint, not the facilitator",
+    };
   },
 };

@@ -14,6 +14,18 @@ router.post("/verify", async (req, res) => {
     return res.status(400).json({ isValid: false, invalidReason: "Missing scheme in payload" });
   }
 
+  // Cross-reference payload scheme against payment requirements
+  if (paymentRequirements) {
+    const reqs = Array.isArray(paymentRequirements) ? paymentRequirements : [paymentRequirements];
+    const matchingReq = reqs.find((r: { scheme?: string }) => r.scheme === payload.scheme);
+    if (!matchingReq) {
+      return res.status(400).json({
+        isValid: false,
+        invalidReason: `Payload scheme "${payload.scheme}" not found in payment requirements`,
+      });
+    }
+  }
+
   const scheme = getScheme(payload.scheme);
   if (!scheme) {
     return res.status(400).json({ isValid: false, invalidReason: `Unknown scheme: ${payload.scheme}` });
@@ -39,6 +51,18 @@ router.post("/settle", async (req, res) => {
 
   if (!payload?.scheme) {
     return res.status(400).json({ success: false, error: "Missing scheme in payload" });
+  }
+
+  // Cross-reference payload scheme against payment requirements
+  if (paymentRequirements) {
+    const reqs = Array.isArray(paymentRequirements) ? paymentRequirements : [paymentRequirements];
+    const matchingReq = reqs.find((r: { scheme?: string }) => r.scheme === payload.scheme);
+    if (!matchingReq) {
+      return res.status(400).json({
+        success: false,
+        error: `Payload scheme "${payload.scheme}" not found in payment requirements`,
+      });
+    }
   }
 
   const scheme = getScheme(payload.scheme);

@@ -31,6 +31,7 @@ export interface SessionResponse {
   success: boolean;
   txHash: Hash;
   sessionId: number;
+  sessionToken?: string;
   expiresAt: number;
   deposit: string;
   pricePerUse: string;
@@ -46,6 +47,7 @@ export interface UseSessionResponse {
 export interface SettleResponse {
   success: boolean;
   sessionId: number;
+  txHash?: string;
   settled: {
     totalCalls: number;
     captured: string;
@@ -273,22 +275,26 @@ export async function submitSession(
  */
 export async function useSession(
   sessionId: number,
+  sessionToken?: string,
   emit?: EventEmitter
 ): Promise<UseSessionResponse> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (sessionToken) headers["X-SESSION-TOKEN"] = sessionToken;
+
   emit?.({
     type: "http_request",
     label: `API Call (session #${sessionId})`,
     data: {
       method: "POST",
       url: `/api/sessions/${sessionId}/use`,
-      headers: { "Content-Type": "application/json" },
-      note: "No signature needed — session ID is the auth token",
+      headers,
+      note: "Session token required for authorization",
     },
   });
 
   const res = await fetch(`/api/sessions/${sessionId}/use`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
   });
 
   const data = await res.json();
@@ -326,8 +332,12 @@ export async function useSession(
  */
 export async function closeSession(
   sessionId: number,
+  sessionToken?: string,
   emit?: EventEmitter
 ): Promise<SettleResponse> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (sessionToken) headers["X-SESSION-TOKEN"] = sessionToken;
+
   emit?.({
     type: "http_request",
     label: "Session Settlement",
@@ -339,7 +349,7 @@ export async function closeSession(
 
   const res = await fetch(`/api/sessions/${sessionId}/settle`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
   });
 
   const data = await res.json();
@@ -358,6 +368,18 @@ export async function closeSession(
     label: "200 Session Settled",
     data: { status: 200, body: data },
   });
+
+  if (data.txHash) {
+    emit?.({
+      type: "tx_confirmed",
+      label: "Session Settlement",
+      data: {
+        txHash: data.txHash,
+        sessionId,
+        function: "settleSession",
+      },
+    });
+  }
 
   emit?.({
     type: "state_change",

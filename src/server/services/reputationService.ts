@@ -65,10 +65,21 @@ export async function getOnChainSellerStats(
 // ──────────────────────── Cache ────────────────────────
 
 const CACHE_TTL_MS = 60_000;
+const MAX_CACHE_SIZE = 1000;
 const cache = new Map<
   string,
   { data: ReputationScore; expiresAt: number }
 >();
+
+// Periodic cache cleanup every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of cache) {
+    if (entry.expiresAt <= now) {
+      cache.delete(key);
+    }
+  }
+}, 5 * 60_000).unref();
 
 // ──────────────────────── SQLite Queries ────────────────────────
 
@@ -273,6 +284,12 @@ export async function computeReputation(
     buyer,
     updatedAt: Math.floor(Date.now() / 1000),
   };
+
+  // Evict oldest entry if cache is at capacity
+  if (cache.size >= MAX_CACHE_SIZE) {
+    const firstKey = cache.keys().next().value;
+    if (firstKey) cache.delete(firstKey);
+  }
 
   cache.set(cacheKey, {
     data: result,

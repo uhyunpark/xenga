@@ -26,6 +26,12 @@ export function sessionPaymentMiddleware(pricePerUse: bigint = BigInt(SESSION_PR
         return res.status(401).json({ error: "Invalid or inactive session" });
       }
 
+      // Validate session token
+      const sessionToken = req.headers["x-session-token"] as string | undefined;
+      if (session.session_token && (!sessionToken || sessionToken !== session.session_token)) {
+        return res.status(401).json({ error: "Invalid or missing session token" });
+      }
+
       // Check expiry
       const now = Math.floor(Date.now() / 1000);
       if (now > session.expires_at) {

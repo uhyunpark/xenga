@@ -71,6 +71,9 @@ export async function POST(request: Request) {
     // Create session via chain adapter (on-chain or mock)
     const { txHash, sessionId, expiresAt } = await getChainAdapter().createSession(payload);
 
+    // Generate bearer token for session auth
+    const sessionToken = crypto.randomUUID();
+
     // Record in DB
     createSession(
       sessionId,
@@ -79,13 +82,15 @@ export async function POST(request: Request) {
       payload.value,
       SESSION_PRICE_PER_USE.toString(),
       expiresAt,
-      txHash
+      txHash,
+      sessionToken
     );
 
     const response = {
       success: true,
       txHash,
       sessionId,
+      sessionToken,
       expiresAt,
       deposit: payload.value,
       pricePerUse: SESSION_PRICE_PER_USE.toString(),

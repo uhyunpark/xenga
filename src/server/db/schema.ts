@@ -55,6 +55,7 @@ export const SCHEMA = `
     price_per_use TEXT NOT NULL,
     expires_at INTEGER NOT NULL,
     status TEXT NOT NULL DEFAULT 'active',
+    session_token TEXT,
     tx_hash TEXT,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL

@@ -10,6 +10,7 @@ export interface SessionRow {
   price_per_use: string;
   expires_at: number;
   status: string;
+  session_token: string | null;
   tx_hash: string | null;
   created_at: number;
   updated_at: number;
@@ -30,16 +31,23 @@ export function createSession(
   depositAmount: string,
   pricePerUse: string,
   expiresAt: number,
-  txHash: string
+  txHash: string,
+  sessionToken?: string
 ): SessionRow {
   const now = Math.floor(Date.now() / 1000);
   const db = getDb();
   db.prepare(
-    `INSERT INTO sessions (session_id, buyer_address, seller_address, deposit_amount, price_per_use, expires_at, tx_hash, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(sessionId, buyerAddress.toLowerCase(), sellerAddress.toLowerCase(), depositAmount, pricePerUse, expiresAt, txHash, now, now);
+    `INSERT INTO sessions (session_id, buyer_address, seller_address, deposit_amount, price_per_use, expires_at, session_token, tx_hash, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(sessionId, buyerAddress.toLowerCase(), sellerAddress.toLowerCase(), depositAmount, pricePerUse, expiresAt, sessionToken ?? null, txHash, now, now);
 
   return getSession(sessionId)!;
+}
+
+export function validateSessionToken(sessionId: number, token: string): boolean {
+  const session = getSession(sessionId);
+  if (!session || !session.session_token) return false;
+  return session.session_token === token;
 }
 
 export function getSession(sessionId: number): SessionRow | undefined {

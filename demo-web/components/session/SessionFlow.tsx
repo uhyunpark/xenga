@@ -38,6 +38,7 @@ interface FlowState {
   sessionRequired: SessionRequired | null;
   sessionPayload: SessionPayload | null;
   sessionId: number | null;
+  sessionToken: string | null;
   expiresAt: number | null;
   deposit: string | null;
   pricePerUse: string | null;
@@ -63,6 +64,7 @@ const initialState: FlowState = {
   sessionRequired: null,
   sessionPayload: null,
   sessionId: null,
+  sessionToken: null,
   expiresAt: null,
   deposit: null,
   pricePerUse: null,
@@ -82,6 +84,7 @@ function reducer(state: FlowState, action: FlowAction): FlowState {
         ...state,
         step: "active",
         sessionId: action.response.sessionId,
+        sessionToken: action.response.sessionToken ?? null,
         expiresAt: action.response.expiresAt,
         deposit: action.response.deposit,
         pricePerUse: action.response.pricePerUse,
@@ -168,7 +171,7 @@ export function SessionFlow() {
     if (!state.sessionId) return;
     dispatch({ type: "SET_LOADING", loading: true });
     try {
-      const result = await useSession(state.sessionId, inspector.addEvent);
+      const result = await useSession(state.sessionId, state.sessionToken ?? undefined, inspector.addEvent);
       dispatch({
         type: "RECORD_USAGE",
         entry: {
@@ -188,7 +191,7 @@ export function SessionFlow() {
     if (!state.sessionId) return;
     dispatch({ type: "SET_LOADING", loading: true });
     try {
-      await closeSession(state.sessionId, inspector.addEvent);
+      await closeSession(state.sessionId, state.sessionToken ?? undefined, inspector.addEvent);
       dispatch({ type: "SET_SETTLED" });
     } catch (err: any) {
       dispatch({ type: "SET_ERROR", error: err.message });

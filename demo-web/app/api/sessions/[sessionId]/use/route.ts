@@ -23,6 +23,12 @@ export async function POST(
     return NextResponse.json({ error: "Invalid or inactive session" }, { status: 401 });
   }
 
+  // Validate session token
+  const sessionToken = request.headers.get("x-session-token");
+  if (session.session_token && (!sessionToken || sessionToken !== session.session_token)) {
+    return NextResponse.json({ error: "Invalid or missing session token" }, { status: 401 });
+  }
+
   // Check expiry
   const now = Math.floor(Date.now() / 1000);
   if (now > session.expires_at) {

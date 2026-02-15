@@ -2,6 +2,7 @@ import { Router } from "express";
 import { sessionPaymentMiddleware } from "../middleware/sessionPayment.js";
 import { getSession, getSessionUsage, updateSessionStatus } from "../services/sessionService.js";
 import { SESSION_PRICE_PER_USE } from "../../shared/constants.js";
+import { config } from "../config.js";
 
 const router = Router();
 
@@ -69,11 +70,25 @@ router.post("/:sessionId/settle", async (req, res) => {
     return res.status(404).json({ error: "Session not found" });
   }
 
+  // Validate session token
+  const sessionToken = req.headers["x-session-token"] as string | undefined;
+  if (session.session_token && (!sessionToken || sessionToken !== session.session_token)) {
+    return res.status(401).json({ error: "Invalid or missing session token" });
+  }
+
   if (session.status !== "active") {
     return res.status(400).json({ error: `Session is already ${session.status}` });
   }
 
-  // Mark session as settled
+  // On-chain settlement requires SessionEscrow contract to be deployed
+  if (!config.sessionEscrowAddress) {
+    return res.status(501).json({
+      error: "Session on-chain settlement not available (SessionEscrow contract not deployed)",
+    });
+  }
+
+  // TODO: Call SessionEscrow.settleSession(sessionId, usedAmount) on-chain
+  // when the contract is deployed. For now, the 501 above prevents DB-only settlement.
   updateSessionStatus(sessionId, "settled");
 
   const usage = getSessionUsage(sessionId);
