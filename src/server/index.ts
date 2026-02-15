@@ -15,6 +15,7 @@ import escrowsRouter from "./routes/escrows.js";
 import metricsRouter from "./routes/metrics.js";
 import facilitatorRouter from "./routes/facilitator.js";
 import sessionsRouter from "./routes/sessions.js";
+import reputationRouter from "./routes/reputation.js";
 import { startEventListener } from "./services/eventListener.js";
 
 // ──────────── Bootstrap ────────────
@@ -70,6 +71,7 @@ app.use("/api/escrows", escrowsRouter);
 app.use("/api/metrics", metricsRouter);
 app.use("/facilitator", facilitatorRouter);
 app.use("/api/sessions", sessionsRouter);
+app.use("/api/reputation", reputationRouter);
 
 // ──────────── Start ────────────
 
@@ -98,6 +100,8 @@ const server = app.listen(config.port, () => {
     POST /api/sessions/use            (session micropayment)
     GET  /api/sessions/:sessionId
     POST /api/sessions/:sessionId/settle
+    GET  /api/reputation/:address
+    GET  /api/reputation/:address/history
   `);
 });
 

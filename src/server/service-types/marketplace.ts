@@ -1,4 +1,4 @@
-import type { ServiceType } from "./index.js";
+import type { ServiceType, EscrowParams, CounterpartyReputation } from "./index.js";
 import {
   MARKETPLACE_RELEASE_WINDOW,
 } from "../../shared/constants.js";
@@ -16,4 +16,21 @@ export const marketplaceServiceType: ServiceType = {
   autoVerify: false,
   description:
     "P2P marketplace with 7-day release window and 3-day dispute period",
+
+  adjustParams(params: EscrowParams, rep: CounterpartyReputation): EscrowParams {
+    // Both high-confidence + high-reputation → shorten release window
+    if (
+      rep.buyerScore >= 80 &&
+      rep.sellerScore >= 80 &&
+      rep.buyerConfidence === "high" &&
+      rep.sellerConfidence === "high"
+    ) {
+      return { ...params, releaseWindow: 3 * 24 * 60 * 60 }; // 7d → 3d
+    }
+    // Low-reputation seller with enough data → extend window
+    if (rep.sellerScore < 40 && rep.sellerConfidence !== "low") {
+      return { ...params, releaseWindow: 14 * 24 * 60 * 60 }; // 7d → 14d
+    }
+    return params;
+  },
 };

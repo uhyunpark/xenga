@@ -14,6 +14,7 @@ import {
 import type { PaymentRequired, PaymentPayload } from "@/lib/api/payment-flow";
 import { Badge } from "@/components/ui/Badge";
 import { AddressDisplay } from "@/components/ui/AddressDisplay";
+import { ReputationBadge } from "@/components/ui/ReputationBadge";
 import { formatUsdc, shortenAddress } from "@/lib/utils";
 import { ProductGrid, type Product } from "./ProductGrid";
 import { DEMO_STEPS, StepTracker, type DemoStep } from "./StepTracker";
@@ -709,6 +710,12 @@ export function PaymentFlow() {
                         <span className="text-text-tertiary">Release Window</span>
                         <span>{formatReleaseWindow(state.paymentRequired.releaseWindow)}</span>
                       </div>
+                      {operatorAddress && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-text-tertiary">Seller Reputation</span>
+                          <ReputationBadge address={operatorAddress} />
+                        </div>
+                      )}
                     </div>
                   </div>
                   <p className="mb-3 text-[11px] text-text-tertiary">

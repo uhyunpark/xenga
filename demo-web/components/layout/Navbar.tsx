@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: "/session", label: "Session" },
   { href: "/explorer", label: "Explorer" },
   { href: "/metrics", label: "Metrics" },
+  { href: "/reputation", label: "Reputation" },
 ];
 
 export function Navbar() {

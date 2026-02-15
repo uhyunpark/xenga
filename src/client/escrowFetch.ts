@@ -5,9 +5,17 @@ import type {
 } from "../shared/types.js";
 import { signEscrowPayment } from "./escrowScheme.js";
 
+interface SellerReputationInfo {
+  score: number;
+  confidence: string;
+  disputeRate: number;
+}
+
 interface EscrowFetchOptions {
   walletClient: WalletClient;
   usdcAddress?: Address;
+  /** Called with seller reputation from 402 response. Return false to abort payment. */
+  onSellerReputation?: (reputation: SellerReputationInfo) => boolean;
 }
 
 /**
@@ -69,6 +77,25 @@ export async function escrowFetch(
   console.log(
     `[x402] Payment required: ${paymentRequired.amount} USDC to escrow ${paymentRequired.escrowContract}`
   );
+
+  // Check seller reputation if callback provided
+  if (options.onSellerReputation) {
+    // Try to get reputation from response body
+    try {
+      const body = await firstResponse.clone().json() as any;
+      if (body.sellerReputation) {
+        const shouldProceed = options.onSellerReputation(body.sellerReputation);
+        if (!shouldProceed) {
+          throw new Error(
+            `Payment aborted: seller reputation check failed (score=${body.sellerReputation.score})`
+          );
+        }
+      }
+    } catch (err: any) {
+      if (err.message.startsWith("Payment aborted")) throw err;
+      // If body parsing fails, continue without reputation check
+    }
+  }
 
   // Sign the payment
   const payload = await signEscrowPayment(

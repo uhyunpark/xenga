@@ -207,3 +207,37 @@ export interface OnChainSession {
   expiresAt: bigint;
   state: SessionState;
 }
+
+// ──────────────────────── Reputation ────────────────────────
+
+export interface ReputationScore {
+  address: Address;
+  overall: number; // 0-100
+  confidence: "low" | "medium" | "high";
+
+  seller?: SellerReputation;
+  buyer?: BuyerReputation;
+
+  updatedAt: number; // unix timestamp
+}
+
+export interface SellerReputation {
+  score: number; // 0-100
+  completionRate: number; // 0-1
+  disputeRate: number; // 0-1
+  refundRate: number; // 0-1
+  resolutionFairness: number; // 0-1 (arbiter ruled in seller's favor)
+  totalVolume: string; // USDC bigint as string
+  totalEscrows: number;
+  firstSeen: number; // unix timestamp
+}
+
+export interface BuyerReputation {
+  score: number; // 0-100
+  disputeRate: number; // 0-1
+  frivolousDisputeRate: number; // 0-1 (arbiter gave buyer <30%)
+  completionRate: number; // 0-1
+  totalVolume: string;
+  totalEscrows: number;
+  firstSeen: number;
+}

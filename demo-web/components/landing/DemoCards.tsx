@@ -53,6 +53,20 @@ const demos = [
     highlights: ["1 signature for N requests", "Real-time balance tracking"],
     color: "accent-green",
   },
+  {
+    title: "Reputation Lookup",
+    description:
+      "On-chain trust scores computed from escrow history — dispute rates, completion rates, and resolution fairness.",
+    href: "/reputation",
+    icon: (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+      </svg>
+    ),
+    badge: "Trust Score",
+    highlights: ["On-chain dispute data", "Agent trust scoring"],
+    color: "warning",
+  },
 ];
 
 export function DemoCards() {
@@ -78,7 +92,7 @@ export function DemoCards() {
           Test interactive and autonomous escrow flows with real protocol events on Base Sepolia.
         </motion.p>
 
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {demos.map((demo, i) => (
             <motion.div
               key={demo.title}
@@ -95,7 +109,9 @@ export function DemoCards() {
                           ? "bg-accent/10 text-accent"
                           : demo.color === "accent-green"
                             ? "bg-success/10 text-success"
-                            : "bg-accent-purple/10 text-accent-purple"
+                            : demo.color === "warning"
+                              ? "bg-warning/10 text-warning"
+                              : "bg-accent-purple/10 text-accent-purple"
                       }`}
                     >
                       {demo.icon}
@@ -106,7 +122,9 @@ export function DemoCards() {
                           ? "bg-accent/10 text-accent"
                           : demo.color === "accent-green"
                             ? "bg-success/10 text-success"
-                            : "bg-accent-purple/10 text-accent-purple"
+                            : demo.color === "warning"
+                              ? "bg-warning/10 text-warning"
+                              : "bg-accent-purple/10 text-accent-purple"
                       }`}
                     >
                       {demo.badge}

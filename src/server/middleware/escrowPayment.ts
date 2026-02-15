@@ -11,6 +11,8 @@ import { getOrderById, updateOrderStatus } from "../services/orderService.js";
 import { getDb } from "../db/index.js";
 import { getServiceType } from "../service-types/index.js";
 import { verifyViaFacilitator, settleViaFacilitator } from "../facilitator/dispatch.js";
+import { computeReputation } from "../services/reputationService.js";
+import type { Address } from "viem";
 
 export interface EscrowPaymentRequest extends Request {
   escrowPayment?: EscrowPaymentResponse;
@@ -73,6 +75,36 @@ export function escrowPaymentMiddleware() {
           .json({ error: `Unknown service type: ${order.serviceType}` });
       }
 
+      // Reputation-based dynamic escrow parameters
+      let releaseWindow = serviceType.releaseWindow;
+      let sellerReputation: { score: number; confidence: string; disputeRate: number } | undefined;
+
+      if (serviceType.adjustParams) {
+        try {
+          const sellerRep = await computeReputation(order.sellerAddress as Address);
+          if (sellerRep.seller) {
+            sellerReputation = {
+              score: sellerRep.seller.score,
+              confidence: sellerRep.confidence,
+              disputeRate: sellerRep.seller.disputeRate,
+            };
+          }
+          const adjusted = serviceType.adjustParams(
+            { releaseWindow },
+            {
+              buyerScore: 50, // buyer unknown at 402 time
+              sellerScore: sellerRep.seller?.score ?? 50,
+              buyerConfidence: "low",
+              sellerConfidence: sellerRep.confidence,
+            }
+          );
+          releaseWindow = adjusted.releaseWindow;
+        } catch (err) {
+          // Reputation lookup failed — use defaults
+          console.warn("[EscrowPayment] Reputation lookup failed, using default params:", err);
+        }
+      }
+
       const paymentRequired: EscrowPaymentRequired = {
         scheme: "escrow",
         network: "base-sepolia",
@@ -81,7 +113,7 @@ export function escrowPaymentMiddleware() {
         amount: order.price.toString(),
         orderId: order.orderId,
         sellerAddress: order.sellerAddress,
-        releaseWindow: serviceType.releaseWindow,
+        releaseWindow,
         serviceType: order.serviceType,
       };
 
@@ -96,6 +128,7 @@ export function escrowPaymentMiddleware() {
         error: "Payment required",
         paymentRequired,
         paymentRequirements,
+        sellerReputation,
       });
     }
 
@@ -168,6 +201,17 @@ export function escrowPaymentMiddleware() {
       const encoded = Buffer.from(JSON.stringify(paymentResponse)).toString("base64");
       res.setHeader("PAYMENT-RESPONSE", encoded);
       res.setHeader("X-PAYMENT-RESPONSE", encoded);
+
+      // Log buyer reputation for monitoring (non-blocking)
+      computeReputation(payload.from as Address)
+        .then((buyerRep) => {
+          if (buyerRep.buyer && buyerRep.buyer.score < 20 && buyerRep.confidence !== "low") {
+            console.warn(
+              `[Reputation] Low-reputation buyer ${payload.from}: score=${buyerRep.buyer.score}, disputeRate=${buyerRep.buyer.disputeRate}`
+            );
+          }
+        })
+        .catch(() => {}); // ignore reputation errors
 
       // Attach payment info to request for downstream handlers
       (req as EscrowPaymentRequest).escrowPayment = paymentResponse;
