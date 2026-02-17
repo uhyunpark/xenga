@@ -9,6 +9,7 @@ export interface SettleResult {
 export interface ChainAdapter {
   settleEscrow(payload: EscrowPaymentPayload): Promise<SettleResult>;
   confirmDelivery(escrowId: number): Promise<Hash>;
+  fileDispute(escrowId: number): Promise<Hash>;
   resolveDispute(escrowId: number, buyerPct: number): Promise<Hash>;
   getEscrow(escrowId: number): Promise<OnChainEscrow>;
   isReleasable(escrowId: number): Promise<boolean>;

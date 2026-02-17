@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import type { DisputeRequest } from "@shared/types.js";
-import { getOrderById } from "@server/services/orderService.js";
+import { getOrderById, updateOrderStatus } from "@server/services/orderService.js";
 import { getDb } from "@server/db/index.js";
+import { getChainAdapter } from "@/lib/chain";
 
 export async function POST(
   request: Request,
@@ -43,5 +44,18 @@ export async function POST(
      VALUES (?, ?, ?, ?, ?, 'open', ?)`
   ).run(id, order.escrowId, order.id, order.buyerAddress, body.reason, now);
 
-  return NextResponse.json({ message: "Dispute filed", disputeId: id }, { status: 201 });
+  // Transition escrow state to Disputed (mock: updates store, real: skipped — buyer must call on-chain)
+  let disputeTxHash: string | undefined;
+  try {
+    disputeTxHash = await getChainAdapter().fileDispute(order.escrowId);
+  } catch (err) {
+    console.warn("[Dispute] On-chain dispute filing skipped:", err);
+  }
+
+  updateOrderStatus(order.id, { status: "disputed" });
+
+  return NextResponse.json(
+    { message: "Dispute filed", disputeId: id, txHash: disputeTxHash },
+    { status: 201 }
+  );
 }
