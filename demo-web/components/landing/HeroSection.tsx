@@ -27,17 +27,17 @@ export function HeroSection() {
           transition={{ duration: 0.45 }}
         >
           <span className="inline-flex rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-accent">
-            Secure Payment Infrastructure
+            Protocol-Grade Checkout
           </span>
           <h1
             className="gradient-text mt-5 text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl"
             style={{ textWrap: "balance" }}
           >
-            Escrow-backed payments that feel like real fintech
+            Escrowed x402 payments for autonomous commerce
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-text-secondary md:text-xl">
-            Run buyer and agent flows through HTTP-native checkout, while keeping
-            verifiable escrow state, predictable settlement, and clear release controls.
+            Integrate x402 while guaranteeing settlement with on-chain escrow state,
+            signed USDC authorization, and programmable release logic.
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -54,14 +54,14 @@ export function HeroSection() {
               href="/explorer"
               className="inline-flex items-center justify-center rounded-lg border border-border-default bg-bg-secondary px-6 py-3 text-sm font-semibold text-text-primary transition-colors hover:bg-bg-tertiary"
             >
-              View Escrow Explorer
+              Inspect Escrow State
             </Link>
           </div>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            <TrustMetric label="Buyer Gas Cost" value="$0 in flow" />
-            <TrustMetric label="Settlement Window" value="~10s testnet" />
-            <TrustMetric label="Payment Trigger" value="HTTP 402" />
+            <TrustMetric label="Buyer Gas Cost" value="$0" />
+            <TrustMetric label="Settlement" value="Base Sepolia" />
+            <TrustMetric label="Flow Trigger" value="HTTP 402" />
           </div>
         </motion.div>
 
