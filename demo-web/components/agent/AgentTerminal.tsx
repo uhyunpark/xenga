@@ -19,6 +19,8 @@ interface TerminalLine {
   delay: number;
 }
 
+type Scenario = "happy" | "dispute";
+
 interface AgentTerminalProps {
   speed: number;
 }
@@ -28,6 +30,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
   const [isComplete, setIsComplete] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [activeScenario, setActiveScenario] = useState<Scenario | null>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
   const { walletClient, address, connectDemo, fundDemoWallet, usdcBalance, type: walletType } = useWallet();
   const inspector = useInspector();
@@ -50,9 +53,10 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
     [scrollToBottom]
   );
 
-  const runDemo = useCallback(async () => {
+  const runDemo = useCallback(async (scenario: Scenario) => {
     if (!walletClient || !address || !operatorAddress) return;
     setIsRunning(true);
+    setActiveScenario(scenario);
     setLines([]);
     setIsComplete(false);
     inspector.clear();
@@ -190,17 +194,154 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
       });
       await wait(1500);
 
-      // Step 7: Complete
-      addLine({ type: "dim", text: "", delay: 0 });
-      addLine({ type: "info", text: "[release] Auto-release window: 1 hour", delay: 0 });
-      await wait(500);
-      addLine({ type: "success", text: "[complete] Transaction complete. Funds available for seller.", delay: 0 });
+      // ── Branch: Happy Path vs Dispute Path ──
 
-      inspector.addEvent({
-        type: "state_change",
-        label: "Complete",
-        data: { previousState: "DeliveryConfirmed", newState: "Completed" },
-      });
+      if (scenario === "happy") {
+        // Step 7: Complete
+        addLine({ type: "dim", text: "", delay: 0 });
+        addLine({ type: "info", text: "[release] Auto-release window: 1 hour", delay: 0 });
+        await wait(500);
+        addLine({ type: "success", text: "[complete] Transaction complete. Funds available for seller.", delay: 0 });
+
+        inspector.addEvent({
+          type: "state_change",
+          label: "Complete",
+          data: { previousState: "DeliveryConfirmed", newState: "Completed" },
+        });
+      } else {
+        // Step 7: Quality check failure
+        addLine({ type: "dim", text: "", delay: 0 });
+        addLine({ type: "dim", text: "$ x402-agent verify --check-quality", delay: 0 });
+        await wait(1200);
+        addLine({ type: "error", text: "[verify] QUALITY CHECK FAILED", delay: 0 });
+        await wait(500);
+        addLine({ type: "error", text: "[verify] Response accuracy: 0.23 (threshold: 0.70)", delay: 0 });
+        await wait(500);
+        addLine({ type: "info", text: "[verify] SLA violation detected — initiating dispute...", delay: 0 });
+        await wait(1500);
+
+        // Step 8: File dispute
+        addLine({ type: "dim", text: "", delay: 0 });
+        addLine({ type: "dim", text: `$ x402-agent dispute --escrow ${result.payment.escrowId}`, delay: 0 });
+        await wait(500);
+
+        inspector.addEvent({
+          type: "http_request",
+          label: "File Dispute",
+          data: {
+            method: "POST",
+            url: `/api/disputes/${orderData.id}`,
+            body: { reason: "Service quality below SLA threshold (accuracy: 0.23, required: 0.70)" },
+          },
+        });
+
+        const disputeRes = await fetch(`/api/disputes/${orderData.id}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            reason: "Service quality below SLA threshold (accuracy: 0.23, required: 0.70)",
+          }),
+        });
+        const disputeData = await disputeRes.json();
+
+        inspector.addEvent({
+          type: "http_response",
+          label: "201 Dispute Filed",
+          data: { status: 201, body: disputeData },
+        });
+
+        addLine({ type: "request", text: `POST /api/disputes/${orderData.id.slice(0, 8)}... → 201 Dispute Filed`, delay: 0 });
+        await wait(500);
+        addLine({ type: "info", text: `[dispute] Dispute ID: ${disputeData.disputeId.slice(0, 8)}...`, delay: 0 });
+
+        if (disputeData.txHash) {
+          inspector.addEvent({
+            type: "tx_confirmed",
+            label: "Dispute Filed",
+            data: {
+              txHash: disputeData.txHash,
+              escrowId: result.payment.escrowId,
+              function: "dispute",
+            },
+          });
+        }
+
+        inspector.addEvent({
+          type: "state_change",
+          label: "Disputed",
+          data: { previousState: "DeliveryConfirmed", newState: "Disputed" },
+        });
+
+        addLine({ type: "error", text: "[dispute] Escrow state: DeliveryConfirmed → Disputed", delay: 0 });
+        await wait(2000);
+
+        // Step 9: Arbiter review (simulated)
+        addLine({ type: "dim", text: "", delay: 0 });
+        addLine({ type: "info", text: "[resolve] Arbiter reviewing dispute evidence...", delay: 0 });
+        await wait(2000);
+        addLine({ type: "info", text: "[resolve] Evidence: response accuracy 0.23 vs SLA threshold 0.70", delay: 0 });
+        await wait(1500);
+        addLine({ type: "info", text: "[resolve] Ruling: 70% refund to buyer, 30% to seller", delay: 0 });
+        await wait(1500);
+
+        // Step 10: Resolve dispute
+        inspector.addEvent({
+          type: "http_request",
+          label: "Resolve Dispute",
+          data: {
+            method: "POST",
+            url: `/api/disputes/${disputeData.disputeId}/resolve`,
+            body: { buyerPct: 70, resolution: "Service quality below SLA threshold" },
+          },
+        });
+
+        const resolveRes = await fetch(`/api/disputes/${disputeData.disputeId}/resolve`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            buyerPct: 70,
+            resolution: "Service quality below SLA threshold",
+          }),
+        });
+        const resolveData = await resolveRes.json();
+
+        inspector.addEvent({
+          type: "http_response",
+          label: "200 Dispute Resolved",
+          data: { status: 200, body: resolveData },
+        });
+
+        addLine({ type: "request", text: `POST /api/disputes/${disputeData.disputeId.slice(0, 8)}.../resolve → 200 Resolved`, delay: 0 });
+        await wait(500);
+
+        if (resolveData.txHash) {
+          inspector.addEvent({
+            type: "tx_confirmed",
+            label: "Dispute Resolved",
+            data: {
+              txHash: resolveData.txHash,
+              escrowId: result.payment.escrowId,
+              function: "resolveDispute",
+              args: { buyerPct: 70 },
+            },
+          });
+        }
+
+        inspector.addEvent({
+          type: "state_change",
+          label: "Resolved",
+          data: { previousState: "Disputed", newState: "Resolved" },
+        });
+
+        addLine({ type: "dim", text: "", delay: 0 });
+        addLine({ type: "success", text: "[resolve] Dispute resolved", delay: 0 });
+        await wait(400);
+        addLine({ type: "success", text: "[resolve] Buyer receives: 1.75 USDC (70%)", delay: 0 });
+        await wait(400);
+        addLine({ type: "success", text: "[resolve] Seller receives: 0.75 USDC (30%)", delay: 0 });
+        await wait(400);
+        addLine({ type: "info", text: "[complete] Dispute resolved. Funds distributed per arbiter ruling.", delay: 0 });
+      }
 
       setIsComplete(true);
     } catch (err: any) {
@@ -212,7 +353,14 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
 
   const needsWallet = !address;
   const needsFunding = walletType === "demo" && usdcBalance !== null && parseFloat(usdcBalance) < 1;
-  const terminalStatus = isRunning ? "Running" : isComplete ? "Complete" : "Ready";
+  const terminalStatus = isRunning
+    ? `Running`
+    : isComplete
+      ? "Complete"
+      : "Ready";
+
+  const otherScenario: Scenario = activeScenario === "happy" ? "dispute" : "happy";
+  const scenarioLabel = (s: Scenario) => s === "happy" ? "Happy Path" : "Dispute Path";
 
   return (
     <div className="space-y-4">
@@ -256,6 +404,15 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
           >
             {terminalStatus}
           </span>
+          {isRunning && activeScenario && (
+            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+              activeScenario === "dispute"
+                ? "border-error/30 bg-error/10 text-error"
+                : "border-accent-purple/30 bg-accent-purple/10 text-accent-purple"
+            }`}>
+              {scenarioLabel(activeScenario)}
+            </span>
+          )}
           <span className="rounded-full border border-border-default bg-bg-primary/55 px-2 py-0.5 text-[10px] uppercase tracking-wide text-text-tertiary">
             Speed {speed}x
           </span>
@@ -264,21 +421,42 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
           </span>
 
           {!isRunning && !isComplete && (
-            <button
-              onClick={runDemo}
-              disabled={!operatorAddress}
-              className="ml-auto rounded-lg bg-accent-purple px-6 py-2.5 text-sm font-semibold text-white transition-all hover:bg-accent-purple/90 disabled:opacity-50"
-            >
-              {operatorAddress ? "Run Agent Demo" : "Loading..."}
-            </button>
+            <div className="ml-auto flex gap-2">
+              <button
+                onClick={() => runDemo("happy")}
+                disabled={!operatorAddress}
+                className="rounded-lg bg-accent-purple px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-accent-purple/90 disabled:opacity-50"
+              >
+                {operatorAddress ? "Happy Path" : "Loading..."}
+              </button>
+              <button
+                onClick={() => runDemo("dispute")}
+                disabled={!operatorAddress}
+                className="rounded-lg border border-error/30 bg-error/10 px-5 py-2.5 text-sm font-semibold text-error transition-all hover:bg-error/20 disabled:opacity-50"
+              >
+                Dispute Path
+              </button>
+            </div>
           )}
           {isComplete && (
-            <button
-              onClick={runDemo}
-              className="ml-auto rounded-lg border border-border-default px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-bg-tertiary"
-            >
-              Replay
-            </button>
+            <div className="ml-auto flex gap-2">
+              <button
+                onClick={() => runDemo(activeScenario ?? "happy")}
+                className="rounded-lg border border-border-default px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-bg-tertiary"
+              >
+                Replay
+              </button>
+              <button
+                onClick={() => runDemo(otherScenario)}
+                className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+                  otherScenario === "dispute"
+                    ? "border border-error/30 bg-error/10 text-error hover:bg-error/20"
+                    : "border border-accent-purple/30 bg-accent-purple/10 text-accent-purple hover:bg-accent-purple/20"
+                }`}
+              >
+                Try {scenarioLabel(otherScenario)}
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -302,7 +480,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
         >
           {lines.length === 0 && !isRunning && (
             <div className="text-text-tertiary">
-              Click &quot;Run Agent Demo&quot; to start...
+              Click &quot;Happy Path&quot; or &quot;Dispute Path&quot; to start...
             </div>
           )}
           <AnimatePresence>

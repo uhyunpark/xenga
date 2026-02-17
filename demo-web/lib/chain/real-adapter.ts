@@ -88,6 +88,10 @@ export class RealChainAdapter implements ChainAdapter {
     return txHash;
   }
 
+  async fileDispute(_escrowId: number): Promise<Hash> {
+    throw new Error("Buyer must call dispute() directly from their wallet");
+  }
+
   async resolveDispute(escrowId: number, buyerPct: number): Promise<Hash> {
     return resolveDisputeOnChain(escrowId, buyerPct);
   }

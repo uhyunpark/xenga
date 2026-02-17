@@ -74,6 +74,11 @@ export class MockChainAdapter implements ChainAdapter {
     return fakeTxHash();
   }
 
+  async fileDispute(escrowId: number): Promise<Hash> {
+    updateMockEscrowState(escrowId, EscrowState.Disputed);
+    return fakeTxHash();
+  }
+
   async resolveDispute(escrowId: number, _buyerPct: number): Promise<Hash> {
     updateMockEscrowState(escrowId, EscrowState.Resolved);
     return fakeTxHash();
