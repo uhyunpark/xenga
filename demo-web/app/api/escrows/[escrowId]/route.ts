@@ -36,6 +36,7 @@ export async function GET(
       releaseWindow: Number(escrow.releaseWindow),
       deliveryConfirmedAt: Number(escrow.deliveryConfirmedAt),
       disputeWindow: Number(escrow.disputeWindow),
+      facilitatorFee: escrow.facilitatorFee.toString(),
       isReleasable: releasable,
     });
   } catch (err) {

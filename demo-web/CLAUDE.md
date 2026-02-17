@@ -30,7 +30,7 @@ Next.js calls `register()` once on server start. It:
 
 1. Dynamically imports server code (`@server/...`) — only in `nodejs` runtime, not edge
 2. Validates config (skipped in mock mode)
-3. Registers service types (marketplace, agent-service)
+3. Registers service types (marketplace, agent-service) and payment schemes (escrow)
 4. Initializes SQLite via `getDb()`
 5. Starts the chain event listener (no-op in mock mode)
 
@@ -62,7 +62,7 @@ If the order was already paid, `requestPayment` throws `AlreadyPaidError` with t
 
 ### `RealChainAdapter` (default)
 
-Delegates to the parent `src/server/` code: `settler.settleEscrow()`, `escrowService.getEscrow()`, `eventListener.startEventListener()`. Uses lazy singleton viem clients with the operator's private key. The `fundWallet()` method transfers 10 USDC + 0.005 ETH from the operator wallet.
+Delegates to the parent `src/server/` code: `settler.settleEscrow()`, `escrowService.getEscrow()`, `eventListener.startEventListener()`. Uses lazy singleton viem clients with the operator's private key. The `fundWallet()` method transfers 10 USDC + 0.005 ETH from the operator wallet. Interface methods: `settleEscrow`, `confirmDelivery`, `resolveDispute`, `getEscrow`, `isReleasable`, `fundWallet`, `startEventListener`.
 
 ### `MockChainAdapter` (`MOCK_CHAIN=true`)
 

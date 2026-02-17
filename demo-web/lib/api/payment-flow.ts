@@ -12,6 +12,8 @@ export interface PaymentRequired {
   sellerAddress: Address;
   releaseWindow: number;
   serviceType: string;
+  facilitatorFee?: string;
+  feeBps?: number;
 }
 
 export interface PaymentPayload {

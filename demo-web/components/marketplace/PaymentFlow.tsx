@@ -695,11 +695,27 @@ export function PaymentFlow() {
                     </div>
                     <div className="space-y-1.5 text-xs">
                       <div className="flex justify-between">
-                        <span className="text-text-tertiary">Amount</span>
+                        <span className="text-text-tertiary">Payment Amount</span>
                         <span className="font-mono text-accent">
                           {formatUsdc(state.paymentRequired.amount)} USDC
                         </span>
                       </div>
+                      {state.paymentRequired.facilitatorFee && BigInt(state.paymentRequired.facilitatorFee) > 0n && (
+                        <>
+                          <div className="flex justify-between text-text-tertiary">
+                            <span>Facilitator Fee ({state.paymentRequired.feeBps ? `${(state.paymentRequired.feeBps / 100).toFixed(1)}%` : ""})</span>
+                            <span className="font-mono">
+                              -{formatUsdc(state.paymentRequired.facilitatorFee)} USDC
+                            </span>
+                          </div>
+                          <div className="flex justify-between border-t border-border-subtle pt-1">
+                            <span className="text-text-tertiary">Seller Receives</span>
+                            <span className="font-mono">
+                              {formatUsdc((BigInt(state.paymentRequired.amount) - BigInt(state.paymentRequired.facilitatorFee)).toString())} USDC
+                            </span>
+                          </div>
+                        </>
+                      )}
                       <div className="flex items-center justify-between">
                         <span className="text-text-tertiary">Escrow Contract</span>
                         <AddressDisplay address={state.paymentRequired.escrowContract} />

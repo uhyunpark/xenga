@@ -45,12 +45,16 @@ contract EscrowVault is Ownable2Step, Pausable {
         uint256 releaseWindow; // seconds from creation for auto-release
         uint256 deliveryConfirmedAt;
         uint256 disputeWindow; // seconds from delivery confirmation for disputes
+        uint256 facilitatorFee; // portion of amount going to feeRecipient on release
     }
 
     // ──────────────────────────── State ────────────────────────────
 
     IERC20 public immutable usdc;
     address public arbiter;
+    address public feeRecipient;
+    uint256 public feeBps;
+    uint256 public constant MAX_FEE_BPS = 1000; // 10% cap
 
     uint256 public nextEscrowId = 1;
     mapping(uint256 => Escrow) public escrows;
@@ -81,15 +85,17 @@ contract EscrowVault is Ownable2Step, Pausable {
         address indexed buyer,
         address seller,
         uint256 amount,
+        uint256 facilitatorFee,
         string serviceType
     );
     event DeliveryConfirmed(uint256 indexed escrowId);
-    event EscrowReleased(uint256 indexed escrowId, address releasedBy);
-    event EscrowAutoReleased(uint256 indexed escrowId);
+    event EscrowReleased(uint256 indexed escrowId, address releasedBy, uint256 sellerAmount, uint256 feeAmount);
+    event EscrowAutoReleased(uint256 indexed escrowId, uint256 sellerAmount, uint256 feeAmount);
     event EscrowDisputed(uint256 indexed escrowId, address disputedBy);
-    event DisputeResolved(uint256 indexed escrowId, uint256 buyerAmount, uint256 sellerAmount);
-    event EscrowRefunded(uint256 indexed escrowId);
+    event DisputeResolved(uint256 indexed escrowId, uint256 buyerAmount, uint256 sellerAmount, uint256 feeAmount);
+    event EscrowRefunded(uint256 indexed escrowId, uint256 buyerAmount);
     event ArbiterChanged(address indexed oldArbiter, address indexed newArbiter);
+    event FeeConfigUpdated(address indexed feeRecipient, uint256 feeBps);
 
     // ──────────────────────────── Errors ───────────────────────────
 
@@ -106,12 +112,18 @@ contract EscrowVault is Ownable2Step, Pausable {
     error DisputeWindowNotStarted();
     error InvalidPercentage();
     error ReleaseWindowTooShort();
+    error InvalidFee();
+    error InvalidFeeRecipient();
 
     // ──────────────────────────── Constructor ──────────────────────
 
-    constructor(address _usdc, address _arbiter) Ownable(msg.sender) {
+    constructor(address _usdc, address _arbiter, address _feeRecipient, uint256 _feeBps) Ownable(msg.sender) {
+        if (_feeBps > MAX_FEE_BPS) revert InvalidFee();
+        if (_feeBps > 0 && _feeRecipient == address(0)) revert InvalidFeeRecipient();
         usdc = IERC20(_usdc);
         arbiter = _arbiter;
+        feeRecipient = _feeRecipient;
+        feeBps = _feeBps;
     }
 
     // ──────────────────────────── Modifiers ────────────────────────
@@ -198,6 +210,7 @@ contract EscrowVault is Ownable2Step, Pausable {
         if (buyer == seller) revert InvalidAddress();
         if (releaseWindow < DEFAULT_DISPUTE_WINDOW) revert ReleaseWindowTooShort();
 
+        uint256 fee = (amount * feeBps) / 10000;
         escrowId = nextEscrowId++;
 
         escrows[escrowId] = Escrow({
@@ -210,7 +223,8 @@ contract EscrowVault is Ownable2Step, Pausable {
             createdAt: block.timestamp,
             releaseWindow: releaseWindow,
             deliveryConfirmedAt: 0,
-            disputeWindow: DEFAULT_DISPUTE_WINDOW
+            disputeWindow: DEFAULT_DISPUTE_WINDOW,
+            facilitatorFee: fee
         });
 
         sellerStats[seller].totalEscrows++;
@@ -220,7 +234,7 @@ contract EscrowVault is Ownable2Step, Pausable {
         serviceStats[serviceType].totalEscrows++;
         serviceStats[serviceType].totalAmount += amount;
 
-        emit EscrowCreated(escrowId, orderId, buyer, seller, amount, serviceType);
+        emit EscrowCreated(escrowId, orderId, buyer, seller, amount, fee, serviceType);
     }
 
     // ──────────────────────── Lifecycle ────────────────────────────
@@ -247,6 +261,9 @@ contract EscrowVault is Ownable2Step, Pausable {
 
         e.state = EscrowState.Completed;
 
+        uint256 fee = e.facilitatorFee;
+        uint256 sellerAmount = e.amount - fee;
+
         sellerStats[e.seller].completedCount++;
         sellerStats[e.seller].completedAmount += e.amount;
         buyerStats[e.buyer].completedCount++;
@@ -254,9 +271,12 @@ contract EscrowVault is Ownable2Step, Pausable {
         serviceStats[e.serviceType].completedCount++;
         serviceStats[e.serviceType].completedAmount += e.amount;
 
-        usdc.safeTransfer(e.seller, e.amount);
+        usdc.safeTransfer(e.seller, sellerAmount);
+        if (fee > 0 && feeRecipient != address(0)) {
+            usdc.safeTransfer(feeRecipient, fee);
+        }
 
-        emit EscrowReleased(escrowId, msg.sender);
+        emit EscrowReleased(escrowId, msg.sender, sellerAmount, fee);
     }
 
     /**
@@ -288,6 +308,9 @@ contract EscrowVault is Ownable2Step, Pausable {
 
         e.state = EscrowState.AutoReleased;
 
+        uint256 fee = e.facilitatorFee;
+        uint256 sellerAmount = e.amount - fee;
+
         sellerStats[e.seller].completedCount++;
         sellerStats[e.seller].completedAmount += e.amount;
         buyerStats[e.buyer].completedCount++;
@@ -295,9 +318,12 @@ contract EscrowVault is Ownable2Step, Pausable {
         serviceStats[e.serviceType].completedCount++;
         serviceStats[e.serviceType].completedAmount += e.amount;
 
-        usdc.safeTransfer(e.seller, e.amount);
+        usdc.safeTransfer(e.seller, sellerAmount);
+        if (fee > 0 && feeRecipient != address(0)) {
+            usdc.safeTransfer(feeRecipient, fee);
+        }
 
-        emit EscrowAutoReleased(escrowId);
+        emit EscrowAutoReleased(escrowId, sellerAmount, fee);
     }
 
     /**
@@ -354,8 +380,10 @@ contract EscrowVault is Ownable2Step, Pausable {
         buyerStats[e.buyer].resolvedCount++;
         serviceStats[e.serviceType].resolvedCount++;
 
-        uint256 buyerAmount = (e.amount * buyerPct) / 100;
-        uint256 sellerAmount = e.amount - buyerAmount;
+        uint256 fee = e.facilitatorFee;
+        uint256 tradeAmount = e.amount - fee;
+        uint256 buyerAmount = (tradeAmount * buyerPct) / 100;
+        uint256 sellerAmount = tradeAmount - buyerAmount;
 
         if (buyerAmount > 0) {
             usdc.safeTransfer(e.buyer, buyerAmount);
@@ -363,8 +391,11 @@ contract EscrowVault is Ownable2Step, Pausable {
         if (sellerAmount > 0) {
             usdc.safeTransfer(e.seller, sellerAmount);
         }
+        if (fee > 0 && feeRecipient != address(0)) {
+            usdc.safeTransfer(feeRecipient, fee);
+        }
 
-        emit DisputeResolved(escrowId, buyerAmount, sellerAmount);
+        emit DisputeResolved(escrowId, buyerAmount, sellerAmount, fee);
     }
 
     /**
@@ -386,9 +417,10 @@ contract EscrowVault is Ownable2Step, Pausable {
         serviceStats[e.serviceType].refundedCount++;
         serviceStats[e.serviceType].refundedAmount += e.amount;
 
+        // Full refund: buyer gets entire deposit including fee — facilitator absorbs cost
         usdc.safeTransfer(e.buyer, e.amount);
 
-        emit EscrowRefunded(escrowId);
+        emit EscrowRefunded(escrowId, e.amount);
     }
 
     // ──────────────────────── Pausable ──────────────────────────
@@ -445,5 +477,17 @@ contract EscrowVault is Ownable2Step, Pausable {
         address oldArbiter = arbiter;
         arbiter = _arbiter;
         emit ArbiterChanged(oldArbiter, _arbiter);
+    }
+
+    function setFeeConfig(address _feeRecipient, uint256 _feeBps) external onlyOwner {
+        if (_feeBps > MAX_FEE_BPS) revert InvalidFee();
+        if (_feeBps > 0 && _feeRecipient == address(0)) revert InvalidFeeRecipient();
+        feeRecipient = _feeRecipient;
+        feeBps = _feeBps;
+        emit FeeConfigUpdated(_feeRecipient, _feeBps);
+    }
+
+    function getFeeConfig() external view returns (address, uint256) {
+        return (feeRecipient, feeBps);
     }
 }

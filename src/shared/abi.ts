@@ -14,6 +14,16 @@ export const escrowVaultAbi = [
         "name": "_arbiter",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "_feeRecipient",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_feeBps",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "nonpayable"
@@ -21,6 +31,19 @@ export const escrowVaultAbi = [
   {
     "type": "function",
     "name": "DEFAULT_DISPUTE_WINDOW",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_FEE_BPS",
     "inputs": [],
     "outputs": [
       {
@@ -263,6 +286,37 @@ export const escrowVaultAbi = [
         "name": "disputeWindow",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "facilitatorFee",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "feeBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "feeRecipient",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -330,6 +384,11 @@ export const escrowVaultAbi = [
           },
           {
             "name": "disputeWindow",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "facilitatorFee",
             "type": "uint256",
             "internalType": "uint256"
           }
@@ -857,6 +916,42 @@ export const escrowVaultAbi = [
   },
   {
     "type": "function",
+    "name": "setFeeConfig",
+    "inputs": [
+      {
+        "name": "_feeRecipient",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_feeBps",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "getFeeConfig",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "transferOwnership",
     "inputs": [
       {
@@ -909,6 +1004,25 @@ export const escrowVaultAbi = [
   },
   {
     "type": "event",
+    "name": "FeeConfigUpdated",
+    "inputs": [
+      {
+        "name": "feeRecipient",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "feeBps",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "DeliveryConfirmed",
     "inputs": [
       {
@@ -941,6 +1055,12 @@ export const escrowVaultAbi = [
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
+      },
+      {
+        "name": "feeAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -953,6 +1073,18 @@ export const escrowVaultAbi = [
         "name": "escrowId",
         "type": "uint256",
         "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "sellerAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "feeAmount",
+        "type": "uint256",
+        "indexed": false,
         "internalType": "uint256"
       }
     ],
@@ -988,6 +1120,12 @@ export const escrowVaultAbi = [
       },
       {
         "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "facilitatorFee",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -1029,6 +1167,12 @@ export const escrowVaultAbi = [
         "type": "uint256",
         "indexed": true,
         "internalType": "uint256"
+      },
+      {
+        "name": "buyerAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -1048,6 +1192,18 @@ export const escrowVaultAbi = [
         "type": "address",
         "indexed": false,
         "internalType": "address"
+      },
+      {
+        "name": "sellerAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "feeAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
@@ -1148,6 +1304,16 @@ export const escrowVaultAbi = [
   },
   {
     "type": "error",
+    "name": "InvalidFee",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidFeeRecipient",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidAmount",
     "inputs": []
   },
@@ -1217,6 +1383,11 @@ export const escrowVaultAbi = [
   {
     "type": "error",
     "name": "ReleaseWindowNotPassed",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ReleaseWindowTooShort",
     "inputs": []
   },
   {

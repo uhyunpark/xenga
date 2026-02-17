@@ -1,9 +1,10 @@
 import type { Address, Hash } from "viem";
 import type { ChainAdapter } from "./types";
-import type { EscrowPaymentPayload, OnChainSession, SessionPaymentPayload, Stats } from "@shared/types.js";
+import type { EscrowPaymentPayload } from "@shared/types.js";
 import { EscrowState } from "@shared/types.js";
 import { MARKETPLACE_DISPUTE_WINDOW } from "@shared/constants.js";
 import { getServiceType } from "@server/service-types/index.js";
+import { config } from "@server/config.js";
 import {
   getOrderByOrderId,
   updateOrderStatus,
@@ -14,12 +15,6 @@ import {
   updateMockEscrowState,
   isMockReleasable,
 } from "./mock-escrow-store";
-import {
-  createMockSession,
-  getMockSession,
-  captureMockSession,
-  settleMockSession,
-} from "./mock-session-store";
 import { fakeTxHash } from "./mock-utils";
 
 export class MockChainAdapter implements ChainAdapter {
@@ -28,6 +23,9 @@ export class MockChainAdapter implements ChainAdapter {
   async settleEscrow(
     payload: EscrowPaymentPayload
   ): Promise<{ txHash: Hash; escrowId: number }> {
+    const feeBps = config.feeBps;
+    const fee = (BigInt(payload.value) * BigInt(feeBps)) / 10000n;
+
     const escrowId = createMockEscrow({
       orderId: payload.orderId,
       buyer: payload.from,
@@ -37,6 +35,7 @@ export class MockChainAdapter implements ChainAdapter {
       releaseWindow: payload.releaseWindow,
       // MARKETPLACE_DISPUTE_WINDOW matches the on-chain DEFAULT_DISPUTE_WINDOW (3 days) — global for all escrow types
       disputeWindow: MARKETPLACE_DISPUTE_WINDOW,
+      facilitatorFee: fee.toString(),
     });
 
     const txHash = fakeTxHash();
@@ -93,62 +92,7 @@ export class MockChainAdapter implements ChainAdapter {
     return { usdcTx: fakeTxHash(), ethTx: fakeTxHash() };
   }
 
-  async getSellerStats(_seller: Address): Promise<Stats> {
-    return zeroStats();
-  }
-
-  async getServiceTypeStats(_serviceType: string): Promise<Stats> {
-    return zeroStats();
-  }
-
   startEventListener(): void {
     console.log("[MockChain] Event listener skipped (mock mode)");
   }
-
-  // ──────────── Session Methods ────────────
-
-  async createSession(
-    payload: SessionPaymentPayload
-  ): Promise<{ txHash: Hash; sessionId: number; expiresAt: number }> {
-    const sessionId = createMockSession({
-      buyer: payload.from,
-      seller: payload.sellerAddress,
-      depositAmount: payload.value,
-      duration: payload.duration,
-    });
-
-    const txHash = fakeTxHash();
-    const expiresAt = Math.floor(Date.now() / 1000) + payload.duration;
-
-    console.log(`[MockChain] Created session ${sessionId} for ${payload.from}`);
-    return { txHash, sessionId, expiresAt };
-  }
-
-  async captureSession(sessionId: number, amount: bigint): Promise<Hash> {
-    captureMockSession(sessionId, amount);
-    return fakeTxHash();
-  }
-
-  async settleSession(sessionId: number, finalAmount: bigint): Promise<Hash> {
-    settleMockSession(sessionId, finalAmount);
-    return fakeTxHash();
-  }
-
-  async getSessionOnChain(sessionId: number): Promise<OnChainSession> {
-    return getMockSession(sessionId);
-  }
-}
-
-function zeroStats(): Stats {
-  return {
-    totalEscrows: 0n,
-    totalAmount: 0n,
-    completedCount: 0n,
-    completedAmount: 0n,
-    disputedCount: 0n,
-    disputedAmount: 0n,
-    resolvedCount: 0n,
-    refundedCount: 0n,
-    refundedAmount: 0n,
-  };
 }

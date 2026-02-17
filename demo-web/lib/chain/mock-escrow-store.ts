@@ -19,7 +19,8 @@ function ensureTable() {
       created_at INTEGER NOT NULL,
       release_window INTEGER NOT NULL,
       delivery_confirmed_at INTEGER NOT NULL DEFAULT 0,
-      dispute_window INTEGER NOT NULL
+      dispute_window INTEGER NOT NULL,
+      facilitator_fee TEXT NOT NULL DEFAULT '0'
     )
   `);
   initialized = true;
@@ -33,14 +34,15 @@ export function createMockEscrow(params: {
   serviceType: string;
   releaseWindow: number;
   disputeWindow: number;
+  facilitatorFee: string;
 }): number {
   ensureTable();
   const db = getDb();
   const now = Math.floor(Date.now() / 1000);
   const result = db
     .prepare(
-      `INSERT INTO mock_escrows (order_id, buyer, seller, amount, service_type, state, created_at, release_window, dispute_window)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO mock_escrows (order_id, buyer, seller, amount, service_type, state, created_at, release_window, dispute_window, facilitator_fee)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       params.orderId,
@@ -51,7 +53,8 @@ export function createMockEscrow(params: {
       EscrowState.Active,
       now,
       params.releaseWindow,
-      params.disputeWindow
+      params.disputeWindow,
+      params.facilitatorFee
     );
   return result.lastInsertRowid as number;
 }
@@ -76,6 +79,7 @@ export function getMockEscrow(escrowId: number): OnChainEscrow {
       releaseWindow: 0n,
       deliveryConfirmedAt: 0n,
       disputeWindow: 0n,
+      facilitatorFee: 0n,
     };
   }
 
@@ -90,6 +94,7 @@ export function getMockEscrow(escrowId: number): OnChainEscrow {
     releaseWindow: BigInt(row.release_window),
     deliveryConfirmedAt: BigInt(row.delivery_confirmed_at),
     disputeWindow: BigInt(row.dispute_window),
+    facilitatorFee: BigInt(row.facilitator_fee),
   };
 }
 

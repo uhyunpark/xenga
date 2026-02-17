@@ -54,6 +54,7 @@ export interface OnChainEscrow {
   releaseWindow: bigint;
   deliveryConfirmedAt: bigint;
   disputeWindow: bigint;
+  facilitatorFee: bigint;
 }
 
 // ──────────────────────── Stats ────────────────────────
@@ -103,6 +104,8 @@ export interface EscrowPaymentRequired {
   sellerAddress: Address;
   releaseWindow: number;
   serviceType: string;
+  facilitatorFee?: string; // informational: stringified bigint
+  feeBps?: number; // informational: basis points (100 = 1%)
 }
 
 export interface EscrowPaymentPayload {
