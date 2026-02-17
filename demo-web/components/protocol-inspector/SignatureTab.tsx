@@ -33,7 +33,7 @@ export function SignatureTab() {
   const { domain, message } = latestSign.data;
 
   return (
-    <div className="space-y-4 overflow-y-auto max-h-full p-1 animate-inspector-flash">
+    <div className="max-h-full space-y-4 overflow-y-auto p-1 animate-inspector-flash">
       {/* EIP-712 Domain */}
       <section>
         <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-2">
@@ -48,7 +48,7 @@ export function SignatureTab() {
           <h3 className="text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-2">
             ReceiveWithAuthorization
           </h3>
-          <div className="rounded-xl border border-border-default overflow-hidden">
+          <div className="overflow-hidden rounded-xl border border-border-default bg-bg-secondary">
             <table className="w-full text-sm">
               <tbody className="divide-y divide-border-default">
                 <FieldRow label="from">
@@ -111,7 +111,7 @@ function SigField({ label, value }: { label: string; value: string }) {
   }, [value]);
 
   return (
-    <div className="flex items-start gap-2 rounded-lg bg-bg-secondary border border-border-default px-3 py-2">
+    <div className="flex items-start gap-2 rounded-lg border border-border-default bg-bg-secondary px-3 py-2">
       <span className="text-xs font-semibold text-accent-purple w-4 shrink-0">{label}</span>
       <span className="font-mono text-xs text-text-secondary break-all flex-1">{value}</span>
       <button

@@ -210,7 +210,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
           </p>
           <button
             onClick={connectDemo}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-[#031018]"
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white"
           >
             Create Demo Wallet
           </button>
@@ -222,7 +222,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
           </p>
           <button
             onClick={fundDemoWallet}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-[#031018]"
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white"
           >
             Fund Wallet
           </button>
@@ -254,7 +254,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
             <button
               onClick={runDemo}
               disabled={!operatorAddress}
-              className="glow-purple ml-auto rounded-lg bg-accent-purple px-6 py-2.5 text-sm font-semibold text-[#03140f] transition-all hover:bg-accent-purple/90 disabled:opacity-50"
+              className="ml-auto rounded-lg bg-accent-purple px-6 py-2.5 text-sm font-semibold text-white transition-all hover:bg-accent-purple/90 disabled:opacity-50"
             >
               {operatorAddress ? "Run Agent Demo" : "Loading..."}
             </button>
@@ -285,7 +285,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
         </div>
         <div
           ref={terminalRef}
-          className="max-h-[500px] overflow-y-auto bg-[#050910] p-4 font-mono text-[13px] leading-relaxed"
+          className="max-h-[500px] overflow-y-auto bg-slate-950 p-4 font-mono text-[13px] leading-relaxed"
         >
           {lines.length === 0 && !isRunning && (
             <div className="text-text-tertiary">

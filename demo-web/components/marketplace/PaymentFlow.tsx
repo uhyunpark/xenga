@@ -474,9 +474,9 @@ export function PaymentFlow() {
     ((currentStepIndex + 1) / DEMO_STEPS.length) * 100;
   const stepHint = STEP_HINTS[state.step];
   const primaryButtonClass =
-    "w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-[#031018] transition-all hover:bg-accent/90 disabled:opacity-50";
+    "w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-accent/90 disabled:opacity-50";
   const primaryGlowButtonClass =
-    "glow-blue w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-[#031018] transition-all hover:bg-accent/90 disabled:opacity-50";
+    "w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-accent/90 disabled:opacity-50";
 
   return (
     <div className="flex flex-col gap-6 lg:flex-row">
@@ -566,7 +566,7 @@ export function PaymentFlow() {
                       </p>
                       <button
                         onClick={connectDemo}
-                        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-[#031018] transition-colors hover:bg-accent/90"
+                        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90"
                       >
                         Create Demo Wallet
                       </button>
@@ -578,7 +578,7 @@ export function PaymentFlow() {
                       </p>
                       <button
                         onClick={fundDemoWallet}
-                        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-[#031018] transition-colors hover:bg-accent/90"
+                        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90"
                       >
                         Fund Wallet with Test USDC
                       </button>
@@ -670,7 +670,7 @@ export function PaymentFlow() {
                   >
                     {state.loading ? (
                       <span className="flex items-center justify-center gap-2">
-                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-[#031018] border-t-transparent" />
+                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
                         Requesting...
                       </span>
                     ) : (
@@ -746,7 +746,7 @@ export function PaymentFlow() {
                   >
                     {state.loading ? (
                       <span className="flex items-center justify-center gap-2">
-                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-[#031018] border-t-transparent" />
+                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
                         Signing...
                       </span>
                     ) : (
@@ -802,7 +802,7 @@ export function PaymentFlow() {
                   >
                     {state.loading ? (
                       <span className="flex items-center justify-center gap-2">
-                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-[#031018] border-t-transparent" />
+                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
                         Submitting on-chain...
                       </span>
                     ) : (
@@ -890,7 +890,7 @@ export function PaymentFlow() {
                             <button
                               onClick={handleRelease}
                               disabled={state.loading}
-                              className="flex-1 rounded-lg bg-success px-3 py-2 text-sm font-medium text-[#041610] transition-colors hover:bg-success/90 disabled:opacity-50"
+                              className="flex-1 rounded-lg bg-success px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-success/90 disabled:opacity-50"
                             >
                               Release Funds
                             </button>

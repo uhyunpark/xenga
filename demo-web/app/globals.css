@@ -1,80 +1,71 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg-primary: #05080f;
-  --color-bg-secondary: #0b1220;
-  --color-bg-tertiary: #121b2c;
-  --color-border-default: rgba(118, 145, 185, 0.24);
-  --color-border-active: rgba(52, 221, 255, 0.62);
-  --color-text-primary: #e8f1ff;
-  --color-text-secondary: #a4b3cd;
-  --color-text-tertiary: #6c7e9b;
-  --color-accent: #25c8ff;
-  --color-accent-purple: #43e7b0;
-  --color-success: #30d49f;
-  --color-warning: #f2b34f;
-  --color-error: #ff6179;
+  --color-bg-primary: #F6F8FB;
+  --color-bg-secondary: #FFFFFF;
+  --color-bg-tertiary: #EEF2F7;
+  --color-border-default: #D6DEE8;
+  --color-border-active: #93B4F8;
+  --color-text-primary: #0F172A;
+  --color-text-secondary: #475569;
+  --color-text-tertiary: #64748B;
+  --color-accent: #2563EB;
+  --color-accent-purple: #2563EB;
+  --color-success: #16A34A;
+  --color-warning: #D97706;
+  --color-error: #DC2626;
 
-  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
   background-color: var(--color-bg-primary);
-  background-image:
-    radial-gradient(1100px 600px at 12% -15%, rgba(37, 200, 255, 0.16), transparent 65%),
-    radial-gradient(900px 500px at 88% -10%, rgba(67, 231, 176, 0.14), transparent 65%),
-    linear-gradient(180deg, rgba(10, 17, 31, 0.96) 0%, rgba(5, 8, 15, 1) 52%);
+  background-image: linear-gradient(180deg, #f9fbfe 0%, #f6f8fb 100%);
   color: var(--color-text-primary);
   font-family: var(--font-sans);
-  letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 ::selection {
-  background: rgba(37, 200, 255, 0.3);
-  color: #eff8ff;
+  background: rgba(37, 99, 235, 0.2);
+  color: #0b1220;
 }
 
-/* Subtle background grid */
 .bg-grid {
   background-image:
-    linear-gradient(rgba(127, 154, 194, 0.12) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(127, 154, 194, 0.12) 1px, transparent 1px);
+    linear-gradient(rgba(148, 163, 184, 0.22) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.22) 1px, transparent 1px);
   background-size: 48px 48px;
-  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.66), transparent 100%);
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.28), transparent 100%);
 }
 
 .gradient-text {
-  background: linear-gradient(130deg, #f3f9ff 0%, #4fe8ba 45%, #1ebfff 100%);
+  background: linear-gradient(120deg, #0f172a 0%, #1d4ed8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .glow-blue {
-  box-shadow:
-    0 0 0 1px rgba(37, 200, 255, 0.4),
-    0 12px 28px rgba(6, 87, 117, 0.35);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.2);
 }
 
 .glow-purple {
-  box-shadow:
-    0 0 0 1px rgba(67, 231, 176, 0.4),
-    0 12px 28px rgba(9, 106, 79, 0.3);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.16);
 }
 
 @keyframes pulse-glow {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(37, 200, 255, 0.4);
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.28);
   }
   50% {
-    box-shadow: 0 0 0 10px rgba(37, 200, 255, 0);
+    box-shadow: 0 0 0 10px rgba(37, 99, 235, 0);
   }
 }
 
@@ -83,21 +74,20 @@ body {
 }
 
 .code-block {
-  background:
-    linear-gradient(180deg, rgba(17, 26, 43, 0.96), rgba(10, 16, 28, 0.96));
+  background: #f8fafc;
   border: 1px solid var(--color-border-default);
   border-radius: 12px;
   font-family: var(--font-mono);
   font-size: 13px;
   line-height: 1.6;
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.38);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
 }
 
 .panel-surface {
-  background:
-    linear-gradient(180deg, rgba(15, 24, 40, 0.94), rgba(9, 14, 24, 0.94));
+  background: #ffffff;
   border: 1px solid var(--color-border-default);
-  backdrop-filter: blur(8px);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 ::-webkit-scrollbar {
@@ -110,17 +100,17 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(129, 155, 194, 0.34);
+  background: rgba(148, 163, 184, 0.6);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(129, 155, 194, 0.58);
+  background: rgba(148, 163, 184, 0.85);
 }
 
 @keyframes inspector-flash {
   from {
-    background-color: rgba(37, 200, 255, 0.16);
+    background-color: rgba(37, 99, 235, 0.1);
   }
   to {
     background-color: transparent;

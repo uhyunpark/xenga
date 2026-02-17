@@ -69,18 +69,17 @@ export function HowItWorks() {
           transition={{ delay: 0.1 }}
           className="mb-10 text-center text-text-secondary"
         >
-          Three layers working together: client SDK, server middleware, and smart
-          contract.
+          Three integrated layers: client SDK, server middleware, and escrow contract.
         </motion.p>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ delay: 0.2 }}
-          className="overflow-hidden rounded-2xl border border-border-default bg-bg-secondary"
+          className="panel-surface overflow-hidden rounded-2xl"
         >
           {/* Tab bar */}
-          <div className="flex border-b border-border-default">
+          <div className="flex border-b border-border-default bg-bg-tertiary/55">
             {tabs.map((tab, i) => (
               <button
                 key={tab.label}
@@ -107,7 +106,7 @@ export function HowItWorks() {
             <div className="mb-2 text-xs text-text-tertiary">
               {tabs[activeTab].lang}
             </div>
-            <pre className="overflow-x-auto font-mono text-[13px] leading-relaxed">
+            <pre className="overflow-x-auto font-mono text-[13px] leading-relaxed text-text-secondary">
               {highlightBlock(tabs[activeTab].code)}
             </pre>
           </div>

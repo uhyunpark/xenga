@@ -35,15 +35,15 @@ export function ProtocolFlow() {
                 key={step.label}
                 initial={{ opacity: 0, y: 20 }}
                 animate={isInView ? { opacity: 1, y: 0 } : {}}
-                transition={{ delay: i * 0.08 }}
-                className="relative flex min-h-[108px] w-[170px] shrink-0 rounded-xl border border-border-default bg-bg-secondary/70 p-3"
+                transition={{ delay: i * 0.06 }}
+                className="relative flex min-h-[108px] w-[170px] shrink-0 rounded-xl border border-border-default bg-bg-secondary p-3"
               >
                 <div className="flex h-full flex-col">
                   <span
                     className={`inline-flex w-fit rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
                       step.icon === "402"
-                        ? "border-warning/40 bg-warning/15 text-warning"
-                        : "border-accent/40 bg-accent/10 text-accent"
+                        ? "border-warning/30 bg-warning/10 text-warning"
+                        : "border-accent/30 bg-accent/10 text-accent"
                     }`}
                   >
                     {step.icon}

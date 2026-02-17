@@ -40,7 +40,7 @@ export function InspectorPanel() {
       {/* Mobile bottom sheet */}
       <div className="fixed inset-0 z-40 md:hidden">
         {/* Backdrop */}
-        <div className="absolute inset-0 bg-black/50" onClick={toggle} />
+        <div className="absolute inset-0 bg-slate-900/20" onClick={toggle} />
         {/* Sheet */}
         <div className="absolute bottom-0 left-0 right-0 flex max-h-[75vh] flex-col rounded-t-2xl border-t border-border-default bg-bg-secondary">
           <PanelContent
@@ -80,7 +80,7 @@ function CollapsedToggle({
     <button
       onClick={onClick}
       className={cn(
-        "fixed right-4 z-40 flex items-center gap-2 rounded-full border border-border-active bg-bg-secondary px-4 py-2.5 shadow-lg shadow-black/40 transition-colors hover:border-accent/40",
+        "fixed right-4 z-40 flex items-center gap-2 rounded-full border border-border-active bg-bg-secondary px-4 py-2.5 shadow-sm transition-colors hover:border-accent/40",
         mobile ? "bottom-4 md:hidden" : "bottom-4 hidden md:flex"
       )}
     >
@@ -132,7 +132,7 @@ function PanelContent({
       </div>
 
       {/* Tab bar */}
-      <div className="flex shrink-0 overflow-x-auto border-b border-border-default bg-bg-primary/60">
+      <div className="flex shrink-0 overflow-x-auto border-b border-border-default bg-bg-tertiary/55">
         {TABS.map((tab) => (
           <button
             key={tab.key}
@@ -146,12 +146,12 @@ function PanelContent({
           >
             {tab.label}
             {eventCounts[tab.key] > 0 && (
-              <span
+                <span
                 className={cn(
                   "flex items-center justify-center h-4 min-w-4 rounded-full text-[10px] font-semibold px-1",
                   activeTab === tab.key
                     ? "bg-accent/20 text-accent"
-                    : "bg-white/5 text-text-tertiary"
+                    : "bg-bg-tertiary text-text-tertiary"
                 )}
               >
                 {eventCounts[tab.key]}

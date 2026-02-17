@@ -27,7 +27,7 @@ export function OnChainTab() {
   return (
     <div ref={scrollRef} className="space-y-3 overflow-y-auto max-h-full p-1">
       {/* Info callout */}
-      <div className="rounded-xl bg-accent/5 border border-accent/20 px-4 py-3 flex items-start gap-2">
+      <div className="flex items-start gap-2 rounded-xl border border-accent/20 bg-accent/5 px-4 py-3">
         <svg className="h-4 w-4 text-accent shrink-0 mt-0.5" viewBox="0 0 16 16" fill="currentColor">
           <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 3a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 018 4zm0 8a.75.75 0 100-1.5.75.75 0 000 1.5z" />
         </svg>
@@ -48,8 +48,8 @@ function TxEventCard({ event }: { event: any }) {
   const isConfirmed = type === "tx_confirmed";
 
   return (
-    <div className="rounded-xl border border-border-default overflow-hidden animate-inspector-flash">
-      <div className="flex items-center gap-2 px-3 py-2 bg-bg-tertiary border-b border-border-default">
+    <div className="overflow-hidden rounded-xl border border-border-default bg-bg-secondary animate-inspector-flash">
+      <div className="flex items-center gap-2 border-b border-border-default bg-bg-tertiary/55 px-3 py-2">
         <Badge variant={isConfirmed ? "success" : "info"}>
           {isConfirmed ? "Confirmed" : "Submitted"}
         </Badge>
@@ -57,7 +57,7 @@ function TxEventCard({ event }: { event: any }) {
           <span className="font-mono text-xs text-text-secondary">{data.functionName}</span>
         )}
       </div>
-      <div className="p-3 space-y-2">
+      <div className="space-y-2 p-3">
         {data.hash && (
           <div className="flex items-center gap-2">
             <span className="text-xs text-text-tertiary w-20">Tx Hash</span>

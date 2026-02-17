@@ -37,13 +37,13 @@ export function Navbar() {
     : "border-warning/30 bg-warning/10 text-warning";
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-border-default bg-bg-primary/85 backdrop-blur-xl">
+    <nav className="sticky top-0 z-50 border-b border-border-default bg-bg-secondary/95 backdrop-blur-md">
       <div className="mx-auto max-w-[90rem] px-4">
         <div className="flex h-16 items-center justify-between gap-3">
           <div className="flex items-center gap-6">
             <Link
               href="/"
-              className="flex items-center gap-2 rounded-lg border border-border-default bg-bg-secondary/75 px-2.5 py-1.5 font-semibold transition-colors hover:border-border-active"
+              className="flex items-center gap-2 rounded-lg border border-border-default bg-bg-secondary px-2.5 py-1.5 font-semibold transition-colors hover:border-border-active"
             >
               <span className="text-accent">x402</span>
               <span className="text-text-secondary">Escrow</span>
@@ -124,7 +124,7 @@ export function Navbar() {
 
         {mobileOpen && (
           <div className="space-y-3 border-t border-border-default py-3 md:hidden">
-            <div className="flex items-center justify-between rounded-lg border border-border-default bg-bg-secondary/60 px-3 py-2">
+            <div className="flex items-center justify-between rounded-lg border border-border-default bg-bg-secondary px-3 py-2">
               <span className="text-xs font-medium text-text-secondary">
                 Chain Environment
               </span>
@@ -134,7 +134,7 @@ export function Navbar() {
                 {chainLabel}
               </span>
             </div>
-            <div className="flex items-center justify-between rounded-lg border border-border-default bg-bg-secondary/60 px-3 py-2">
+            <div className="flex items-center justify-between rounded-lg border border-border-default bg-bg-secondary px-3 py-2">
               <span className="text-xs font-medium text-text-secondary">
                 Protocol Inspector
               </span>
@@ -161,7 +161,7 @@ export function Navbar() {
                 </NavLink>
               ))}
             </div>
-            <div className="rounded-lg border border-border-default bg-bg-secondary/60 p-2">
+            <div className="rounded-lg border border-border-default bg-bg-secondary p-2">
               <WalletSelector />
             </div>
           </div>
@@ -187,7 +187,7 @@ function NavLink({
       href={href}
       className={`rounded-lg px-3 py-2 text-sm transition-colors ${
         active
-          ? "bg-accent/12 text-accent"
+          ? "bg-accent/10 text-accent"
           : "text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"
       } ${mobile ? "block w-full" : ""}`}
     >
@@ -207,7 +207,7 @@ function HealthDot({ status }: { status: boolean | null }) {
     status === null ? "Checking..." : status ? "Connected" : "Disconnected";
 
   return (
-    <div className="flex items-center gap-1.5 rounded-full border border-border-default bg-bg-secondary/70 px-2 py-1" title={label}>
+    <div className="flex items-center gap-1.5 rounded-full border border-border-default bg-bg-secondary px-2 py-1" title={label}>
       <div className={`h-2 w-2 rounded-full ${color}`} />
       <span className="hidden text-xs text-text-tertiary sm:inline">
         {label}

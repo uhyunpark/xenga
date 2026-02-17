@@ -52,7 +52,7 @@ export function StepTracker({ currentStep, onStepClick, className = "" }: StepTr
             <div
               className={`flex h-5 w-5 items-center justify-center rounded-full border text-[10px] font-bold ${
                 isCurrent
-                  ? "border-accent bg-accent text-[#031018]"
+                  ? "border-accent bg-accent text-white"
                   : isPast
                     ? "border-success bg-success/20 text-success"
                     : "border-border-default"

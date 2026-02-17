@@ -60,7 +60,7 @@ export function DemoCards() {
           transition={{ delay: 0.1 }}
           className="mb-10 text-center text-text-secondary"
         >
-          Two demos, one protocol. Start with the manual marketplace flow, then watch it run autonomously.
+          Test interactive and autonomous escrow flows with protocol-level visibility.
         </motion.p>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -72,7 +72,7 @@ export function DemoCards() {
               transition={{ delay: 0.2 + i * 0.1 }}
             >
               <Link href={demo.href} className="group block">
-                <div className="panel-surface rounded-2xl p-6 transition-all duration-200 hover:border-border-active hover:scale-[1.01] group-hover:shadow-lg">
+                <div className="panel-surface rounded-2xl p-6 transition-all duration-200 hover:border-border-active hover:shadow-sm">
                   <div className="mb-4 flex items-center justify-between">
                     <div
                       className={`rounded-lg p-2.5 ${
@@ -101,9 +101,6 @@ export function DemoCards() {
                       {demo.badge}
                     </span>
                   </div>
-                  <div className="mb-3 inline-flex rounded-full border border-border-default bg-bg-primary/70 px-2 py-0.5 text-[10px] uppercase tracking-wide text-text-tertiary">
-                    Base Sepolia Testnet
-                  </div>
                   <h3 className="mb-2 text-lg font-semibold">{demo.title}</h3>
                   <p className="text-sm text-text-secondary">
                     {demo.description}
@@ -116,7 +113,7 @@ export function DemoCards() {
                       </div>
                     ))}
                   </div>
-                  <div className="mt-4 flex items-center gap-1 text-sm font-medium text-text-tertiary group-hover:text-text-primary transition-colors">
+                  <div className="mt-4 flex items-center gap-1 text-sm font-medium text-text-tertiary transition-colors group-hover:text-text-primary">
                     Start Demo
                     <svg
                       width="14"

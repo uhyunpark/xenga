@@ -21,8 +21,8 @@ export function Footer() {
             </div>
             <p className="text-sm text-text-tertiary">
               {isMockChain
-                ? "Agentic payments with simulated escrow state for offline demos."
-                : "Agentic payments with on-chain escrow protection."}
+                ? "Secure payment flows with simulated escrow state for local and offline demos."
+                : "Secure HTTP-native payments with on-chain escrow protection."}
             </p>
             <div className="mt-3">
               <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${envBadgeClass}`}>
@@ -60,6 +60,43 @@ export function Footer() {
                   <p className="text-xs text-text-tertiary">
                     EscrowVault address shown in Health endpoint
                   </p>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <h4 className="mb-3 text-sm font-semibold text-text-primary">
+              Resources
+            </h4>
+            <div className="space-y-2">
+              {isMockChain ? (
+                <>
+                  <p className="text-sm text-text-secondary">
+                    External chain links are hidden in simulation mode.
+                  </p>
+                  <p className="text-xs text-text-tertiary">
+                    Set `MOCK_CHAIN=false` and `NEXT_PUBLIC_MOCK_CHAIN=false` to use live testnet resources.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <a
+                    href="https://sepolia.basescan.org"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block text-sm text-text-secondary transition-colors hover:text-text-primary"
+                  >
+                    BaseScan (Sepolia)
+                  </a>
+                  <a
+                    href="https://www.circle.com/en/multi-chain-usdc/base"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block text-sm text-text-secondary transition-colors hover:text-text-primary"
+                  >
+                    USDC on Base
+                  </a>
                 </>
               )}
             </div>

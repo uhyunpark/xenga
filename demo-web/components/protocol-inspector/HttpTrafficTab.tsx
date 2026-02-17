@@ -64,7 +64,7 @@ function HttpPair({
   index: number;
 }) {
   return (
-    <div className="rounded-xl border border-border-default overflow-hidden animate-inspector-flash">
+    <div className="overflow-hidden rounded-xl border border-border-default bg-bg-secondary animate-inspector-flash">
       {pair.request && <RequestBlock event={pair.request} index={index} />}
       {pair.response && <ResponseBlock event={pair.response} />}
     </div>
@@ -75,13 +75,13 @@ function RequestBlock({ event, index }: { event: any; index: number }) {
   const { data } = event;
   return (
     <div>
-      <div className="flex items-center gap-2 px-3 py-2 bg-accent/10 border-b border-border-default">
+      <div className="flex items-center gap-2 border-b border-border-default bg-accent/10 px-3 py-2">
         <span className="text-xs font-semibold text-accent">REQUEST #{index + 1}</span>
         <span className="font-mono text-xs text-text-secondary">
           {data.method} {data.url}
         </span>
       </div>
-      <div className="p-3 space-y-2">
+      <div className="space-y-2 p-3">
         {data.headers && (
           <HeadersSection headers={data.headers} label="Headers" />
         )}
@@ -115,7 +115,7 @@ function ResponseBlock({ event }: { event: any }) {
         </span>
         <Badge variant={is402 ? "warning" : "success"}>{status}</Badge>
       </div>
-      <div className="p-3 space-y-2">
+      <div className="space-y-2 p-3">
         {data.headers && (
           <HeadersSection headers={data.headers} label="Headers" />
         )}

@@ -19,14 +19,14 @@ export function JsonViewer({ data, className, collapsed = false }: JsonViewerPro
   }, [data]);
 
   return (
-    <div className={cn("relative rounded-xl bg-bg-secondary border border-border-default p-4 overflow-auto", className)}>
+    <div className={cn("relative overflow-auto rounded-xl border border-border-default bg-bg-secondary p-4", className)}>
       <button
         onClick={handleCopy}
-        className="absolute top-2 right-2 rounded-md bg-bg-tertiary px-2 py-1 text-xs text-text-tertiary hover:text-text-primary border border-border-default transition-colors cursor-pointer"
+        className="absolute right-2 top-2 cursor-pointer rounded-md border border-border-default bg-bg-tertiary px-2 py-1 text-xs text-text-tertiary transition-colors hover:text-text-primary"
       >
         {copied ? "Copied!" : "Copy"}
       </button>
-      <pre className="font-mono text-[13px] leading-relaxed">
+      <pre className="font-mono text-[12px] leading-relaxed text-text-secondary">
         <JsonNode value={data} defaultCollapsed={collapsed} depth={0} />
       </pre>
     </div>
@@ -53,11 +53,11 @@ function JsonNode({
   }
 
   if (typeof value === "number") {
-    return <span className="text-warning">{value}</span>;
+    return <span className="text-accent">{value}</span>;
   }
 
   if (typeof value === "string") {
-    return <span className="text-success">&quot;{value}&quot;</span>;
+      return <span className="text-success">&quot;{value}&quot;</span>;
   }
 
   if (Array.isArray(value)) {
@@ -134,7 +134,7 @@ function JsonNode({
         {keys.map((key, i) => (
           <span key={key}>
             {indent}
-            <span className="text-accent-purple">&quot;{key}&quot;</span>
+            <span className="text-text-primary">&quot;{key}&quot;</span>
             <span className="text-text-tertiary">: </span>
             <JsonNode value={value[key]} defaultCollapsed={defaultCollapsed} depth={depth + 1} />
             {i < keys.length - 1 ? "," : ""}

@@ -4,11 +4,11 @@ import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
 
 const variantStyles = {
-  success: "bg-success/15 text-success border-success/20",
-  warning: "bg-warning/15 text-warning border-warning/20",
-  error: "bg-error/15 text-error border-error/20",
-  info: "bg-accent/15 text-accent border-accent/20",
-  default: "bg-white/5 text-text-secondary border-white/10",
+  success: "bg-success/10 text-success border-success/25",
+  warning: "bg-warning/10 text-warning border-warning/25",
+  error: "bg-error/10 text-error border-error/25",
+  info: "bg-accent/10 text-accent border-accent/25",
+  default: "bg-bg-tertiary text-text-secondary border-border-default",
 } as const;
 
 interface BadgeProps {

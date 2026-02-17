@@ -17,42 +17,52 @@ const codeLines = [
 
 export function HeroSection() {
   return (
-    <section className="relative overflow-hidden px-4 pb-20 pt-20 md:pt-28">
+    <section className="relative overflow-hidden px-4 pb-20 pt-20 md:pt-24">
       <div className="bg-grid pointer-events-none absolute inset-0" />
-      <div className="pointer-events-none absolute -left-20 top-10 h-[380px] w-[380px] rounded-full bg-accent/12 blur-[110px]" />
-      <div className="pointer-events-none absolute right-[-8rem] top-0 h-[360px] w-[360px] rounded-full bg-accent-purple/12 blur-[120px]" />
 
-      <div className="relative mx-auto grid max-w-6xl gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+      <div className="relative mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55 }}
+          transition={{ duration: 0.45 }}
         >
           <span className="inline-flex rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-accent">
-            Protocol-Grade Checkout
+            Secure Payment Infrastructure
           </span>
           <h1
-            className="gradient-text mt-5 text-4xl font-bold tracking-tight md:text-6xl lg:text-7xl"
+            className="gradient-text mt-5 text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl"
             style={{ textWrap: "balance" }}
           >
-            New standard of Agentic commerce
+            Escrow-backed payments that feel like real fintech
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-text-secondary md:text-xl">
-            Experience the future of payments with escrowed x402 payment protocol.
+            Run buyer and agent flows through HTTP-native checkout, while keeping
+            verifiable escrow state, predictable settlement, and clear release controls.
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link
               href="/marketplace"
-              className="glow-blue inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-[#031018] transition-all hover:bg-accent/90 hover:scale-[1.02] active:scale-[0.98]"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-accent/90"
             >
               Launch Marketplace Demo
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M3 8h10M9 4l4 4-4 4" />
               </svg>
             </Link>
+            <Link
+              href="/explorer"
+              className="inline-flex items-center justify-center rounded-lg border border-border-default bg-bg-secondary px-6 py-3 text-sm font-semibold text-text-primary transition-colors hover:bg-bg-tertiary"
+            >
+              View Escrow Explorer
+            </Link>
           </div>
 
+          <div className="mt-8 grid gap-3 sm:grid-cols-3">
+            <TrustMetric label="Buyer Gas Cost" value="$0 in flow" />
+            <TrustMetric label="Settlement Window" value="~10s testnet" />
+            <TrustMetric label="Payment Trigger" value="HTTP 402" />
+          </div>
         </motion.div>
 
         <motion.div
@@ -83,7 +93,7 @@ function CodeSnippet() {
         <div className="h-3 w-3 rounded-full bg-success/60" />
         <span className="ml-2 text-xs text-text-tertiary">payment.ts</span>
       </div>
-      <pre className="text-[13px] leading-relaxed">
+      <pre className="text-[13px] leading-relaxed text-text-secondary">
         {codeLines.map((line, i) => (
           <div key={i}>{highlightCode(line)}</div>
         ))}
@@ -105,7 +115,7 @@ function highlightCode(line: string): React.ReactNode {
     }
     if (/^(import|from|const|await)$/.test(part)) {
       return (
-        <span key={i} className="text-accent-purple">
+        <span key={i} className="text-accent">
           {part}
         </span>
       );
@@ -123,7 +133,7 @@ function highlightCode(line: string): React.ReactNode {
 
 function TrustMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-border-default bg-bg-secondary/65 px-3 py-2">
+    <div className="rounded-lg border border-border-default bg-bg-secondary px-3 py-2">
       <div className="text-[10px] uppercase tracking-wide text-text-tertiary">
         {label}
       </div>
@@ -134,7 +144,7 @@ function TrustMetric({ label, value }: { label: string; value: string }) {
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-border-default bg-bg-primary/55 px-3 py-2">
+    <div className="rounded-lg border border-border-default bg-bg-secondary px-3 py-2">
       <div className="text-[10px] uppercase tracking-wide text-text-tertiary">
         {label}
       </div>

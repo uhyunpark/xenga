@@ -37,7 +37,7 @@ export default function AgentPage() {
                 onClick={() => setSpeed(s)}
                 className={`rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
                   speed === s
-                    ? "border-accent-purple/30 bg-accent-purple/18 text-accent-purple"
+                    ? "border-accent-purple/30 bg-accent-purple/20 text-accent-purple"
                     : "border-transparent text-text-tertiary hover:border-border-default hover:text-text-primary"
                 }`}
               >

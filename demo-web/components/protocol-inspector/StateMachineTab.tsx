@@ -17,8 +17,6 @@ const BRANCH_STATES = [
   { id: "Resolved", label: "Resolved", color: "text-accent-purple", fromState: "Disputed" },
 ] as const;
 
-const ALL_STATE_IDS = [...STATES.map((s) => s.id), ...BRANCH_STATES.map((s) => s.id)];
-
 function getStateIndex(stateId: string): number {
   const mainIdx = STATES.findIndex((s) => s.id === stateId);
   if (mainIdx >= 0) return mainIdx;
@@ -47,7 +45,7 @@ export function StateMachineTab() {
       </h3>
 
       {/* Main flow */}
-      <div className="flex items-center gap-1 mb-8">
+      <div className="mb-8 flex items-center gap-1">
         {STATES.map((state, idx) => (
           <div key={state.id} className="flex items-center">
             <StateNode
@@ -67,7 +65,7 @@ export function StateMachineTab() {
       </div>
 
       {/* Branch states */}
-      <div className="flex gap-4 flex-wrap justify-center">
+      <div className="flex flex-wrap justify-center gap-4">
         {BRANCH_STATES.map((state) => (
           <div key={state.id} className="flex flex-col items-center gap-1">
             <span className="text-[10px] text-text-tertiary">
@@ -124,7 +122,7 @@ function StateNode({
         size,
         isCurrent && "animate-pulse-glow border-accent bg-accent/10",
         isPast && "border-success/50 bg-success/10",
-        !isCurrent && !isPast && "border-border-default border-dashed bg-bg-tertiary/50"
+        !isCurrent && !isPast && "border-border-default border-dashed bg-bg-tertiary/60"
       )}
     >
       {isPast && (

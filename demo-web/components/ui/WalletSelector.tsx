@@ -23,12 +23,12 @@ export function WalletSelector() {
       <div className="relative">
         <button
           onClick={() => setShowMenu(!showMenu)}
-          className="rounded-lg border border-border-default bg-bg-secondary px-3 py-1.5 text-sm font-medium text-text-primary transition-colors hover:border-border-active hover:bg-bg-tertiary"
+          className="rounded-lg border border-border-default bg-bg-secondary px-3 py-1.5 text-sm font-medium text-text-primary transition-colors hover:border-border-active hover:bg-bg-tertiary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
         >
           Connect Wallet
         </button>
         {showMenu && (
-          <div className="absolute right-0 top-full mt-2 w-56 rounded-lg border border-border-default bg-bg-secondary p-1 shadow-xl">
+          <div className="absolute right-0 top-full z-20 mt-2 w-56 rounded-lg border border-border-default bg-bg-secondary p-1 shadow-lg shadow-slate-200">
             <button
               onClick={() => {
                 connectDemo();
@@ -66,7 +66,7 @@ export function WalletSelector() {
         <button
           onClick={fundDemoWallet}
           disabled={isFunding}
-          className="rounded-md border border-accent/30 bg-accent/10 px-2 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent/20 disabled:opacity-50"
+          className="rounded-md border border-accent/30 bg-accent/10 px-2 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent/15 disabled:opacity-50"
         >
           {isFunding ? "Funding..." : "Fund"}
         </button>

@@ -15,7 +15,7 @@ export function TxLink({ hash, label, className }: TxLinkProps) {
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
-        "inline-flex items-center gap-1 font-mono text-sm text-accent hover:text-accent/80 transition-colors",
+        "inline-flex items-center gap-1 font-mono text-sm text-accent transition-colors hover:text-accent/80",
         className
       )}
     >
