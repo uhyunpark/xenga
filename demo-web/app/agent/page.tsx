@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AgentTerminal } from "@/components/agent/AgentTerminal";
 import { InspectorPanel } from "@/components/protocol-inspector/InspectorPanel";
+import { isMockChainClient } from "@/lib/env/isMockChainClient";
 
 export default function AgentPage() {
   const [speed, setSpeed] = useState(1);
@@ -22,7 +23,9 @@ export default function AgentPage() {
             </div>
             <h1 className="mt-3 text-2xl font-bold md:text-3xl">Agent Service Demo</h1>
             <p className="mt-1 text-sm text-text-secondary">
-              Watch an autonomous agent execute discovery, order creation, payment authorization, and on-chain settlement.
+              {isMockChainClient
+                ? "Watch an autonomous agent execute discovery, order creation, payment authorization, and simulated settlement."
+                : "Watch an autonomous agent execute discovery, order creation, payment authorization, and on-chain settlement."}
             </p>
           </div>
 

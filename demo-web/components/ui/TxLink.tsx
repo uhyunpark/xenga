@@ -1,6 +1,7 @@
 "use client";
 
 import { cn, shortenAddress } from "@/lib/utils";
+import { isMockChainClient } from "@/lib/env/isMockChainClient";
 
 interface TxLinkProps {
   hash: string;
@@ -9,6 +10,18 @@ interface TxLinkProps {
 }
 
 export function TxLink({ hash, label, className }: TxLinkProps) {
+  const displayLabel = label ?? shortenAddress(hash, 6);
+
+  if (isMockChainClient) {
+    return (
+      <span
+        className={cn("inline-flex items-center gap-1 font-mono text-sm text-text-secondary", className)}
+      >
+        {displayLabel}
+      </span>
+    );
+  }
+
   return (
     <a
       href={`https://sepolia.basescan.org/tx/${hash}`}
@@ -19,7 +32,7 @@ export function TxLink({ hash, label, className }: TxLinkProps) {
         className
       )}
     >
-      <span>{label ?? shortenAddress(hash, 6)}</span>
+      <span>{displayLabel}</span>
       <svg
         className="h-3 w-3 shrink-0"
         viewBox="0 0 12 12"

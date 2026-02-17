@@ -8,7 +8,7 @@ import { InspectorProvider } from "@/lib/protocol-inspector/context";
 export const metadata: Metadata = {
   title: "x402 Escrow — Agentic Payment Demo",
   description:
-    "Interactive demo of the x402 escrow payment protocol. Agentic payments with on-chain escrow protection on Base Sepolia.",
+    "Interactive demo of the x402 escrow payment protocol with programmable escrow settlement flows.",
 };
 
 export default function RootLayout({

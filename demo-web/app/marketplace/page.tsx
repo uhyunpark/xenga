@@ -2,6 +2,7 @@
 
 import { PaymentFlow } from "@/components/marketplace/PaymentFlow";
 import { InspectorPanel } from "@/components/protocol-inspector/InspectorPanel";
+import { isMockChainClient } from "@/lib/env/isMockChainClient";
 
 export default function MarketplacePage() {
   return (
@@ -15,7 +16,7 @@ export default function MarketplacePage() {
                 Interactive Flow
               </span>
               <span className="rounded-full border border-border-default bg-bg-primary/50 px-2.5 py-1 text-[11px] uppercase tracking-wide text-text-tertiary">
-                Base Sepolia
+                {isMockChainClient ? "Mock Chain" : "Base Sepolia"}
               </span>
             </div>
             <h1 className="mt-3 text-2xl font-bold md:text-3xl">Marketplace Escrow Demo</h1>

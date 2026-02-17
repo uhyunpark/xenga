@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { isMockChainClient } from "@/lib/env/isMockChainClient";
 
 const codeLines = [
   'import { escrowFetch } from "x402-escrow";',
@@ -36,8 +37,9 @@ export function HeroSection() {
             Escrowed x402 payments for autonomous commerce
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-text-secondary md:text-xl">
-            Integrate x402 while guaranteeing settlement with on-chain escrow state,
-            signed USDC authorization, and programmable release logic.
+            {isMockChainClient
+              ? "Integrate x402 with simulated escrow state, signed USDC authorization, and programmable release logic."
+              : "Integrate x402 while guaranteeing settlement with on-chain escrow state, signed USDC authorization, and programmable release logic."}
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -50,17 +52,22 @@ export function HeroSection() {
                 <path d="M3 8h10M9 4l4 4-4 4" />
               </svg>
             </Link>
-            <Link
-              href="/explorer"
-              className="inline-flex items-center justify-center rounded-lg border border-border-default bg-bg-secondary px-6 py-3 text-sm font-semibold text-text-primary transition-colors hover:bg-bg-tertiary"
-            >
-              Inspect Escrow State
-            </Link>
+            {!isMockChainClient && (
+              <Link
+                href="/explorer"
+                className="inline-flex items-center justify-center rounded-lg border border-border-default bg-bg-secondary px-6 py-3 text-sm font-semibold text-text-primary transition-colors hover:bg-bg-tertiary"
+              >
+                Inspect Escrow State
+              </Link>
+            )}
           </div>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
             <TrustMetric label="Buyer Gas Cost" value="$0" />
-            <TrustMetric label="Settlement" value="Base Sepolia" />
+            <TrustMetric
+              label="Settlement"
+              value={isMockChainClient ? "Simulated" : "Base Sepolia"}
+            />
             <TrustMetric label="Flow Trigger" value="HTTP 402" />
           </div>
         </motion.div>

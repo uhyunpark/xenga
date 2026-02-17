@@ -3,6 +3,7 @@
 import { motion, useInView } from "framer-motion";
 import Link from "next/link";
 import { useRef } from "react";
+import { isMockChainClient } from "@/lib/env/isMockChainClient";
 
 const demos = [
   {
@@ -60,7 +61,9 @@ export function DemoCards() {
           transition={{ delay: 0.1 }}
           className="mb-10 text-center text-text-secondary"
         >
-          Test interactive and autonomous escrow flows with real protocol events on Base Sepolia.
+          {isMockChainClient
+            ? "Test interactive and autonomous escrow flows with simulated protocol events."
+            : "Test interactive and autonomous escrow flows with real protocol events on Base Sepolia."}
         </motion.p>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -109,7 +112,11 @@ export function DemoCards() {
                     {demo.highlights.map((item) => (
                       <div key={item} className="flex items-center gap-2 text-xs text-text-secondary">
                         <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-                        <span>{item}</span>
+                        <span>
+                          {isMockChainClient && item === "Signed authorization + on-chain settle"
+                            ? "Signed authorization + simulated settlement"
+                            : item}
+                        </span>
                       </div>
                     ))}
                   </div>

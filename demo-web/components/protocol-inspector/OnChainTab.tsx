@@ -5,6 +5,7 @@ import { useInspector } from "@/lib/protocol-inspector/context";
 import { useAutoScroll } from "@/lib/protocol-inspector/useAutoScroll";
 import { TxLink } from "@/components/ui/TxLink";
 import { Badge } from "@/components/ui/Badge";
+import { isMockChainClient } from "@/lib/env/isMockChainClient";
 
 export function OnChainTab() {
   const { events } = useInspector();
@@ -19,7 +20,9 @@ export function OnChainTab() {
   if (txEvents.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-text-tertiary text-sm">
-        No on-chain transactions yet. Transactions appear after payment verification.
+        {isMockChainClient
+          ? "No simulated transactions yet. Events appear after payment verification."
+          : "No on-chain transactions yet. Transactions appear after payment verification."}
       </div>
     );
   }
@@ -32,7 +35,9 @@ export function OnChainTab() {
           <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 3a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 018 4zm0 8a.75.75 0 100-1.5.75.75 0 000 1.5z" />
         </svg>
         <span className="text-xs text-accent">
-          Gas paid by operator, NOT the buyer. The buyer only signs a gasless USDC authorization.
+          {isMockChainClient
+            ? "Simulation mode: transaction events and hashes are generated locally for demo playback."
+            : "Gas paid by operator, NOT the buyer. The buyer only signs a gasless USDC authorization."}
         </span>
       </div>
 

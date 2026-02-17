@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { useInspector } from "@/lib/protocol-inspector/context";
 import { useOperatorAddress } from "@/lib/hooks/useOperatorAddress";
+import { isMockChainClient } from "@/lib/env/isMockChainClient";
 import {
   requestPayment,
   signPayment,
@@ -145,7 +146,13 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
 
       addLine({ type: "request", text: `POST /api/orders/${orderData.id.slice(0, 8)}.../pay [X-PAYMENT] → 200 OK`, delay: 0 });
       await wait(800);
-      addLine({ type: "success", text: "[settle] Escrow created on-chain!", delay: 0 });
+      addLine({
+        type: "success",
+        text: isMockChainClient
+          ? "[settle] Escrow created in simulation!"
+          : "[settle] Escrow created on-chain!",
+        delay: 0,
+      });
       await wait(400);
       addLine({ type: "success", text: `[settle] Tx: ${result.payment.txHash.slice(0, 14)}...`, delay: 0 });
       await wait(400);
@@ -166,7 +173,13 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
       await wait(2000);
       addLine({ type: "info", text: "[verify] Seller is shipping item...", delay: 0 });
       await wait(2000);
-      addLine({ type: "info", text: "[verify] Delivery confirmation submitted on-chain", delay: 0 });
+      addLine({
+        type: "info",
+        text: isMockChainClient
+          ? "[verify] Delivery confirmation submitted in simulation"
+          : "[verify] Delivery confirmation submitted on-chain",
+        delay: 0,
+      });
       await wait(1500);
 
       addLine({ type: "success", text: "[verify] ✓ Delivery confirmed by operator", delay: 0 });
@@ -322,15 +335,21 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
 
       {txHash && (
         <div className="panel-surface flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-text-tertiary">
-          <span>View on BaseScan:</span>
-          <a
-            href={`https://sepolia.basescan.org/tx/${txHash}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-mono text-accent hover:underline"
-          >
-            {txHash.slice(0, 14)}...
-          </a>
+          <span>{isMockChainClient ? "Transaction ID:" : "View on BaseScan:"}</span>
+          {isMockChainClient ? (
+            <span className="font-mono text-text-secondary">
+              {txHash.slice(0, 14)}...
+            </span>
+          ) : (
+            <a
+              href={`https://sepolia.basescan.org/tx/${txHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-accent hover:underline"
+            >
+              {txHash.slice(0, 14)}...
+            </a>
+          )}
         </div>
       )}
     </div>

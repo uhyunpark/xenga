@@ -19,6 +19,7 @@ import { formatUsdc, shortenAddress } from "@/lib/utils";
 import { ProductGrid, type Product } from "./ProductGrid";
 import { DEMO_STEPS, StepTracker, type DemoStep } from "./StepTracker";
 import { SellerPanel } from "./SellerPanel";
+import { isMockChainClient } from "@/lib/env/isMockChainClient";
 
 function formatReleaseWindow(seconds: number): string {
   if (seconds >= 86400) {
@@ -109,7 +110,9 @@ const STEP_HINTS: Record<DemoStep, string> = {
   create_order: "Create an off-chain order before requesting payment terms.",
   request_payment: "Request payment terms and expect an HTTP 402 response.",
   sign: "Review required fields, then sign the typed USDC authorization.",
-  submit: "Submit the signed payload to settle escrow on-chain.",
+  submit: isMockChainClient
+    ? "Submit the signed payload to settle escrow in simulation."
+    : "Submit the signed payload to settle escrow on-chain.",
   escrowed: "Escrow has been created and is waiting for delivery confirmation.",
   delivery: "Decide whether to release funds or open a dispute.",
   complete: "Payment flow completed and seller settlement finalized.",
@@ -803,7 +806,9 @@ export function PaymentFlow() {
                     {state.loading ? (
                       <span className="flex items-center justify-center gap-2">
                         <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                        Submitting on-chain...
+                        {isMockChainClient
+                          ? "Submitting simulated settlement..."
+                          : "Submitting on-chain..."}
                       </span>
                     ) : (
                       "Submit Payment"
@@ -840,14 +845,20 @@ export function PaymentFlow() {
                     {state.txHash && (
                       <div className="flex justify-between">
                         <span className="text-text-tertiary">Tx</span>
-                        <a
-                          href={`https://sepolia.basescan.org/tx/${state.txHash}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-mono text-accent hover:underline"
-                        >
-                          {state.txHash.slice(0, 10)}...
-                        </a>
+                        {isMockChainClient ? (
+                          <span className="font-mono text-text-secondary">
+                            {state.txHash.slice(0, 10)}...
+                          </span>
+                        ) : (
+                          <a
+                            href={`https://sepolia.basescan.org/tx/${state.txHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-mono text-accent hover:underline"
+                          >
+                            {state.txHash.slice(0, 10)}...
+                          </a>
+                        )}
                       </div>
                     )}
                   </div>
