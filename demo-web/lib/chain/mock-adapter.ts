@@ -4,6 +4,7 @@ import type { EscrowPaymentPayload } from "@shared/types.js";
 import { EscrowState } from "@shared/types.js";
 import { MARKETPLACE_DISPUTE_WINDOW } from "@shared/constants.js";
 import { getServiceType } from "@server/service-types/index.js";
+import { config } from "@server/config.js";
 import {
   getOrderByOrderId,
   updateOrderStatus,
@@ -22,6 +23,9 @@ export class MockChainAdapter implements ChainAdapter {
   async settleEscrow(
     payload: EscrowPaymentPayload
   ): Promise<{ txHash: Hash; escrowId: number }> {
+    const feeBps = config.feeBps;
+    const fee = (BigInt(payload.value) * BigInt(feeBps)) / 10000n;
+
     const escrowId = createMockEscrow({
       orderId: payload.orderId,
       buyer: payload.from,
@@ -31,6 +35,7 @@ export class MockChainAdapter implements ChainAdapter {
       releaseWindow: payload.releaseWindow,
       // MARKETPLACE_DISPUTE_WINDOW matches the on-chain DEFAULT_DISPUTE_WINDOW (3 days) — global for all escrow types
       disputeWindow: MARKETPLACE_DISPUTE_WINDOW,
+      facilitatorFee: fee.toString(),
     });
 
     const txHash = fakeTxHash();

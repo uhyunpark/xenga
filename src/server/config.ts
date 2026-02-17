@@ -30,6 +30,8 @@ export const config = {
   ),
   sessionEscrowAddress: process.env.SESSION_ESCROW_ADDRESS as Address | undefined,
   facilitatorUrl: process.env.FACILITATOR_URL as string | undefined,
+  feeBps: parseInt(process.env.FEE_BPS || "0", 10),
+  feeRecipient: (process.env.FEE_RECIPIENT || undefined) as Address | undefined,
 };
 
 export function validateConfig() {
@@ -53,6 +55,12 @@ export function validateConfig() {
       `USDC_ADDRESS "${config.usdcAddress}" is not a valid Ethereum address. ` +
       `Address must be a hex value of 20 bytes (40 hex characters), e.g. 0x1234...abcd`
     );
+  }
+  if (config.feeBps < 0 || config.feeBps > 1000) {
+    throw new Error("FEE_BPS must be between 0 and 1000 (0-10%)");
+  }
+  if (config.feeBps > 0 && !config.feeRecipient) {
+    throw new Error("FEE_RECIPIENT is required when FEE_BPS > 0");
   }
 }
 

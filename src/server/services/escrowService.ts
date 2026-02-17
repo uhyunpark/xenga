@@ -31,6 +31,7 @@ export async function getEscrow(escrowId: number): Promise<OnChainEscrow> {
     releaseWindow: BigInt(r.releaseWindow ?? r[7]),
     deliveryConfirmedAt: BigInt(r.deliveryConfirmedAt ?? r[8]),
     disputeWindow: BigInt(r.disputeWindow ?? r[9]),
+    facilitatorFee: BigInt(r.facilitatorFee ?? r[10]),
   };
 }
 

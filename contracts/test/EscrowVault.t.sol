@@ -12,6 +12,7 @@ contract EscrowVaultTest is Test {
 
     address public arbiter = makeAddr("arbiter");
     address public operator = makeAddr("operator");
+    address public feeRecipient = makeAddr("feeRecipient");
 
     uint256 public buyerPk = 0xA11CE;
     address public buyer = vm.addr(buyerPk);
@@ -20,12 +21,14 @@ contract EscrowVaultTest is Test {
 
     bytes32 constant ORDER_ID = keccak256("order-1");
     uint256 constant AMOUNT = 5_000_000; // 5 USDC
+    uint256 constant FEE_BPS = 100; // 1%
+    uint256 constant FEE = (AMOUNT * FEE_BPS) / 10000; // 50_000 (0.05 USDC)
     uint256 constant RELEASE_WINDOW = 7 days;
     uint256 constant DISPUTE_WINDOW = 3 days;
 
     function setUp() public {
         usdc = new MockUSDC();
-        vault = new EscrowVault(address(usdc), arbiter);
+        vault = new EscrowVault(address(usdc), arbiter, feeRecipient, FEE_BPS);
 
         // Mint USDC to buyer
         usdc.mint(buyer, 100_000_000); // 100 USDC
@@ -75,6 +78,7 @@ contract EscrowVaultTest is Test {
         assertEq(e.buyer, buyer);
         assertEq(e.seller, seller);
         assertEq(e.amount, AMOUNT);
+        assertEq(e.facilitatorFee, FEE);
         assertEq(uint256(e.state), uint256(EscrowVault.EscrowState.Active));
         assertEq(e.orderId, ORDER_ID);
     }
@@ -120,7 +124,8 @@ contract EscrowVaultTest is Test {
 
         e = vault.getEscrow(escrowId);
         assertEq(uint256(e.state), uint256(EscrowVault.EscrowState.Completed));
-        assertEq(usdc.balanceOf(seller), AMOUNT);
+        assertEq(usdc.balanceOf(seller), AMOUNT - FEE);
+        assertEq(usdc.balanceOf(feeRecipient), FEE);
         assertEq(usdc.balanceOf(address(vault)), 0);
     }
 
@@ -134,7 +139,8 @@ contract EscrowVaultTest is Test {
 
         EscrowVault.Escrow memory e = vault.getEscrow(escrowId);
         assertEq(uint256(e.state), uint256(EscrowVault.EscrowState.Completed));
-        assertEq(usdc.balanceOf(seller), AMOUNT);
+        assertEq(usdc.balanceOf(seller), AMOUNT - FEE);
+        assertEq(usdc.balanceOf(feeRecipient), FEE);
     }
 
     // ──────────── Test: Auto-release after timeout (Active state needs releaseWindow + disputeWindow) ────────────
@@ -158,7 +164,8 @@ contract EscrowVaultTest is Test {
 
         EscrowVault.Escrow memory e = vault.getEscrow(escrowId);
         assertEq(uint256(e.state), uint256(EscrowVault.EscrowState.AutoReleased));
-        assertEq(usdc.balanceOf(seller), AMOUNT);
+        assertEq(usdc.balanceOf(seller), AMOUNT - FEE);
+        assertEq(usdc.balanceOf(feeRecipient), FEE);
     }
 
     // ──────────── Test: Auto-release blocked during dispute window ────────────
@@ -189,7 +196,8 @@ contract EscrowVaultTest is Test {
         vm.warp(1000 + 9 days + 1);
         vault.autoRelease(escrowId);
 
-        assertEq(usdc.balanceOf(seller), AMOUNT);
+        assertEq(usdc.balanceOf(seller), AMOUNT - FEE);
+        assertEq(usdc.balanceOf(feeRecipient), FEE);
     }
 
     // ──────────── Test: Dispute → resolve with split ────────────
@@ -214,8 +222,10 @@ contract EscrowVaultTest is Test {
 
         e = vault.getEscrow(escrowId);
         assertEq(uint256(e.state), uint256(EscrowVault.EscrowState.Resolved));
-        assertEq(usdc.balanceOf(buyer), 100_000_000 - AMOUNT + 3_500_000); // original - deposit + 70%
-        assertEq(usdc.balanceOf(seller), 1_500_000); // 30%
+        // tradeAmount = AMOUNT - FEE = 4_950_000; buyer 70% = 3_465_000; seller 30% = 1_485_000
+        assertEq(usdc.balanceOf(buyer), 100_000_000 - AMOUNT + 3_465_000);
+        assertEq(usdc.balanceOf(seller), 1_485_000);
+        assertEq(usdc.balanceOf(feeRecipient), FEE);
     }
 
     // ──────────── Test: Refund before delivery ────────────
@@ -376,8 +386,9 @@ contract EscrowVaultTest is Test {
         vm.prank(arbiter);
         vault.resolveDispute(escrowId, 100);
 
-        assertEq(usdc.balanceOf(buyer), buyerBalBefore + AMOUNT);
+        assertEq(usdc.balanceOf(buyer), buyerBalBefore + AMOUNT - FEE);
         assertEq(usdc.balanceOf(seller), 0);
+        assertEq(usdc.balanceOf(feeRecipient), FEE);
     }
 
     function test_resolveDisputeFullSeller() public {
@@ -392,7 +403,8 @@ contract EscrowVaultTest is Test {
         vm.prank(arbiter);
         vault.resolveDispute(escrowId, 0);
 
-        assertEq(usdc.balanceOf(seller), AMOUNT);
+        assertEq(usdc.balanceOf(seller), AMOUNT - FEE);
+        assertEq(usdc.balanceOf(feeRecipient), FEE);
     }
 
     function test_expiredERC3009Auth() public {
@@ -558,7 +570,8 @@ contract EscrowVaultTest is Test {
 
         EscrowVault.Escrow memory e = vault.getEscrow(escrowId);
         assertEq(uint256(e.state), uint256(EscrowVault.EscrowState.AutoReleased));
-        assertEq(usdc.balanceOf(seller), AMOUNT);
+        assertEq(usdc.balanceOf(seller), AMOUNT - FEE);
+        assertEq(usdc.balanceOf(feeRecipient), FEE);
     }
 
     // ──────────── Test: Pause blocks creation ────────────
@@ -592,11 +605,13 @@ contract EscrowVaultTest is Test {
         vm.prank(arbiter);
         vault.resolveDispute(escrowId, buyerPct);
 
-        uint256 expectedBuyerAmount = (AMOUNT * buyerPct) / 100;
-        uint256 expectedSellerAmount = AMOUNT - expectedBuyerAmount;
+        uint256 tradeAmount = AMOUNT - FEE;
+        uint256 expectedBuyerAmount = (tradeAmount * buyerPct) / 100;
+        uint256 expectedSellerAmount = tradeAmount - expectedBuyerAmount;
 
         assertEq(usdc.balanceOf(buyer), buyerBalBefore + expectedBuyerAmount);
         assertEq(usdc.balanceOf(seller), expectedSellerAmount);
+        assertEq(usdc.balanceOf(feeRecipient), FEE);
     }
 
     // ──────────── Test: Fuzz — create escrow ────────────
@@ -857,8 +872,119 @@ contract EscrowVaultTest is Test {
 
         EscrowVault.Escrow memory e = vault.getEscrow(escrowId);
         assertEq(e.amount, amount);
+        assertEq(e.facilitatorFee, (amount * FEE_BPS) / 10000);
         assertEq(e.buyer, buyer);
         assertEq(e.seller, seller);
         assertEq(uint256(e.state), uint256(EscrowVault.EscrowState.Active));
+    }
+
+    // ──────────── Test: Fee configuration ────────────
+
+    function test_setFeeConfig() public {
+        address newRecipient = makeAddr("newFeeRecipient");
+        vault.setFeeConfig(newRecipient, 200);
+
+        (address recipient, uint256 bps) = vault.getFeeConfig();
+        assertEq(recipient, newRecipient);
+        assertEq(bps, 200);
+    }
+
+    function test_setFeeConfigNotOwner() public {
+        vm.prank(seller);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, seller));
+        vault.setFeeConfig(makeAddr("x"), 200);
+    }
+
+    function test_feeExceedsMax() public {
+        vm.expectRevert(EscrowVault.InvalidFee.selector);
+        vault.setFeeConfig(feeRecipient, 1001);
+    }
+
+    function test_feeWithZeroRecipient() public {
+        // feeBps > 0 but feeRecipient == address(0) should revert
+        vm.expectRevert(EscrowVault.InvalidFeeRecipient.selector);
+        vault.setFeeConfig(address(0), 100);
+    }
+
+    function test_zeroFeeMode() public {
+        // Deploy a vault with zero fee
+        EscrowVault zeroFeeVault = new EscrowVault(address(usdc), arbiter, address(0), 0);
+
+        usdc.mint(buyer, AMOUNT);
+        vm.startPrank(buyer);
+        usdc.approve(address(zeroFeeVault), AMOUNT);
+        uint256 escrowId = zeroFeeVault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW);
+        vm.stopPrank();
+
+        EscrowVault.Escrow memory e = zeroFeeVault.getEscrow(escrowId);
+        assertEq(e.facilitatorFee, 0);
+
+        // Release — seller gets full amount, no fee transfer
+        vm.prank(buyer);
+        zeroFeeVault.releaseFunds(escrowId);
+
+        assertEq(usdc.balanceOf(seller), AMOUNT);
+    }
+
+    function test_feeStoredInStruct() public {
+        uint256 escrowId = _createStandardEscrow();
+
+        EscrowVault.Escrow memory e = vault.getEscrow(escrowId);
+        assertEq(e.facilitatorFee, FEE);
+        assertEq(e.facilitatorFee, (AMOUNT * FEE_BPS) / 10000);
+    }
+
+    function test_feeDistributionOnRelease() public {
+        uint256 escrowId = _createStandardEscrow();
+
+        uint256 sellerBalBefore = usdc.balanceOf(seller);
+        uint256 feeBalBefore = usdc.balanceOf(feeRecipient);
+        uint256 vaultBalBefore = usdc.balanceOf(address(vault));
+
+        vm.prank(buyer);
+        vault.releaseFunds(escrowId);
+
+        assertEq(usdc.balanceOf(seller), sellerBalBefore + AMOUNT - FEE);
+        assertEq(usdc.balanceOf(feeRecipient), feeBalBefore + FEE);
+        assertEq(usdc.balanceOf(address(vault)), vaultBalBefore - AMOUNT);
+    }
+
+    function test_fullRefundOnRefund() public {
+        uint256 escrowId = _createStandardEscrow();
+        uint256 buyerBalBefore = usdc.balanceOf(buyer);
+        uint256 feeBalBefore = usdc.balanceOf(feeRecipient);
+
+        vm.prank(seller);
+        vault.refund(escrowId);
+
+        // Buyer gets full amount back — facilitator absorbs cost
+        assertEq(usdc.balanceOf(buyer), buyerBalBefore + AMOUNT);
+        // feeRecipient gets nothing on refund
+        assertEq(usdc.balanceOf(feeRecipient), feeBalBefore);
+    }
+
+    function testFuzz_feeAlwaysMatchesBps(uint256 amount, uint256 bps) public {
+        vm.assume(amount > 0 && amount < 1e18);
+        vm.assume(bps <= 1000);
+
+        address recipient = bps > 0 ? feeRecipient : address(0);
+        EscrowVault fuzzVault = new EscrowVault(address(usdc), arbiter, recipient, bps);
+
+        usdc.mint(buyer, amount);
+        vm.startPrank(buyer);
+        usdc.approve(address(fuzzVault), amount);
+        uint256 escrowId = fuzzVault.createEscrow(ORDER_ID, seller, amount, "marketplace", RELEASE_WINDOW);
+        vm.stopPrank();
+
+        EscrowVault.Escrow memory e = fuzzVault.getEscrow(escrowId);
+        assertEq(e.facilitatorFee, (amount * bps) / 10000);
+    }
+
+    function test_zeroFeeAllowsZeroRecipient() public {
+        // feeBps = 0 allows feeRecipient = address(0)
+        vault.setFeeConfig(address(0), 0);
+        (address recipient, uint256 bps) = vault.getFeeConfig();
+        assertEq(recipient, address(0));
+        assertEq(bps, 0);
     }
 }

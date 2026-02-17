@@ -74,6 +74,23 @@ On-chain credit scoring for agents/wallets, computed from escrow transaction his
 - `src/server/routes/reputation.ts` — `GET /api/reputation/:address`, `GET /api/reputation/:address/history`
 - `src/shared/types.ts` — `ReputationScore`, `SellerReputation`, `BuyerReputation`
 
+### Fee System
+
+The facilitator pays all gas fees for on-chain transactions (createEscrowWithAuth, confirmDelivery, resolveDispute, refund). To cover costs and earn margin, a configurable facilitator fee is deducted from the seller's payout at settlement (seller-pays model, like Stripe/PayPal).
+
+**How it works:**
+- `feeBps` and `feeRecipient` are global contract state, set by owner via `setFeeConfig()`
+- Fee is computed at escrow creation: `fee = (amount * feeBps) / 10000`, stored in `Escrow.facilitatorFee`
+- Buyer pays exactly `orderPrice` — no amount inflation
+- On release/autoRelease: seller gets `amount - fee`, feeRecipient gets `fee`
+- On refund: buyer gets full `amount` back (facilitator absorbs cost)
+- On dispute resolution: fee goes to feeRecipient, `buyerPct` split applies to `amount - fee`
+- `MAX_FEE_BPS = 1000` (10% cap)
+- Safety guard: `if (fee > 0 && feeRecipient != address(0))` prevents revert if feeRecipient changed to zero while escrows are active
+- Stats track gross `amount` (not net) — reputation scoring uses transaction volume
+
+**Config:** `FEE_BPS` and `FEE_RECIPIENT` env vars (see `.env.example`). Default: 0 (no fee).
+
 ### Escrow Lifecycle (On-Chain)
 
 `None → Active → DeliveryConfirmed → Completed` (happy path: seller confirms, buyer releases)

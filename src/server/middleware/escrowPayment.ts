@@ -106,6 +106,9 @@ export function escrowPaymentMiddleware() {
         }
       }
 
+      const feeBps = config.feeBps;
+      const fee = (order.price * BigInt(feeBps)) / 10000n;
+
       const paymentRequired: EscrowPaymentRequired = {
         scheme: "escrow",
         network: "base-sepolia",
@@ -116,6 +119,8 @@ export function escrowPaymentMiddleware() {
         sellerAddress: order.sellerAddress,
         releaseWindow,
         serviceType: order.serviceType,
+        facilitatorFee: fee.toString(),
+        feeBps,
       };
 
       // x402 standard: array format
@@ -149,6 +154,9 @@ export function escrowPaymentMiddleware() {
     }
 
     // Verify signature via facilitator (internal or external)
+    const verifyFeeBps = config.feeBps;
+    const verifyFee = (BigInt(payload.value) * BigInt(verifyFeeBps)) / 10000n;
+
     const paymentRequired: EscrowPaymentRequired = {
       scheme: "escrow",
       network: "base-sepolia",
@@ -159,6 +167,8 @@ export function escrowPaymentMiddleware() {
       sellerAddress: payload.sellerAddress,
       releaseWindow: payload.releaseWindow,
       serviceType: payload.serviceType,
+      facilitatorFee: verifyFee.toString(),
+      feeBps: verifyFeeBps,
     };
 
     const verification = await verifyViaFacilitator(payload, paymentRequired);
