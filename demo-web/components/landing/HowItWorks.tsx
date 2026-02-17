@@ -69,7 +69,8 @@ export function HowItWorks() {
           transition={{ delay: 0.1 }}
           className="mb-10 text-center text-text-secondary"
         >
-          Three integrated layers: client SDK, server middleware, and escrow contract.
+          Three layers working together: client SDK, server middleware, and smart
+          contract.
         </motion.p>
 
         <motion.div

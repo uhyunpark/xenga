@@ -21,8 +21,8 @@ export function Footer() {
             </div>
             <p className="text-sm text-text-tertiary">
               {isMockChain
-                ? "Secure payment flows with simulated escrow state for local and offline demos."
-                : "Secure HTTP-native payments with on-chain escrow protection."}
+                ? "Agentic payments with simulated escrow state for offline demos."
+                : "Agentic payments with on-chain escrow protection."}
             </p>
             <div className="mt-3">
               <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${envBadgeClass}`}>

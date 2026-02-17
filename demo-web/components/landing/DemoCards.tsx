@@ -60,7 +60,7 @@ export function DemoCards() {
           transition={{ delay: 0.1 }}
           className="mb-10 text-center text-text-secondary"
         >
-          Test interactive and autonomous escrow flows with protocol-level visibility.
+          Test interactive and autonomous escrow flows with real protocol events on Base Sepolia.
         </motion.p>
 
         <div className="grid gap-6 md:grid-cols-2">
