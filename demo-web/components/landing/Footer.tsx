@@ -75,9 +75,6 @@ export function Footer() {
                   <p className="text-sm text-text-secondary">
                     External chain links are hidden in simulation mode.
                   </p>
-                  <p className="text-xs text-text-tertiary">
-                    Set `MOCK_CHAIN=false` and `NEXT_PUBLIC_MOCK_CHAIN=false` to use live testnet resources.
-                  </p>
                 </>
               ) : (
                 <>
