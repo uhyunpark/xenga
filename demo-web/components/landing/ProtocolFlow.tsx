@@ -28,15 +28,15 @@ export function ProtocolFlow() {
           End-to-End x402 Escrow Flow
         </motion.h2>
 
-        <div className="panel-surface overflow-x-auto rounded-2xl p-4 md:p-5">
-          <div className="flex min-w-max items-stretch gap-3 pb-1">
+        <div className="panel-surface rounded-2xl p-4 md:p-5">
+          <div className="grid gap-3 pb-1 sm:grid-cols-2 lg:grid-cols-4">
             {steps.map((step, i) => (
               <motion.div
                 key={step.label}
                 initial={{ opacity: 0, y: 20 }}
                 animate={isInView ? { opacity: 1, y: 0 } : {}}
                 transition={{ delay: i * 0.06 }}
-                className="relative flex min-h-[108px] w-[170px] shrink-0 rounded-xl border border-border-default bg-bg-secondary p-3"
+                className="flex min-h-[108px] rounded-xl border border-border-default bg-bg-secondary p-3"
               >
                 <div className="flex h-full flex-col">
                   <span
@@ -55,20 +55,6 @@ export function ProtocolFlow() {
                     {step.desc}
                   </span>
                 </div>
-                {i < steps.length - 1 && (
-                  <span className="absolute -right-2 top-1/2 hidden -translate-y-1/2 text-text-tertiary md:block">
-                    <svg
-                      width="10"
-                      height="10"
-                      viewBox="0 0 10 10"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.5"
-                    >
-                      <path d="M1.5 5h7M5.5 1.5L9 5 5.5 8.5" />
-                    </svg>
-                  </span>
-                )}
               </motion.div>
             ))}
           </div>
