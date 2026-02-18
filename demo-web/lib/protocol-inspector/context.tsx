@@ -27,7 +27,7 @@ export interface InspectorEvent {
 
 interface InspectorState {
   events: InspectorEvent[];
-  activeTab: "http" | "signatures" | "onchain" | "state";
+  activeTab: "http" | "signatures" | "onchain";
   isOpen: boolean;
   currentState?: string;
 }
@@ -101,7 +101,7 @@ export function InspectorProvider({ children }: { children: ReactNode }) {
       ) {
         dispatch({ type: "SET_TAB", tab: "onchain" });
       } else if (event.type === "state_change") {
-        dispatch({ type: "SET_TAB", tab: "state" });
+        dispatch({ type: "SET_TAB", tab: "onchain" });
         dispatch({ type: "SET_STATE", state: event.data.newState });
       }
     },
