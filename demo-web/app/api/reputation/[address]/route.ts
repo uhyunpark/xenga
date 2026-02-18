@@ -3,7 +3,7 @@ import { isAddress, type Address } from "viem";
 import { computeReputation } from "@server/services/reputationService.js";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ address: string }> }
 ) {
   const { address } = await params;
@@ -13,7 +13,9 @@ export async function GET(
   }
 
   try {
-    const reputation = await computeReputation(address as Address);
+    const { searchParams } = new URL(request.url);
+    const fresh = searchParams.get("fresh") === "true";
+    const reputation = await computeReputation(address as Address, { skipCache: fresh });
     return NextResponse.json(reputation);
   } catch (err) {
     console.error("[reputation] Error:", err);

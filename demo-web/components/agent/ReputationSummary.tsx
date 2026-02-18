@@ -1,0 +1,272 @@
+"use client";
+
+import type { ReputationScore } from "@shared/types";
+import { Badge } from "@/components/ui/Badge";
+import { shortenAddress } from "@/lib/utils";
+import { isMockChainClient } from "@/lib/env/isMockChainClient";
+
+interface ReputationSummaryProps {
+  buyerAddress: string;
+  sellerAddress: string;
+  buyerRep: ReputationScore | null;
+  sellerRep: ReputationScore | null;
+  scenario: "happy" | "dispute";
+}
+
+const BUYER_FORMULA = [
+  { label: "Completion", weight: 45, color: "bg-accent" },
+  { label: "Non-Dispute", weight: 25, color: "bg-warning" },
+  { label: "Non-Frivolous", weight: 20, color: "bg-violet" },
+  { label: "Volume", weight: 10, color: "bg-success" },
+];
+
+const SELLER_FORMULA = [
+  { label: "Completion", weight: 40, color: "bg-accent" },
+  { label: "Non-Dispute", weight: 25, color: "bg-warning" },
+  { label: "Non-Refund", weight: 15, color: "bg-error/60" },
+  { label: "Fairness", weight: 10, color: "bg-violet" },
+  { label: "Volume", weight: 10, color: "bg-success" },
+];
+
+const RELEASE_WINDOWS = [
+  { condition: "Score ≥80 + high confidence", window: "30 min", id: "high" },
+  { condition: "Score 40-79 or low confidence", window: "1 hour (default)", id: "default" },
+  { condition: "Score <40 + data", window: "4 hours", id: "low" },
+];
+
+function getActiveWindow(rep: ReputationScore | null): string {
+  if (!rep?.seller) return "default";
+  if (rep.confidence === "low") return "default";
+  if (rep.seller.score >= 80 && rep.confidence === "high") return "high";
+  if (rep.seller.score < 40) return "low";
+  return "default";
+}
+
+function scoreColor(score: number): string {
+  if (score >= 70) return "bg-success";
+  if (score >= 40) return "bg-warning";
+  return "bg-error";
+}
+
+function confidenceBadge(confidence: string) {
+  const variant = confidence === "high" ? "success" : confidence === "medium" ? "warning" : "default";
+  const label =
+    confidence === "high" ? "High (10+)" : confidence === "medium" ? "Medium (3-9)" : "Low (<3 escrows)";
+  return <Badge variant={variant}>{label}</Badge>;
+}
+
+function formatVolume(totalVolume: string): string {
+  return (Number(totalVolume) / 1e6).toFixed(2);
+}
+
+export function ReputationSummary({
+  buyerAddress,
+  sellerAddress,
+  buyerRep,
+  sellerRep,
+  scenario,
+}: ReputationSummaryProps) {
+  const hasBuyerData = !!buyerRep?.buyer;
+  const hasSellerData = !!sellerRep?.seller;
+  const hasAnyData = hasBuyerData || hasSellerData;
+  const activeWindow = getActiveWindow(sellerRep);
+
+  return (
+    <div className="panel-surface overflow-hidden rounded-xl">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-border-default px-5 py-3">
+        <h3 className="text-sm font-semibold text-text-primary">Reputation Impact</h3>
+        <Badge variant={scenario === "dispute" ? "error" : "success"}>
+          {scenario === "happy" ? "Happy Path" : "Dispute Path"}
+        </Badge>
+      </div>
+
+      {/* Mock mode notice */}
+      {!hasAnyData && isMockChainClient && (
+        <div className="mx-5 mt-4 flex items-start gap-2 rounded-lg border border-warning/20 bg-warning/5 px-3 py-2">
+          <span className="text-xs text-warning">
+            Simulation mode — on-chain stats are not updated in mock chain mode. The scoring formula and parameter table below show how the system works with real transactions.
+          </span>
+        </div>
+      )}
+
+      {/* Section 1: Side-by-side stats */}
+      <div className="grid grid-cols-2 gap-px bg-border-default">
+        <PartyStats
+          role="BUYER"
+          address={buyerAddress}
+          rep={buyerRep}
+          data={buyerRep?.buyer ? {
+            score: buyerRep.buyer.score,
+            confidence: buyerRep.confidence,
+            totalEscrows: buyerRep.buyer.totalEscrows,
+            completionRate: buyerRep.buyer.completionRate,
+            disputeRate: buyerRep.buyer.disputeRate,
+            totalVolume: buyerRep.buyer.totalVolume,
+          } : null}
+        />
+        <PartyStats
+          role="SELLER"
+          address={sellerAddress}
+          rep={sellerRep}
+          data={sellerRep?.seller ? {
+            score: sellerRep.seller.score,
+            confidence: sellerRep.confidence,
+            totalEscrows: sellerRep.seller.totalEscrows,
+            completionRate: sellerRep.seller.completionRate,
+            disputeRate: sellerRep.seller.disputeRate,
+            totalVolume: sellerRep.seller.totalVolume,
+          } : null}
+        />
+      </div>
+
+      {/* Section 2: Scoring formula */}
+      <div className="border-t border-border-default px-5 py-4">
+        <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-text-tertiary">
+          How Scores Are Computed
+        </h4>
+        <div className="space-y-4">
+          <FormulaBar label="Buyer Formula" segments={BUYER_FORMULA} />
+          <FormulaBar label="Seller Formula" segments={SELLER_FORMULA} />
+        </div>
+      </div>
+
+      {/* Section 3: Release window impact */}
+      <div className="border-t border-border-default px-5 py-4">
+        <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-text-tertiary">
+          How Reputation Affects Parameters
+        </h4>
+        <div className="overflow-hidden rounded-lg border border-border-default">
+          {RELEASE_WINDOWS.map((row) => (
+            <div
+              key={row.id}
+              className={`flex items-center justify-between px-3 py-2 text-xs ${
+                row.id === activeWindow
+                  ? "border-l-2 border-l-accent bg-accent/5"
+                  : "border-l-2 border-l-transparent"
+              } ${row.id !== "low" ? "border-b border-border-default" : ""}`}
+            >
+              <span className="text-text-secondary">{row.condition}</span>
+              <span className="font-mono font-medium text-text-primary">{row.window}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Footer note */}
+      <div className="border-t border-border-default px-5 py-3">
+        <p className="text-[11px] leading-relaxed text-text-tertiary">
+          {scenario === "happy"
+            ? "Escrow created but not yet released — completion stats update after the 1-hour auto-release window. Repeating transactions builds confidence and unlocks shorter release windows."
+            : "Dispute recorded in on-chain stats. Both buyer's dispute rate and seller's dispute rate are now tracked. Resolution fairness (arbiter rulings) shapes long-term reputation scores."}
+          {" "}Confidence thresholds: Low (&lt;3 escrows), Medium (3-9), High (10+). Parameter adjustments activate at Medium confidence.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function PartyStats({
+  role,
+  address,
+  rep,
+  data,
+}: {
+  role: "BUYER" | "SELLER";
+  address: string;
+  rep: ReputationScore | null;
+  data: {
+    score: number;
+    confidence: string;
+    totalEscrows: number;
+    completionRate: number;
+    disputeRate: number;
+    totalVolume: string;
+  } | null;
+}) {
+  return (
+    <div className="bg-bg-secondary p-4 space-y-3">
+      {/* Role + address */}
+      <div>
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-text-tertiary">{role}</span>
+        <p className="font-mono text-xs text-text-secondary">{shortenAddress(address)}</p>
+      </div>
+
+      {data ? (
+        <>
+          {/* Score gauge */}
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <div className="h-2 flex-1 overflow-hidden rounded-full bg-bg-tertiary">
+                <div
+                  className={`h-full rounded-full transition-all ${scoreColor(data.score)}`}
+                  style={{ width: `${Math.min(data.score, 100)}%` }}
+                />
+              </div>
+              <span className="font-mono text-sm font-semibold text-text-primary">{data.score}</span>
+            </div>
+            {confidenceBadge(data.confidence)}
+          </div>
+
+          {/* Stats grid */}
+          <div className="grid grid-cols-2 gap-2">
+            <StatCell label="Escrows" value={String(data.totalEscrows)} />
+            <StatCell label="Completed" value={`${(data.completionRate * 100).toFixed(0)}%`} />
+            <StatCell label="Disputes" value={`${(data.disputeRate * 100).toFixed(0)}%`} />
+            <StatCell label="Volume" value={`${formatVolume(data.totalVolume)} USDC`} />
+          </div>
+        </>
+      ) : (
+        <p className="text-xs text-text-tertiary">No on-chain activity yet</p>
+      )}
+    </div>
+  );
+}
+
+function StatCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-bg-tertiary/60 px-2 py-1.5">
+      <p className="text-[10px] text-text-tertiary">{label}</p>
+      <p className="font-mono text-xs font-medium text-text-primary">{value}</p>
+    </div>
+  );
+}
+
+function FormulaBar({
+  label,
+  segments,
+}: {
+  label: string;
+  segments: { label: string; weight: number; color: string }[];
+}) {
+  const total = segments.reduce((sum, s) => sum + s.weight, 0);
+
+  return (
+    <div>
+      <p className="mb-1.5 text-xs text-text-secondary">{label}</p>
+      {/* Stacked bar */}
+      <div className="flex h-3 overflow-hidden rounded-full">
+        {segments.map((seg) => (
+          <div
+            key={seg.label}
+            className={`${seg.color} transition-all`}
+            style={{ width: `${(seg.weight / total) * 100}%` }}
+          />
+        ))}
+      </div>
+      {/* Labels */}
+      <div className="mt-1 flex">
+        {segments.map((seg) => (
+          <div
+            key={seg.label}
+            className="overflow-hidden text-center"
+            style={{ width: `${(seg.weight / total) * 100}%` }}
+          >
+            <p className="truncate text-[9px] text-text-tertiary">{seg.label}</p>
+            <p className="text-[9px] font-medium text-text-secondary">&times;{seg.weight}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

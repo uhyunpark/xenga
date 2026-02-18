@@ -11,10 +11,12 @@ import {
   signPayment,
   submitPayment,
 } from "@/lib/api/payment-flow";
+import { ReputationSummary } from "./ReputationSummary";
+import type { ReputationScore } from "@shared/types";
 
 interface TerminalLine {
   id: string;
-  type: "info" | "request" | "response" | "success" | "error" | "dim";
+  type: "info" | "request" | "response" | "success" | "error" | "dim" | "reputation";
   text: string;
   delay: number;
 }
@@ -31,6 +33,11 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
   const [isRunning, setIsRunning] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [activeScenario, setActiveScenario] = useState<Scenario | null>(null);
+  const [reputationData, setReputationData] = useState<{
+    buyer: ReputationScore | null;
+    seller: ReputationScore | null;
+    scenario: Scenario;
+  } | null>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
   const { walletClient, address, connectDemo, fundDemoWallet, usdcBalance, type: walletType } = useWallet();
   const inspector = useInspector();
@@ -59,6 +66,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
     setActiveScenario(scenario);
     setLines([]);
     setIsComplete(false);
+    setReputationData(null);
     inspector.clear();
     inspector.setOpen(true);
 
@@ -73,6 +81,47 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
       await wait(500);
       addLine({ type: "info", text: "[discover] Price: 2.50 USDC | Type: agent-service | Auto-release: 1 hour", delay: 0 });
       await wait(800);
+
+      // Step 1.5: Check seller reputation
+      addLine({ type: "dim", text: "", delay: 0 });
+      addLine({ type: "dim", text: `$ x402-agent reputation --check ${operatorAddress.slice(0, 10)}...`, delay: 0 });
+      await wait(800);
+
+      inspector.addEvent({
+        type: "http_request",
+        label: "Check Seller Reputation",
+        data: { method: "GET", url: `/api/reputation/${operatorAddress}` },
+      });
+
+      let sellerRep: ReputationScore | null = null;
+      try {
+        const repRes = await fetch(`/api/reputation/${operatorAddress}`);
+        if (repRes.ok) sellerRep = await repRes.json();
+      } catch {}
+
+      inspector.addEvent({
+        type: "http_response",
+        label: sellerRep?.seller ? `${sellerRep.overall}/100` : "No History",
+        data: { status: 200, body: sellerRep },
+      });
+
+      if (sellerRep?.seller) {
+        const s = sellerRep.seller;
+        addLine({ type: "reputation", text: `[reputation] Seller score: ${s.score}/100 (${sellerRep.confidence} confidence)`, delay: 0 });
+        await wait(400);
+        addLine({ type: "reputation", text: `[reputation] Completion: ${(s.completionRate * 100).toFixed(0)}% | Disputes: ${(s.disputeRate * 100).toFixed(0)}% | Volume: ${(Number(s.totalVolume) / 1e6).toFixed(2)} USDC`, delay: 0 });
+        await wait(400);
+        const trust = sellerRep.confidence === "low"
+          ? "NEW SELLER — default escrow parameters"
+          : s.score >= 70 ? "HIGH TRUST — shortened release window eligible"
+          : "ELEVATED RISK — extended release window applied";
+        addLine({ type: "reputation", text: `[reputation] ${trust}`, delay: 0 });
+      } else {
+        addLine({ type: "reputation", text: `[reputation] Seller: no transaction history`, delay: 0 });
+        await wait(400);
+        addLine({ type: "reputation", text: `[reputation] New seller — using default 1-hour release window`, delay: 0 });
+      }
+      await wait(1200);
 
       // Step 2: Create order
       addLine({ type: "dim", text: "", delay: 0 });
@@ -343,6 +392,58 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
         addLine({ type: "info", text: "[complete] Dispute resolved. Funds distributed per arbiter ruling.", delay: 0 });
       }
 
+      // ── Reputation Update (both paths) ──
+      addLine({ type: "dim", text: "", delay: 0 });
+      addLine({ type: "dim", text: "$ x402-agent reputation --update", delay: 0 });
+      await wait(1000);
+
+      let buyerRep: ReputationScore | null = null;
+      let updatedSellerRep: ReputationScore | null = null;
+      try {
+        const [bRes, sRes] = await Promise.all([
+          fetch(`/api/reputation/${address}?fresh=true`),
+          fetch(`/api/reputation/${operatorAddress}?fresh=true`),
+        ]);
+        if (bRes.ok) buyerRep = await bRes.json();
+        if (sRes.ok) updatedSellerRep = await sRes.json();
+      } catch {}
+
+      inspector.addEvent({
+        type: "http_request",
+        label: "Fetch Updated Reputation",
+        data: { method: "GET", url: `/api/reputation/${address}?fresh=true` },
+      });
+      inspector.addEvent({
+        type: "http_response",
+        label: "Reputation Updated",
+        data: { buyer: buyerRep?.buyer ? { score: buyerRep.buyer.score } : null, seller: updatedSellerRep?.seller ? { score: updatedSellerRep.seller.score } : null },
+      });
+
+      addLine({ type: "reputation", text: "[reputation] On-chain stats updated", delay: 0 });
+      await wait(400);
+
+      if (buyerRep?.buyer) {
+        addLine({ type: "reputation", text: `[reputation] Buyer  — score: ${buyerRep.buyer.score}/100 | completed: ${(buyerRep.buyer.completionRate * 100).toFixed(0)}% | disputes: ${(buyerRep.buyer.disputeRate * 100).toFixed(0)}%`, delay: 0 });
+      } else {
+        addLine({ type: "reputation", text: `[reputation] Buyer  — awaiting on-chain confirmation`, delay: 0 });
+      }
+      await wait(300);
+
+      if (updatedSellerRep?.seller) {
+        addLine({ type: "reputation", text: `[reputation] Seller — score: ${updatedSellerRep.seller.score}/100 | completed: ${(updatedSellerRep.seller.completionRate * 100).toFixed(0)}% | disputes: ${(updatedSellerRep.seller.disputeRate * 100).toFixed(0)}%`, delay: 0 });
+      } else {
+        addLine({ type: "reputation", text: `[reputation] Seller — awaiting on-chain confirmation`, delay: 0 });
+      }
+      await wait(400);
+
+      if (scenario === "happy") {
+        addLine({ type: "reputation", text: `[reputation] Both parties building toward "medium" confidence (need 3+ escrows)`, delay: 0 });
+      } else {
+        addLine({ type: "reputation", text: `[reputation] Dispute recorded — future escrows may use extended release windows`, delay: 0 });
+      }
+
+      setReputationData({ buyer: buyerRep, seller: updatedSellerRep, scenario });
+
       setIsComplete(true);
     } catch (err: any) {
       addLine({ type: "error", text: `[error] ${err.message}`, delay: 0 });
@@ -496,9 +597,11 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
                       ? "text-error"
                       : line.type === "request"
                         ? "text-accent"
-                        : line.type === "dim"
-                          ? "text-text-tertiary"
-                          : "text-text-secondary"
+                        : line.type === "reputation"
+                          ? "text-violet"
+                          : line.type === "dim"
+                            ? "text-text-tertiary"
+                            : "text-text-secondary"
                 }
               >
                 {line.text || "\u00A0"}
@@ -529,6 +632,16 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
             </a>
           )}
         </div>
+      )}
+
+      {isComplete && reputationData && (
+        <ReputationSummary
+          buyerAddress={address!}
+          sellerAddress={operatorAddress!}
+          buyerRep={reputationData.buyer}
+          sellerRep={reputationData.seller}
+          scenario={reputationData.scenario}
+        />
       )}
     </div>
   );

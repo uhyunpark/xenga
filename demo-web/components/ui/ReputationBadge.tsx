@@ -26,7 +26,18 @@ export function ReputationBadge({
       .catch(() => {});
   }, [address]);
 
-  if (!rep || rep.confidence === "low") return null;
+  if (!rep) return null;
+
+  if (rep.confidence === "low") {
+    return (
+      <Badge
+        variant="default"
+        className={cn(size === "md" && "px-2.5 py-1 text-sm", className)}
+      >
+        New
+      </Badge>
+    );
+  }
 
   const variant =
     rep.overall >= 70 ? "success" : rep.overall >= 40 ? "warning" : "error";
