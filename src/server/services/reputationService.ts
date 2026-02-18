@@ -236,12 +236,15 @@ function getConfidence(
 // ──────────────────────── Main API ────────────────────────
 
 export async function computeReputation(
-  address: Address
+  address: Address,
+  options?: { skipCache?: boolean }
 ): Promise<ReputationScore> {
   const cacheKey = address.toLowerCase();
-  const cached = cacheGet(cacheKey);
-  if (cached) {
-    return cached.data;
+  if (!options?.skipCache) {
+    const cached = cacheGet(cacheKey);
+    if (cached) {
+      return cached.data;
+    }
   }
 
   // Fetch on-chain stats in parallel
