@@ -19,7 +19,7 @@ export function ProtocolFlow() {
 
   return (
     <section className="px-4 py-20" ref={ref}>
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-7xl">
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -29,14 +29,14 @@ export function ProtocolFlow() {
         </motion.h2>
 
         <div className="panel-surface rounded-2xl p-4 md:p-5">
-          <div className="grid gap-3 pb-1 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 pb-1 grid-cols-2 sm:grid-cols-4 lg:grid-cols-7">
             {steps.map((step, i) => (
               <motion.div
                 key={step.label}
                 initial={{ opacity: 0, y: 20 }}
                 animate={isInView ? { opacity: 1, y: 0 } : {}}
                 transition={{ delay: i * 0.06 }}
-                className="flex min-h-[108px] rounded-xl border border-border-default bg-bg-secondary p-3"
+                className="flex min-h-[88px] rounded-xl border border-border-default bg-bg-secondary p-3"
               >
                 <div className="flex h-full flex-col">
                   <span

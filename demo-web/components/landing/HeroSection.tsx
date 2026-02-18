@@ -62,14 +62,6 @@ export function HeroSection() {
             )}
           </div>
 
-          <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            <TrustMetric label="Buyer Gas Cost" value="$0" />
-            <TrustMetric
-              label="Settlement"
-              value={isMockChainClient ? "Simulated" : "Base Sepolia"}
-            />
-            <TrustMetric label="Flow Trigger" value="HTTP 402" />
-          </div>
         </motion.div>
 
         <motion.div
@@ -80,10 +72,11 @@ export function HeroSection() {
         >
           <CodeSnippet />
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <MiniStat label="Buyer Gas Cost" value="$0" />
+            <MiniStat label="Settlement" value={isMockChainClient ? "Simulated" : "Base Sepolia"} />
             <MiniStat label="Escrow Visibility" value="Realtime" />
             <MiniStat label="Authorization" value="EIP-712" />
             <MiniStat label="Asset" value="USDC" />
-            <MiniStat label="Release Logic" value="Programmable" />
           </div>
         </motion.div>
       </div>

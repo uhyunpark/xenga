@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { WalletSelector } from "@/components/ui/WalletSelector";
-import { useInspector } from "@/lib/protocol-inspector/context";
 
 const NAV_ITEMS = [
   { href: "/marketplace", label: "Marketplace" },
@@ -15,7 +14,6 @@ export function Navbar() {
   const [healthOk, setHealthOk] = useState<boolean | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
-  const { isOpen, toggle, events } = useInspector();
   const isMockChain = process.env.NEXT_PUBLIC_MOCK_CHAIN === "true";
 
   useEffect(() => {
@@ -30,7 +28,6 @@ export function Navbar() {
     setMobileOpen(false);
   }, [pathname]);
 
-  const protocolCount = events.length;
   const chainLabel = isMockChain ? "Mock Chain Mode" : "Base Sepolia";
   const chainBadgeClass = isMockChain
     ? "border-accent-purple/35 bg-accent-purple/10 text-accent-purple"
@@ -74,21 +71,6 @@ export function Navbar() {
               {chainLabel}
             </span>
             <HealthDot status={healthOk} />
-            <button
-              onClick={toggle}
-              className={`hidden items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors hover:border-border-active hover:bg-bg-tertiary md:inline-flex ${
-                isOpen
-                  ? "border-accent/40 bg-accent/10 text-accent"
-                  : "border-border-default bg-bg-secondary text-text-secondary"
-              }`}
-            >
-              Protocol
-              {protocolCount > 0 && (
-                <span className="rounded-full bg-accent/20 px-1.5 py-0.5 text-[10px] text-accent">
-                  {protocolCount}
-                </span>
-              )}
-            </button>
             <div className="hidden md:block">
               <WalletSelector />
             </div>
@@ -133,21 +115,6 @@ export function Navbar() {
               >
                 {chainLabel}
               </span>
-            </div>
-            <div className="flex items-center justify-between rounded-lg border border-border-default bg-bg-secondary px-3 py-2">
-              <span className="text-xs font-medium text-text-secondary">
-                Protocol Inspector
-              </span>
-              <button
-                onClick={toggle}
-                className={`rounded-md px-2 py-1 text-xs font-medium ${
-                  isOpen
-                    ? "bg-accent/15 text-accent"
-                    : "bg-bg-tertiary text-text-secondary"
-                }`}
-              >
-                {isOpen ? "Opened" : "Open"}
-              </button>
             </div>
             <div className="grid grid-cols-1 gap-2">
               {NAV_ITEMS.map((item) => (
