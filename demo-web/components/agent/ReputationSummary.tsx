@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReputationScore } from "@shared/types";
+import type { RoundSnapshot } from "@/lib/reputation/client-scoring";
 import { Badge } from "@/components/ui/Badge";
 import { shortenAddress } from "@/lib/utils";
 import { isMockChainClient } from "@/lib/env/isMockChainClient";
@@ -10,7 +11,8 @@ interface ReputationSummaryProps {
   sellerAddress: string;
   buyerRep: ReputationScore | null;
   sellerRep: ReputationScore | null;
-  scenario: "happy" | "dispute";
+  scenario: "happy" | "dispute" | "reputation";
+  progression?: RoundSnapshot[];
 }
 
 const BUYER_FORMULA = [
@@ -65,6 +67,7 @@ export function ReputationSummary({
   buyerRep,
   sellerRep,
   scenario,
+  progression,
 }: ReputationSummaryProps) {
   const hasBuyerData = !!buyerRep?.buyer;
   const hasSellerData = !!sellerRep?.seller;
@@ -76,13 +79,13 @@ export function ReputationSummary({
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border-default px-5 py-3">
         <h3 className="text-sm font-semibold text-text-primary">Reputation Impact</h3>
-        <Badge variant={scenario === "dispute" ? "error" : "success"}>
-          {scenario === "happy" ? "Happy Path" : "Dispute Path"}
+        <Badge variant={scenario === "dispute" ? "error" : scenario === "reputation" ? "info" : "success"}>
+          {scenario === "happy" ? "Happy Path" : scenario === "dispute" ? "Dispute Path" : "Trust Building"}
         </Badge>
       </div>
 
       {/* Mock mode notice */}
-      {!hasAnyData && isMockChainClient && (
+      {!hasAnyData && isMockChainClient && scenario !== "reputation" && (
         <div className="mx-5 mt-4 flex items-start gap-2 rounded-lg border border-warning/20 bg-warning/5 px-3 py-2">
           <span className="text-xs text-warning">
             Simulation mode — on-chain stats are not updated in mock chain mode. The scoring formula and parameter table below show how the system works with real transactions.
@@ -153,12 +156,59 @@ export function ReputationSummary({
         </div>
       </div>
 
+      {/* Section 4: Score Progression (reputation scenario only) */}
+      {scenario === "reputation" && progression && progression.length > 0 && (
+        <div className="border-t border-border-default px-5 py-4">
+          <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-text-tertiary">
+            Score Progression
+          </h4>
+          <div className="overflow-x-auto">
+            <table className="min-w-[500px] w-full text-xs">
+              <thead>
+                <tr className="border-b border-border-default text-left text-text-tertiary">
+                  <th className="pb-2 pr-3 font-medium">Round</th>
+                  <th className="pb-2 pr-3 font-medium">Outcome</th>
+                  <th className="pb-2 pr-3 font-medium">Seller</th>
+                  <th className="pb-2 pr-3 font-medium">Buyer</th>
+                  <th className="pb-2 pr-3 font-medium">Confidence</th>
+                  <th className="pb-2 font-medium">Window</th>
+                </tr>
+              </thead>
+              <tbody>
+                {progression.map((snap) => (
+                  <tr key={snap.round} className="border-b border-border-default/50">
+                    <td className="py-2 pr-3 font-mono text-text-secondary">{snap.round}</td>
+                    <td className="py-2 pr-3">
+                      <span className={snap.definition.outcome === "completed" ? "text-success" : "text-error"}>
+                        {snap.definition.outcome === "completed" ? "Completed" : `Disputed ${snap.definition.buyerPct}/${100 - (snap.definition.buyerPct ?? 50)}`}
+                      </span>
+                    </td>
+                    <td className="py-2 pr-3">
+                      <span className="font-mono font-medium text-text-primary">{snap.sellerScore}</span>
+                      <DeltaBadge delta={snap.sellerDelta} isFirst={snap.round === 1} />
+                    </td>
+                    <td className="py-2 pr-3">
+                      <span className="font-mono font-medium text-text-primary">{snap.buyerScore}</span>
+                      <DeltaBadge delta={snap.buyerDelta} isFirst={snap.round === 1} />
+                    </td>
+                    <td className="py-2 pr-3 capitalize text-text-secondary">{snap.confidence}</td>
+                    <td className="py-2 font-mono text-text-secondary">{snap.windowLabel}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Footer note */}
       <div className="border-t border-border-default px-5 py-3">
         <p className="text-[11px] leading-relaxed text-text-tertiary">
           {scenario === "happy"
             ? "Escrow created but not yet released — completion stats update after the 1-hour auto-release window. Repeating transactions builds confidence and unlocks shorter release windows."
-            : "Dispute recorded in on-chain stats. Both buyer's dispute rate and seller's dispute rate are now tracked. Resolution fairness (arbiter rulings) shapes long-term reputation scores."}
+            : scenario === "dispute"
+              ? "Dispute recorded in on-chain stats. Both buyer's dispute rate and seller's dispute rate are now tracked. Resolution fairness (arbiter rulings) shapes long-term reputation scores."
+              : "Simulated using the same scoring formulas applied to on-chain data. The dispute in round 3 dropped the seller score by 21 points, but two subsequent completions restored trust. In production, these scores drive release window adjustments once confidence reaches \"high\" (10+ escrows)."}
           {" "}Confidence thresholds: Low (&lt;3 escrows), Medium (3-9), High (10+). Parameter adjustments activate at Medium confidence.
         </p>
       </div>
@@ -268,5 +318,20 @@ function FormulaBar({
         ))}
       </div>
     </div>
+  );
+}
+
+function DeltaBadge({ delta, isFirst }: { delta: number; isFirst: boolean }) {
+  if (isFirst) return null;
+  const positive = delta > 0;
+  return (
+    <span
+      className={`ml-1 text-[10px] font-medium ${
+        positive ? "text-success" : "text-error"
+      }`}
+    >
+      {positive ? "+" : ""}
+      {delta}
+    </span>
   );
 }
