@@ -108,7 +108,7 @@ const initialState: FlowState = {
 const STEP_HINTS: Record<DemoStep, string> = {
   select: "Choose an item to initialize the escrow payment flow.",
   create_order: "Create an off-chain order before requesting payment terms.",
-  request_payment: "Request payment terms and expect an HTTP 402 response.",
+  request_payment: "Request escrow payment terms from the server.",
   sign: "Review required fields, then sign the typed USDC authorization.",
   submit: isMockChainClient
     ? "Submit the signed payload to settle escrow in simulation."
@@ -694,7 +694,7 @@ export function PaymentFlow() {
                 >
                   <div className="mb-3 rounded-lg border border-accent/20 bg-accent/5 p-3">
                     <div className="mb-2 flex items-center gap-2">
-                      <Badge variant="info">402 Payment Required</Badge>
+                      <Badge variant="info">Escrow Payment Required</Badge>
                     </div>
                     <div className="space-y-1.5 text-xs">
                       <div className="flex justify-between">
@@ -740,7 +740,7 @@ export function PaymentFlow() {
                     </div>
                   </div>
                   <p className="mb-3 text-[11px] text-text-tertiary">
-                    See the HTTP tab for the raw 402 response headers.
+                    See the HTTP tab for the raw response headers.
                   </p>
                   <button
                     onClick={handleSignPayment}

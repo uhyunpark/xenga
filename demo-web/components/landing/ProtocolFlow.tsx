@@ -25,7 +25,7 @@ export function ProtocolFlow() {
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           className="mb-12 text-center text-2xl font-semibold md:text-3xl"
         >
-          End-to-End x402 Escrow Flow
+          End-to-End Escrow Settlement Flow
         </motion.h2>
 
         <div className="panel-surface rounded-2xl p-4 md:p-5">
@@ -59,7 +59,7 @@ export function ProtocolFlow() {
             ))}
           </div>
           <p className="mt-3 text-xs text-text-tertiary">
-            Sequence: 402 negotiation, typed-data signature, and escrow settlement all visible in the protocol inspector.
+            Sequence: payment negotiation, typed-data signature, and escrow settlement all visible in the protocol inspector.
           </p>
         </div>
       </div>

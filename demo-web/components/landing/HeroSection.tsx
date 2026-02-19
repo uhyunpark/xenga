@@ -28,18 +28,18 @@ export function HeroSection() {
           transition={{ duration: 0.45 }}
         >
           <span className="inline-flex rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-accent">
-            Protocol-Grade Checkout
+            Escrow-Secured Checkout
           </span>
           <h1
             className="gradient-text mt-5 text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl"
             style={{ textWrap: "balance" }}
           >
-            Escrowed x402 payments for autonomous commerce
+            On-chain escrow for autonomous commerce
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-text-secondary md:text-xl">
             {isMockChainClient
-              ? "Integrate x402 with simulated escrow state, signed USDC authorization, and programmable release logic."
-              : "Integrate x402 while guaranteeing settlement with on-chain escrow state, signed USDC authorization, and programmable release logic."}
+              ? "Explore the escrow lifecycle with simulated settlement, signed USDC authorization, and programmable release logic."
+              : "Explore the escrow lifecycle with on-chain settlement, signed USDC authorization, and programmable release logic."}
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
