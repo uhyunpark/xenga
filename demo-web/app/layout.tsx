@@ -6,9 +6,9 @@ import { WalletProvider } from "@/lib/wallet/WalletProvider";
 import { InspectorProvider } from "@/lib/protocol-inspector/context";
 
 export const metadata: Metadata = {
-  title: "x402 Escrow — Agentic Payment Demo",
+  title: "EscrowVault — On-Chain Escrow Demo",
   description:
-    "Interactive demo of the x402 escrow payment protocol with programmable escrow settlement flows.",
+    "Interactive demo of on-chain escrow settlement with reputation scoring, dispute resolution, and programmable release logic.",
 };
 
 export default function RootLayout({
