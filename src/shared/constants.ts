@@ -33,3 +33,20 @@ export const SERVICE_TYPE_SESSION = "session-api";
 export const DEFAULT_SESSION_DURATION = 60 * 60; // 1 hour
 export const DEFAULT_SESSION_DEPOSIT = 10_000000; // 10 USDC
 export const SESSION_PRICE_PER_USE = 100000; // 0.10 USDC per API call
+
+// ──────────────────────── Reputation Thresholds ────────────────────────
+
+export const REPUTATION_HIGH_THRESHOLD = 80;
+export const REPUTATION_LOW_THRESHOLD = 40;
+
+// ──────────────────────── Cache & Timing Defaults ────────────────────────
+
+export const REPUTATION_CACHE_TTL_MS = 60_000; // 1 minute
+export const REPUTATION_CACHE_MAX_SIZE = 1000;
+export const AUTO_VERIFY_DELAY_MS = 5_000; // 5 seconds
+
+// ──────────────────────── Event Listener ────────────────────────
+
+export const EVENT_LISTENER_MAX_RETRIES = 20;
+export const EVENT_LISTENER_BASE_BACKOFF_MS = 5_000;
+export const EVENT_LISTENER_MAX_BACKOFF_MS = 60_000;

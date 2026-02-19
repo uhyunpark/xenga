@@ -1,6 +1,10 @@
 import { createPublicClient, http, type Address } from "viem";
 import { escrowVaultAbi } from "../../shared/abi.js";
-import { CHAIN } from "../../shared/constants.js";
+import {
+  CHAIN,
+  REPUTATION_CACHE_TTL_MS,
+  REPUTATION_CACHE_MAX_SIZE,
+} from "../../shared/constants.js";
 import type {
   Stats,
   ReputationScore,
@@ -64,8 +68,8 @@ export async function getOnChainSellerStats(
 
 // ──────────────────────── LRU Cache ────────────────────────
 
-const CACHE_TTL_MS = 60_000;
-const MAX_CACHE_SIZE = 1000;
+const CACHE_TTL_MS = REPUTATION_CACHE_TTL_MS;
+const MAX_CACHE_SIZE = REPUTATION_CACHE_MAX_SIZE;
 
 interface CacheEntry {
   data: ReputationScore;

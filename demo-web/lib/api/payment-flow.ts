@@ -1,6 +1,7 @@
 import type { WalletClient, Address, Hash } from "viem";
 import { keccak256, toHex } from "viem";
 import type { InspectorEvent } from "@/lib/protocol-inspector/context";
+import { buildReceiveAuthSigningParams } from "@shared/eip712.js";
 
 export interface PaymentRequired {
   scheme: string;
@@ -131,63 +132,42 @@ export async function signPayment(
     )
   ) as Hash;
 
-  const validAfter = BigInt(0);
-  const validBefore = BigInt(Math.floor(Date.now() / 1000) + 86400);
-
-  const domain = {
-    name: "USD Coin",
-    version: "2",
-    chainId: BigInt(84532),
-    verifyingContract: paymentRequired.asset,
-  };
-
-  const types = {
-    ReceiveWithAuthorization: [
-      { name: "from", type: "address" },
-      { name: "to", type: "address" },
-      { name: "value", type: "uint256" },
-      { name: "validAfter", type: "uint256" },
-      { name: "validBefore", type: "uint256" },
-      { name: "nonce", type: "bytes32" },
-    ],
-  } as const;
-
-  const message = {
+  const signingParams = buildReceiveAuthSigningParams({
     from: account.address,
     to: paymentRequired.escrowContract,
-    value: BigInt(paymentRequired.amount),
-    validAfter,
-    validBefore,
+    amount: BigInt(paymentRequired.amount),
     nonce,
-  };
+    usdcAddress: paymentRequired.asset,
+  });
 
   emit?.({
     type: "eip712_sign",
     label: "EIP-712 Sign Request",
     data: {
       domain: {
-        ...domain,
-        chainId: Number(domain.chainId),
+        ...signingParams.domain,
+        chainId: Number(signingParams.domain.chainId),
       },
-      primaryType: "ReceiveWithAuthorization",
-      types: types.ReceiveWithAuthorization,
+      primaryType: signingParams.primaryType,
+      types: signingParams.types.ReceiveWithAuthorization,
       message: {
-        ...message,
+        ...signingParams.message,
         value: paymentRequired.amount,
-        validAfter: "0",
-        validBefore: validBefore.toString(),
+        validAfter: signingParams.validAfter.toString(),
+        validBefore: signingParams.validBefore.toString(),
       },
     },
   });
 
   const signature = await walletClient.signTypedData({
     account,
-    domain,
-    types,
-    primaryType: "ReceiveWithAuthorization",
-    message,
+    domain: signingParams.domain,
+    types: signingParams.types,
+    primaryType: signingParams.primaryType,
+    message: signingParams.message,
   });
 
+  // Parse signature into v, r, s
   const r = `0x${signature.slice(2, 66)}` as Hash;
   const s = `0x${signature.slice(66, 130)}` as Hash;
   const v = parseInt(signature.slice(130, 132), 16);
@@ -198,8 +178,8 @@ export async function signPayment(
     from: account.address,
     to: paymentRequired.escrowContract,
     value: paymentRequired.amount,
-    validAfter: validAfter.toString(),
-    validBefore: validBefore.toString(),
+    validAfter: signingParams.validAfter.toString(),
+    validBefore: signingParams.validBefore.toString(),
     nonce,
     signature: { v, r, s },
     orderId: paymentRequired.orderId,

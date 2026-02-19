@@ -1,5 +1,5 @@
 import { Router } from "express";
-import type { Address } from "viem";
+import { isAddress, type Address } from "viem";
 import type { CreateOrderRequest, OrderStatus } from "../../shared/types.js";
 import { USDC_DECIMALS } from "../../shared/constants.js";
 import {
@@ -7,6 +7,7 @@ import {
   getOrderById,
   listOrders,
 } from "../services/orderService.js";
+import { getServiceType } from "../service-types/index.js";
 import { escrowPaymentMiddleware, type EscrowPaymentRequest } from "../middleware/escrowPayment.js";
 
 const router = Router();
@@ -65,6 +66,22 @@ router.post("/", (req, res) => {
     return res.status(400).json({
       error: "Missing required fields: title, price, serviceType, sellerAddress",
     });
+  }
+
+  if (typeof body.price !== "number" || body.price <= 0 || body.price > 1_000_000) {
+    return res.status(400).json({ error: "Price must be a positive number up to 1,000,000 USDC" });
+  }
+  if (body.title.length > 200) {
+    return res.status(400).json({ error: "Title must be 200 characters or fewer" });
+  }
+  if (body.description && body.description.length > 2000) {
+    return res.status(400).json({ error: "Description must be 2000 characters or fewer" });
+  }
+  if (!getServiceType(body.serviceType)) {
+    return res.status(400).json({ error: `Unknown service type: ${body.serviceType}` });
+  }
+  if (!isAddress(body.sellerAddress)) {
+    return res.status(400).json({ error: "Invalid seller address" });
   }
 
   const order = createOrder(body);

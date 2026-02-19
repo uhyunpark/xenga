@@ -1,5 +1,9 @@
 import type { ServiceType, EscrowParams, CounterpartyReputation } from "./index.js";
-import { AGENT_RELEASE_WINDOW } from "../../shared/constants.js";
+import {
+  AGENT_RELEASE_WINDOW,
+  REPUTATION_HIGH_THRESHOLD,
+  REPUTATION_LOW_THRESHOLD,
+} from "../../shared/constants.js";
 
 /**
  * AI Agent Commerce service type
@@ -26,15 +30,15 @@ export const agentServiceType: ServiceType = {
   adjustParams(params: EscrowParams, rep: CounterpartyReputation): EscrowParams {
     // Both high-reputation, high-confidence → shorten release window
     if (
-      rep.buyerScore >= 80 &&
-      rep.sellerScore >= 80 &&
+      rep.buyerScore >= REPUTATION_HIGH_THRESHOLD &&
+      rep.sellerScore >= REPUTATION_HIGH_THRESHOLD &&
       rep.buyerConfidence === "high" &&
       rep.sellerConfidence === "high"
     ) {
       return { ...params, releaseWindow: 30 * 60 }; // 1h → 30min
     }
     // Low-reputation seller with enough data → extend window
-    if (rep.sellerScore < 40 && rep.sellerConfidence !== "low") {
+    if (rep.sellerScore < REPUTATION_LOW_THRESHOLD && rep.sellerConfidence !== "low") {
       return { ...params, releaseWindow: 4 * 60 * 60 }; // 1h → 4h
     }
     return params;

@@ -4,8 +4,10 @@ import type {
   EscrowPaymentRequired,
   EscrowPaymentResponse,
   Order,
+  SellerReputationInfo,
 } from "../../shared/types.js";
 import { CHAIN_ID, USDC_ADDRESS } from "../../shared/constants.js";
+import { computeFee } from "../../shared/fees.js";
 import { config } from "../config.js";
 import { getOrderById, updateOrderStatus } from "../services/orderService.js";
 import { getDb } from "../db/index.js";
@@ -78,7 +80,7 @@ export function escrowPaymentMiddleware() {
 
       // Reputation-based dynamic escrow parameters
       let releaseWindow = serviceType.releaseWindow;
-      let sellerReputation: { score: number; confidence: string; disputeRate: number } | undefined;
+      let sellerReputation: SellerReputationInfo | undefined;
 
       if (serviceType.adjustParams) {
         try {
@@ -107,7 +109,7 @@ export function escrowPaymentMiddleware() {
       }
 
       const feeBps = config.feeBps;
-      const fee = (order.price * BigInt(feeBps)) / 10000n;
+      const fee = computeFee(order.price, feeBps);
 
       const paymentRequired: EscrowPaymentRequired = {
         scheme: "escrow",
@@ -155,7 +157,7 @@ export function escrowPaymentMiddleware() {
 
     // Verify signature via facilitator (internal or external)
     const verifyFeeBps = config.feeBps;
-    const verifyFee = (BigInt(payload.value) * BigInt(verifyFeeBps)) / 10000n;
+    const verifyFee = computeFee(BigInt(payload.value), verifyFeeBps);
 
     const paymentRequired: EscrowPaymentRequired = {
       scheme: "escrow",
@@ -223,7 +225,9 @@ export function escrowPaymentMiddleware() {
             });
           }
         })
-        .catch(() => {}); // ignore reputation errors
+        .catch((err: unknown) => {
+          logger.debug("reputation", `Buyer reputation lookup failed: ${err instanceof Error ? err.message : String(err)}`);
+        });
 
       // Attach payment info to request for downstream handlers
       (req as EscrowPaymentRequest).escrowPayment = paymentResponse;

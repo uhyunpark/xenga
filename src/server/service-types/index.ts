@@ -60,6 +60,10 @@ function getRegistry(): Map<string, ServiceType> {
 }
 
 export function registerServiceType(serviceType: ServiceType) {
+  const existing = getRegistry().get(serviceType.name);
+  if (existing) {
+    console.warn(`[x402] Service type "${serviceType.name}" is being re-registered (previous registration overwritten)`);
+  }
   getRegistry().set(serviceType.name, serviceType);
 }
 
