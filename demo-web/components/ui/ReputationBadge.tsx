@@ -9,12 +9,14 @@ interface ReputationBadgeProps {
   address: string;
   size?: "sm" | "md";
   className?: string;
+  showTooltip?: boolean;
 }
 
 export function ReputationBadge({
   address,
   size = "sm",
   className,
+  showTooltip = true,
 }: ReputationBadgeProps) {
   const [rep, setRep] = useState<ReputationScore | null>(null);
 
@@ -28,26 +30,49 @@ export function ReputationBadge({
 
   if (!rep) return null;
 
-  if (rep.confidence === "low") {
-    return (
-      <Badge
-        variant="default"
-        className={cn(size === "md" && "px-2.5 py-1 text-sm", className)}
-      >
-        New
-      </Badge>
-    );
-  }
+  const isNew = rep.confidence === "low";
+  const variant = isNew
+    ? "default"
+    : rep.overall >= 70
+      ? "success"
+      : rep.overall >= 40
+        ? "warning"
+        : "error";
 
-  const variant =
-    rep.overall >= 70 ? "success" : rep.overall >= 40 ? "warning" : "error";
+  const badgeContent = isNew ? "New" : `${rep.overall}/100`;
 
-  return (
+  const tooltipText = isNew
+    ? "New address — fewer than 3 escrows. Default escrow parameters apply."
+    : `Score ${rep.overall}/100 · ${rep.confidence} confidence. ${
+        rep.overall >= 70
+          ? "High trust — may qualify for shorter release windows."
+          : rep.overall >= 40
+            ? "Moderate trust — standard escrow parameters."
+            : "Low trust — extended release windows may apply."
+      }`;
+
+  const badge = (
     <Badge
       variant={variant}
-      className={cn(size === "md" && "px-2.5 py-1 text-sm", className)}
+      className={cn(
+        showTooltip && "cursor-help",
+        size === "md" && "px-2.5 py-1 text-sm",
+        className,
+      )}
     >
-      {rep.overall}/100
+      {badgeContent}
     </Badge>
+  );
+
+  if (!showTooltip) return badge;
+
+  return (
+    <span className="group relative inline-flex">
+      {badge}
+      <span className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-56 -translate-x-1/2 rounded-lg border border-border-default bg-bg-secondary p-2.5 text-[11px] leading-relaxed text-text-secondary opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+        {tooltipText}
+        <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-bg-secondary" />
+      </span>
+    </span>
   );
 }

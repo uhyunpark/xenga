@@ -47,7 +47,7 @@ export function HeroSection() {
               href="/marketplace"
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-accent/90"
             >
-              Launch Marketplace Demo
+              Launch Human Escrow Demo
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M3 8h10M9 4l4 4-4 4" />
               </svg>

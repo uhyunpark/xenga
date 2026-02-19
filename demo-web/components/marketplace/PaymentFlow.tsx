@@ -12,6 +12,7 @@ import {
   AlreadyPaidError,
 } from "@/lib/api/payment-flow";
 import type { PaymentRequired, PaymentPayload } from "@/lib/api/payment-flow";
+import type { ReputationScore } from "@shared/types";
 import { Badge } from "@/components/ui/Badge";
 import { AddressDisplay } from "@/components/ui/AddressDisplay";
 import { ReputationBadge } from "@/components/ui/ReputationBadge";
@@ -46,6 +47,7 @@ interface FlowState {
   deliveryConfirmed: boolean;
   paymentRequired: PaymentRequired | null;
   paymentPayload: PaymentPayload | null;
+  completionReputation: ReputationScore | null;
 }
 
 type FlowAction =
@@ -59,7 +61,8 @@ type FlowAction =
   | { type: "DELIVERY_CONFIRMED" }
   | { type: "RESET" }
   | { type: "SET_PAYMENT_REQUIRED"; paymentRequired: PaymentRequired }
-  | { type: "SET_PAYMENT_PAYLOAD"; paymentPayload: PaymentPayload };
+  | { type: "SET_PAYMENT_PAYLOAD"; paymentPayload: PaymentPayload }
+  | { type: "SET_COMPLETION_REPUTATION"; reputation: ReputationScore };
 
 function reducer(state: FlowState, action: FlowAction): FlowState {
   switch (action.type) {
@@ -85,6 +88,8 @@ function reducer(state: FlowState, action: FlowAction): FlowState {
       return { ...state, paymentRequired: action.paymentRequired, step: "sign", loading: false, error: null };
     case "SET_PAYMENT_PAYLOAD":
       return { ...state, paymentPayload: action.paymentPayload, step: "submit", loading: false, error: null };
+    case "SET_COMPLETION_REPUTATION":
+      return { ...state, completionReputation: action.reputation };
     default:
       return state;
   }
@@ -103,6 +108,7 @@ const initialState: FlowState = {
   deliveryConfirmed: false,
   paymentRequired: null,
   paymentPayload: null,
+  completionReputation: null,
 };
 
 const STEP_HINTS: Record<DemoStep, string> = {
@@ -279,6 +285,17 @@ export function PaymentFlow() {
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, [deliveryOrderId, inspector]);
+
+  // Fetch seller reputation when transaction completes
+  useEffect(() => {
+    if (state.step !== "complete" || !operatorAddress) return;
+    fetch(`/api/reputation/${operatorAddress}?fresh=true`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((rep) => {
+        if (rep) dispatch({ type: "SET_COMPLETION_REPUTATION", reputation: rep });
+      })
+      .catch(() => {});
+  }, [state.step, operatorAddress]);
 
   const handleSelectProduct = useCallback((product: Product) => {
     inspector.clear();
@@ -732,9 +749,14 @@ export function PaymentFlow() {
                         <span>{formatReleaseWindow(state.paymentRequired.releaseWindow)}</span>
                       </div>
                       {operatorAddress && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-text-tertiary">Seller Reputation</span>
-                          <ReputationBadge address={operatorAddress} />
+                        <div className="mt-3 rounded-lg border border-border-default bg-bg-secondary/50 p-3">
+                          <div className="mb-1.5 flex items-center gap-2">
+                            <span className="text-xs font-semibold text-text-primary">Seller Trust Score</span>
+                            <ReputationBadge address={operatorAddress} size="md" />
+                          </div>
+                          <p className="text-[11px] text-text-tertiary">
+                            Based on the seller&apos;s on-chain escrow history: completion rate, dispute frequency, and transaction volume. Higher scores may qualify for shorter release windows.
+                          </p>
                         </div>
                       )}
                     </div>
@@ -940,6 +962,45 @@ export function PaymentFlow() {
                   <p className="mb-4 text-sm text-text-secondary">
                     Funds have been released to the seller.
                   </p>
+                  {state.completionReputation && (
+                    <div className="mx-auto mb-4 max-w-sm text-left">
+                      <div className="rounded-lg border border-border-default bg-bg-secondary p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-text-primary">Seller Reputation</span>
+                          {operatorAddress && <ReputationBadge address={operatorAddress} size="md" />}
+                        </div>
+                        {state.completionReputation.seller && (
+                          <div className="space-y-1 text-xs">
+                            <div className="flex justify-between">
+                              <span className="text-text-tertiary">Completion Rate</span>
+                              <span className="font-mono">
+                                {(state.completionReputation.seller.completionRate * 100).toFixed(0)}%
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-text-tertiary">Total Escrows</span>
+                              <span className="font-mono">{state.completionReputation.seller.totalEscrows}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-text-tertiary">Confidence</span>
+                              <span className="capitalize">{state.completionReputation.confidence}</span>
+                            </div>
+                          </div>
+                        )}
+                        <p className="text-[11px] text-text-tertiary">
+                          {state.paymentRequired
+                            ? `Release window: ${formatReleaseWindow(state.paymentRequired.releaseWindow)} — ${
+                                state.completionReputation.confidence === "low"
+                                  ? "seller is new, default parameters applied"
+                                  : state.completionReputation.seller && state.completionReputation.seller.score >= 80 && state.completionReputation.confidence === "high"
+                                    ? "high trust seller, shortened release window"
+                                    : "standard parameters based on seller history"
+                              }`
+                            : "This transaction is now part of the seller\u2019s on-chain reputation."}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   <button
                     onClick={handleReset}
                     className="rounded-lg border border-border-default px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-bg-tertiary"
