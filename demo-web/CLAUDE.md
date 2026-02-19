@@ -1,6 +1,6 @@
 # demo-web
 
-Next.js 15 App Router app that demonstrates the x402 escrow payment flow. Imports existing server logic from the parent `src/server/` via webpack aliases — no code duplication.
+Next.js 15 App Router app that demonstrates the escrow lifecycle and reputation system. Imports existing server logic from the parent `src/server/` via webpack aliases — no code duplication.
 
 ## Build & Run
 
