@@ -15,7 +15,10 @@ import { ReputationSummary } from "./ReputationSummary";
 import type { ReputationScore } from "@shared/types";
 import {
   type RoundSnapshot,
+  type ScreeningAgentProfile,
   TRUST_BUILDING_ROUNDS,
+  SCREENING_AGENTS,
+  SCREENING_THRESHOLD,
   simulateRounds,
 } from "@/lib/reputation/client-scoring";
 
@@ -26,7 +29,7 @@ interface TerminalLine {
   delay: number;
 }
 
-type Scenario = "happy" | "dispute" | "reputation";
+type Scenario = "happy" | "dispute" | "reputation" | "screening";
 
 interface AgentTerminalProps {
   speed: number;
@@ -43,6 +46,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
     seller: ReputationScore | null;
     scenario: Scenario;
     progression?: RoundSnapshot[];
+    screeningResults?: ScreeningAgentProfile[];
   } | null>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
   const { walletClient, address, connectDemo, fundDemoWallet, usdcBalance, type: walletType } = useWallet();
@@ -523,17 +527,22 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
           delay: 0,
         });
 
-        // Inspector event
+        // Inspector event — reputation_check switches to Reputation tab automatically
         inspector.addEvent({
-          type: "http_response",
+          type: "reputation_check",
           label: `Round ${snap.round}: ${def.outcome === "completed" ? "Completed" : "Disputed"}`,
           data: {
+            mode: "round",
+            round: snap.round,
+            label: def.label,
+            outcome: def.outcome,
             sellerScore: snap.sellerScore,
             buyerScore: snap.buyerScore,
             sellerDelta: snap.sellerDelta,
             buyerDelta: snap.buyerDelta,
             confidence: snap.confidence,
             windowTier: snap.windowTier,
+            windowLabel: snap.windowLabel,
           },
         });
 
@@ -606,6 +615,116 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
     }
   }, [address, operatorAddress, speed, inspector, addLine]);
 
+  // ── Agent Screening (no wallet needed) ──
+
+  const runScreeningDemo = useCallback(async () => {
+    setIsRunning(true);
+    setActiveScenario("screening");
+    setLines([]);
+    setIsComplete(false);
+    setTxHash(null);
+    setReputationData(null);
+    inspector.clear();
+    inspector.setOpen(true);
+
+    const wait = (ms: number) =>
+      new Promise((resolve) => setTimeout(resolve, ms / speed));
+
+    try {
+      addLine({ type: "dim", text: "$ x402-marketplace screen --service data-api-premium --threshold 50", delay: 0 });
+      await wait(800);
+      addLine({ type: "info", text: `[screen] Premium Data API — verifying ${SCREENING_AGENTS.length} agents for access`, delay: 0 });
+      await wait(400);
+      addLine({ type: "info", text: `[screen] Minimum reputation score: ${SCREENING_THRESHOLD}/100`, delay: 0 });
+      await wait(1200);
+
+      for (const agent of SCREENING_AGENTS) {
+        addLine({ type: "dim", text: "", delay: 0 });
+        addLine({ type: "dim", text: `━━━ Agent: ${agent.name} (${agent.address}) ━━━`, delay: 0 });
+        await wait(600);
+
+        addLine({ type: "dim", text: `$ x402-marketplace reputation --check ${agent.address}`, delay: 0 });
+        await wait(800);
+
+        // Emit inspector event
+        inspector.addEvent({
+          type: "reputation_check",
+          label: `${agent.name} — ${agent.decision.toUpperCase()}`,
+          data: {
+            mode: "screening",
+            agentName: agent.name,
+            address: agent.address,
+            score: agent.score,
+            confidence: agent.confidence,
+            decision: agent.decision,
+            reason: agent.rejectionReason ?? agent.windowLabel,
+            windowLabel: agent.windowLabel ?? null,
+            stats: agent.stats,
+          },
+        });
+
+        addLine({
+          type: "reputation",
+          text: `[reputation] Score: ${agent.score}/100 | Confidence: ${agent.confidence} (${agent.stats.totalEscrows} escrows)`,
+          delay: 0,
+        });
+        await wait(400);
+
+        if (agent.stats.totalEscrows > 0) {
+          addLine({
+            type: "reputation",
+            text: `[reputation] Completion: ${(agent.stats.completionRate * 100).toFixed(0)}% | Disputes: ${(agent.stats.disputeRate * 100).toFixed(0)}% | Volume: ${agent.stats.totalAmount} USDC`,
+            delay: 0,
+          });
+          await wait(400);
+        }
+
+        if (agent.decision === "rejected") {
+          addLine({ type: "error", text: `[screen]  REJECTED — ${agent.rejectionReason}`, delay: 0 });
+        } else {
+          addLine({ type: "success", text: `[screen]  ACCEPTED — Release window: ${agent.windowLabel}`, delay: 0 });
+        }
+        await wait(1200);
+      }
+
+      const accepted = SCREENING_AGENTS.filter((a) => a.decision === "accepted");
+      const rejected = SCREENING_AGENTS.filter((a) => a.decision === "rejected");
+
+      addLine({ type: "dim", text: "", delay: 0 });
+      addLine({ type: "dim", text: "━━━ SCREENING COMPLETE ━━━", delay: 0 });
+      await wait(600);
+      addLine({ type: "info", text: `[summary] ${accepted.length} of ${SCREENING_AGENTS.length} agents accepted`, delay: 0 });
+      await wait(300);
+      for (const a of accepted) {
+        addLine({ type: "success", text: `[summary] ${a.name}: ${a.windowLabel}`, delay: 0 });
+        await wait(200);
+      }
+      for (const a of rejected) {
+        addLine({ type: "error", text: `[summary] ${a.name}: access denied`, delay: 0 });
+        await wait(200);
+      }
+      await wait(800);
+      addLine({ type: "reputation", text: "[takeaway] Reputation gating protects services from bad actors", delay: 0 });
+      await wait(400);
+      addLine({ type: "reputation", text: "[takeaway] High-trust agents unlock shorter release windows (30 min vs 1 hour)", delay: 0 });
+      await wait(400);
+      addLine({ type: "reputation", text: "[takeaway] On-chain history is a portable credential — works across all services", delay: 0 });
+
+      setReputationData({
+        buyer: null,
+        seller: null,
+        scenario: "screening",
+        screeningResults: SCREENING_AGENTS,
+      });
+
+      setIsComplete(true);
+    } catch (err: any) {
+      addLine({ type: "error", text: `[error] ${err.message}`, delay: 0 });
+    } finally {
+      setIsRunning(false);
+    }
+  }, [speed, inspector, addLine]);
+
   const needsWallet = !address;
   const needsFunding = walletType === "demo" && usdcBalance !== null && parseFloat(usdcBalance) < 1;
   const terminalStatus = isRunning
@@ -615,14 +734,34 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
       : "Ready";
 
   const scenarioLabel = (s: Scenario) =>
-    s === "happy" ? "Successful Payment" : s === "dispute" ? "Dispute & Resolution" : "Reputation Over Time";
+    s === "happy" ? "Successful Payment"
+    : s === "dispute" ? "Dispute & Resolution"
+    : s === "reputation" ? "Reputation Over Time"
+    : "Agent Screening";
 
   return (
     <div className="space-y-4">
+      {/* Agent Screening is always available — no wallet required */}
+      {(needsWallet || needsFunding) && (
+        <div className="panel-surface flex flex-wrap items-center gap-3 rounded-xl p-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-text-secondary">Agent Screening</p>
+            <p className="text-[11px] text-text-tertiary">No wallet needed — pure reputation simulation</p>
+          </div>
+          <button
+            onClick={runScreeningDemo}
+            disabled={isRunning}
+            className="shrink-0 rounded-lg border border-amber-400/30 bg-amber-400/10 px-4 py-2 text-sm font-semibold text-amber-400 transition-all hover:bg-amber-400/20 disabled:opacity-50"
+          >
+            Agent Screening
+          </button>
+        </div>
+      )}
+
       {needsWallet ? (
         <div className="panel-surface rounded-xl p-6 text-center">
           <p className="mb-3 text-sm text-text-secondary">
-            Connect a wallet to run the agent demo
+            Connect a wallet to run the on-chain demos
           </p>
           <button
             onClick={connectDemo}
@@ -634,7 +773,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
       ) : needsFunding ? (
         <div className="panel-surface rounded-xl p-6 text-center">
           <p className="mb-3 text-sm text-text-secondary">
-            Fund your wallet to run the demo
+            Fund your wallet to run the on-chain demos
           </p>
           <button
             onClick={fundDemoWallet}
@@ -665,7 +804,9 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
                 ? "border-error/30 bg-error/10 text-error"
                 : activeScenario === "reputation"
                   ? "border-violet-400/30 bg-violet-400/10 text-violet-400"
-                  : "border-accent-purple/30 bg-accent-purple/10 text-accent-purple"
+                  : activeScenario === "screening"
+                    ? "border-amber-400/30 bg-amber-400/10 text-amber-400"
+                    : "border-accent-purple/30 bg-accent-purple/10 text-accent-purple"
             }`}>
               {scenarioLabel(activeScenario)}
             </span>
@@ -678,7 +819,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
           </span>
 
           {!isRunning && !isComplete && (
-            <div className="ml-auto flex gap-2">
+            <div className="ml-auto flex flex-wrap gap-2">
               <button
                 onClick={() => runDemo("happy")}
                 disabled={!operatorAddress}
@@ -700,12 +841,22 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
               >
                 Reputation Over Time
               </button>
+              <button
+                onClick={runScreeningDemo}
+                className="rounded-lg border border-amber-400/30 bg-amber-400/10 px-5 py-2.5 text-sm font-semibold text-amber-400 transition-all hover:bg-amber-400/20"
+              >
+                Agent Screening
+              </button>
             </div>
           )}
           {isComplete && (
-            <div className="ml-auto flex gap-2">
+            <div className="ml-auto flex flex-wrap gap-2">
               <button
-                onClick={() => activeScenario === "reputation" ? runReputationDemo() : runDemo(activeScenario ?? "happy")}
+                onClick={() => {
+                  if (activeScenario === "reputation") runReputationDemo();
+                  else if (activeScenario === "screening") runScreeningDemo();
+                  else runDemo(activeScenario ?? "happy");
+                }}
                 className="rounded-lg border border-border-default px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-bg-tertiary"
               >
                 Replay
@@ -732,6 +883,14 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
                   className="rounded-lg border border-violet-400/30 bg-violet-400/10 px-4 py-2 text-sm font-medium text-violet-400 transition-colors hover:bg-violet-400/20"
                 >
                   Try Reputation Over Time
+                </button>
+              )}
+              {activeScenario !== "screening" && (
+                <button
+                  onClick={runScreeningDemo}
+                  className="rounded-lg border border-amber-400/30 bg-amber-400/10 px-4 py-2 text-sm font-medium text-amber-400 transition-colors hover:bg-amber-400/20"
+                >
+                  Try Agent Screening
                 </button>
               )}
             </div>
@@ -813,12 +972,13 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
 
       {isComplete && reputationData && (
         <ReputationSummary
-          buyerAddress={address!}
-          sellerAddress={operatorAddress!}
+          buyerAddress={address ?? "0x0000000000000000000000000000000000000000"}
+          sellerAddress={operatorAddress ?? "0x0000000000000000000000000000000000000000"}
           buyerRep={reputationData.buyer}
           sellerRep={reputationData.seller}
           scenario={reputationData.scenario}
           progression={reputationData.progression}
+          screeningResults={reputationData.screeningResults}
         />
       )}
     </div>

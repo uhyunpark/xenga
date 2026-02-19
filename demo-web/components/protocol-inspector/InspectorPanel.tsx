@@ -6,11 +6,13 @@ import { cn } from "@/lib/utils";
 import { HttpTrafficTab } from "./HttpTrafficTab";
 import { SignatureTab } from "./SignatureTab";
 import { OnChainTab } from "./OnChainTab";
+import { ReputationTab } from "./ReputationTab";
 
 const TABS = [
   { key: "http" as const, label: "HTTP Traffic", eventTypes: ["http_request", "http_response"] },
   { key: "signatures" as const, label: "Signatures", eventTypes: ["eip712_sign", "signature_result"] },
   { key: "onchain" as const, label: "On-Chain", eventTypes: ["tx_submitted", "tx_confirmed", "state_change"] },
+  { key: "reputation" as const, label: "Reputation", eventTypes: ["reputation_check"] },
 ];
 
 export function InspectorPanel() {
@@ -168,6 +170,7 @@ function PanelContent({
         {activeTab === "http" && <HttpTrafficTab />}
         {activeTab === "signatures" && <SignatureTab />}
         {activeTab === "onchain" && <OnChainTab />}
+        {activeTab === "reputation" && <ReputationTab />}
       </div>
     </>
   );

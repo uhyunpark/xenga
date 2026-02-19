@@ -15,7 +15,8 @@ export type InspectorEventType =
   | "signature_result"
   | "tx_submitted"
   | "tx_confirmed"
-  | "state_change";
+  | "state_change"
+  | "reputation_check";
 
 export interface InspectorEvent {
   id: string;
@@ -27,7 +28,7 @@ export interface InspectorEvent {
 
 interface InspectorState {
   events: InspectorEvent[];
-  activeTab: "http" | "signatures" | "onchain";
+  activeTab: "http" | "signatures" | "onchain" | "reputation";
   isOpen: boolean;
   currentState?: string;
 }
@@ -103,6 +104,8 @@ export function InspectorProvider({ children }: { children: ReactNode }) {
       } else if (event.type === "state_change") {
         dispatch({ type: "SET_TAB", tab: "onchain" });
         dispatch({ type: "SET_STATE", state: event.data.newState });
+      } else if (event.type === "reputation_check") {
+        dispatch({ type: "SET_TAB", tab: "reputation" });
       }
     },
     []

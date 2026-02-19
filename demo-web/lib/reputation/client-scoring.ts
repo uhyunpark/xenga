@@ -196,6 +196,83 @@ export function simulateRounds(rounds: RoundDefinition[]): RoundSnapshot[] {
   return snapshots;
 }
 
+// ── Multi-agent screening scenario ──
+
+export const SCREENING_THRESHOLD = 50; // minimum score for service access
+
+export type ConfidenceLevel = "low" | "medium" | "high";
+
+export interface ScreeningAgentProfile {
+  id: string;
+  name: string;
+  address: string;
+  score: number;
+  confidence: ConfidenceLevel;
+  decision: "accepted" | "rejected";
+  rejectionReason?: string;
+  windowLabel?: string;
+  windowTier?: "high" | "default";
+  stats: {
+    totalEscrows: number;
+    completionRate: number;
+    disputeRate: number;
+    totalAmount: number;
+  };
+}
+
+// Pre-computed profiles — scores verified against computeSellerScoreRaw formula:
+//   score = completionRate*40 + (1-disputeRate)*25 + (1-refundRate)*15 + fairness*10 + volumeBonus*10
+//   volumeBonus = min(10, log10(amount) * 3.33)
+//
+// Alice:  0 escrows  → score 0,  confidence "low"    → REJECTED (no history)
+// Bob:   12 escrows  → score 39, confidence "high"   → REJECTED (below threshold 50)
+// Carol:  7 escrows  → score 64, confidence "medium" → ACCEPTED (1-hour window)
+// Dave:  18 escrows  → score 92, confidence "high"   → ACCEPTED (30-min fast lane)
+export const SCREENING_AGENTS: ScreeningAgentProfile[] = [
+  {
+    id: "alice",
+    name: "Alice",
+    address: "0xA1ce7f4b...0001",
+    score: 0,
+    confidence: "low",
+    decision: "rejected",
+    rejectionReason: "No transaction history — minimum 3 escrows required",
+    stats: { totalEscrows: 0, completionRate: 0, disputeRate: 0, totalAmount: 0 },
+  },
+  {
+    id: "bob",
+    name: "Bob",
+    address: "0xB0b5a8c1...0002",
+    score: 39,
+    confidence: "high",
+    decision: "rejected",
+    rejectionReason: "Score 39 below threshold 50 — high dispute rate (58%)",
+    stats: { totalEscrows: 12, completionRate: 0.25, disputeRate: 0.58, totalAmount: 60 },
+  },
+  {
+    id: "carol",
+    name: "Carol",
+    address: "0xCA30b2f7...0003",
+    score: 64,
+    confidence: "medium",
+    decision: "accepted",
+    windowLabel: "1 hour (standard)",
+    windowTier: "default",
+    stats: { totalEscrows: 7, completionRate: 0.57, disputeRate: 0.29, totalAmount: 35 },
+  },
+  {
+    id: "dave",
+    name: "Dave",
+    address: "0xDA5ef8b3...0004",
+    score: 92,
+    confidence: "high",
+    decision: "accepted",
+    windowLabel: "30 min (fast lane)",
+    windowTier: "high",
+    stats: { totalEscrows: 18, completionRate: 0.94, disputeRate: 0.06, totalAmount: 180 },
+  },
+];
+
 // ── Round definitions for the Trust Building scenario ──
 
 export const TRUST_BUILDING_ROUNDS: RoundDefinition[] = [
