@@ -5,10 +5,7 @@ import {
   keccak256,
   toHex,
 } from "viem";
-import {
-  getUsdcEip712Domain,
-  receiveWithAuthorizationTypes,
-} from "../shared/eip712.js";
+import { buildReceiveAuthSigningParams } from "../shared/eip712.js";
 import type { EscrowPaymentPayload, EscrowPaymentRequired } from "../shared/types.js";
 
 /**
@@ -31,29 +28,21 @@ export async function signEscrowPayment(
     toHex(`${account.address}-${paymentRequired.orderId}-${crypto.randomUUID()}`)
   ) as Hash;
 
-  const validAfter = BigInt(0);
-  const validBefore = BigInt(Math.floor(Date.now() / 1000) + 86400); // 24 hour validity
-
-  const domain = getUsdcEip712Domain(
-    usdcAddress ?? (paymentRequired.asset as Address)
-  );
-
-  const message = {
+  const signingParams = buildReceiveAuthSigningParams({
     from: account.address,
     to: paymentRequired.escrowContract,
-    value: BigInt(paymentRequired.amount),
-    validAfter,
-    validBefore,
+    amount: BigInt(paymentRequired.amount),
     nonce,
-  };
+    usdcAddress: usdcAddress ?? (paymentRequired.asset as Address),
+  });
 
   // Sign EIP-712 typed data
   const signature = await walletClient.signTypedData({
     account,
-    domain,
-    types: receiveWithAuthorizationTypes,
-    primaryType: "ReceiveWithAuthorization",
-    message,
+    domain: signingParams.domain,
+    types: signingParams.types,
+    primaryType: signingParams.primaryType,
+    message: signingParams.message,
   });
 
   // Parse signature into v, r, s
@@ -67,8 +56,8 @@ export async function signEscrowPayment(
     from: account.address,
     to: paymentRequired.escrowContract,
     value: paymentRequired.amount,
-    validAfter: validAfter.toString(),
-    validBefore: validBefore.toString(),
+    validAfter: signingParams.validAfter.toString(),
+    validBefore: signingParams.validBefore.toString(),
     nonce,
     signature: { v, r, s },
     orderId: paymentRequired.orderId,

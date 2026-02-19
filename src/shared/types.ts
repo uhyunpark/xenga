@@ -213,6 +213,13 @@ export interface OnChainSession {
 
 // ──────────────────────── Reputation ────────────────────────
 
+/** Lightweight seller reputation info included in 402 responses */
+export interface SellerReputationInfo {
+  score: number;
+  confidence: string;
+  disputeRate: number;
+}
+
 export interface ReputationScore {
   address: Address;
   overall: number; // 0-100

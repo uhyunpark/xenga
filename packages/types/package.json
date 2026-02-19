@@ -1,0 +1,30 @@
+{
+  "name": "@x402/types",
+  "version": "0.1.0",
+  "description": "Shared types, constants, and ABIs for x402 escrow payment protocol",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./abi": {
+      "import": "./dist/abi.js",
+      "types": "./dist/abi.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  },
+  "dependencies": {
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {},
+  "publishConfig": {
+    "access": "public"
+  }
+}

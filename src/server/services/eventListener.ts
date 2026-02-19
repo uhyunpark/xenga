@@ -3,7 +3,13 @@ import { privateKeyToAccount } from "viem/accounts";
 import type { Hash } from "viem";
 import { escrowVaultAbi } from "../../shared/abi.js";
 import type { OrderStatus } from "../../shared/types.js";
-import { CHAIN } from "../../shared/constants.js";
+import {
+  CHAIN,
+  AUTO_VERIFY_DELAY_MS,
+  EVENT_LISTENER_MAX_RETRIES,
+  EVENT_LISTENER_BASE_BACKOFF_MS,
+  EVENT_LISTENER_MAX_BACKOFF_MS,
+} from "../../shared/constants.js";
 import { config } from "../config.js";
 import { getDb } from "../db/index.js";
 import { updateOrderStatus, getOrderByOrderId } from "./orderService.js";
@@ -143,6 +149,11 @@ function watchWithReconnect(
   let retryCount = 0;
 
   const startWatching = () => {
+    if (retryCount >= EVENT_LISTENER_MAX_RETRIES) {
+      logger.error("events", `Max retries (${EVENT_LISTENER_MAX_RETRIES}) reached for ${eventName}. Giving up.`);
+      return;
+    }
+
     client.watchContractEvent({
       address: contractAddress,
       abi: escrowVaultAbi,
@@ -153,8 +164,8 @@ function watchWithReconnect(
       },
       onError: (error) => {
         retryCount++;
-        const backoffMs = Math.min(5000 * Math.pow(2, retryCount - 1), 60_000);
-        logger.error("events", `Error watching ${eventName}, retrying in ${backoffMs}ms (attempt ${retryCount})`, {
+        const backoffMs = Math.min(EVENT_LISTENER_BASE_BACKOFF_MS * Math.pow(2, retryCount - 1), EVENT_LISTENER_MAX_BACKOFF_MS);
+        logger.error("events", `Error watching ${eventName}, retrying in ${backoffMs}ms (attempt ${retryCount}/${EVENT_LISTENER_MAX_RETRIES})`, {
           error: (error as Error).message,
         });
         setTimeout(startWatching, backoffMs);
@@ -240,7 +251,7 @@ function scheduleAutoVerify(escrowId: number, orderId: `0x${string}`) {
       } catch (err) {
         logger.error("events", `Auto-verify tx failed for escrow ${escrowId}: ${(err as Error).message}`);
       }
-    }, 5000); // 5 second delay to simulate service completion
+    }, AUTO_VERIFY_DELAY_MS);
   } catch (err) {
     logger.error("events", `Failed to schedule auto-verify: ${(err as Error).message}`);
   }

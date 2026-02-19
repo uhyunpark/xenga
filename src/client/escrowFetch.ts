@@ -2,7 +2,14 @@ import type { WalletClient, Address } from "viem";
 import type {
   EscrowPaymentRequired,
   EscrowPaymentResponse,
+  SellerReputationInfo,
 } from "../shared/types.js";
+import {
+  NetworkError,
+  InvalidPaymentHeaderError,
+  UnsupportedSchemeError,
+  ReputationAbortError,
+} from "../shared/errors.js";
 import { signEscrowPayment } from "./escrowScheme.js";
 
 // Universal base64 helpers (works in Node.js, browsers, and Bun)
@@ -30,17 +37,30 @@ function decodeBase64(b64: string): string {
   return new TextDecoder().decode(bytes);
 }
 
-interface SellerReputationInfo {
-  score: number;
-  confidence: string;
-  disputeRate: number;
+/** Runtime validation of EscrowPaymentRequired shape */
+function isEscrowPaymentRequired(obj: unknown): obj is EscrowPaymentRequired {
+  if (typeof obj !== "object" || obj === null) return false;
+  const o = obj as Record<string, unknown>;
+  return (
+    o.scheme === "escrow" &&
+    typeof o.network === "string" &&
+    typeof o.escrowContract === "string" &&
+    typeof o.asset === "string" &&
+    typeof o.amount === "string" &&
+    typeof o.orderId === "string" &&
+    typeof o.sellerAddress === "string" &&
+    typeof o.releaseWindow === "number" &&
+    typeof o.serviceType === "string"
+  );
 }
 
-interface EscrowFetchOptions {
+export interface EscrowFetchOptions {
   walletClient: WalletClient;
   usdcAddress?: Address;
   /** Called with seller reputation from 402 response. Return false to abort payment. */
   onSellerReputation?: (reputation: SellerReputationInfo) => boolean;
+  /** Request timeout in milliseconds (default: 30000) */
+  timeoutMs?: number;
 }
 
 /**
@@ -61,8 +81,18 @@ export async function escrowFetch(
   response: Response;
   payment?: EscrowPaymentResponse;
 }> {
+  const timeoutMs = options.timeoutMs ?? 30_000;
+
   // First request
-  const firstResponse = await fetch(url, init);
+  let firstResponse: Response;
+  try {
+    firstResponse = await fetchWithTimeout(url, init, timeoutMs);
+  } catch (err) {
+    throw new NetworkError(
+      `Failed to reach ${url}: ${err instanceof Error ? err.message : String(err)}`,
+      err instanceof Error ? err : undefined
+    );
+  }
 
   // If not 402, return as-is
   if (firstResponse.status !== 402) {
@@ -76,25 +106,53 @@ export async function escrowFetch(
   let paymentRequired: EscrowPaymentRequired;
 
   if (paymentRequiredHeader) {
-    const decoded = JSON.parse(decodeBase64(paymentRequiredHeader));
+    let decoded: unknown;
+    try {
+      decoded = JSON.parse(decodeBase64(paymentRequiredHeader));
+    } catch {
+      throw new InvalidPaymentHeaderError(
+        "Failed to decode PAYMENT-REQUIRED header: invalid base64 or JSON"
+      );
+    }
     // Handle array format (x402 standard) or single object (legacy)
-    paymentRequired = Array.isArray(decoded)
-      ? decoded.find((r: { scheme: string }) => r.scheme === "escrow")
+    const candidate = Array.isArray(decoded)
+      ? decoded.find((r: { scheme?: string }) => r.scheme === "escrow")
       : decoded;
+
+    if (!isEscrowPaymentRequired(candidate)) {
+      throw new InvalidPaymentHeaderError(
+        "PAYMENT-REQUIRED header is missing required fields (scheme, network, escrowContract, asset, amount, orderId, sellerAddress, releaseWindow, serviceType)"
+      );
+    }
+    paymentRequired = candidate;
   } else {
     // Fallback: read from response body
-    const body = (await firstResponse.json()) as {
-      paymentRequired?: EscrowPaymentRequired;
-      paymentRequirements?: EscrowPaymentRequired[];
+    let body: {
+      paymentRequired?: unknown;
+      paymentRequirements?: unknown[];
     };
-    paymentRequired = body.paymentRequirements?.find(r => r.scheme === "escrow")
-      ?? body.paymentRequired!;
+    try {
+      body = (await firstResponse.clone().json()) as typeof body;
+    } catch {
+      throw new InvalidPaymentHeaderError(
+        "402 response has no PAYMENT-REQUIRED header and body is not valid JSON"
+      );
+    }
+    const candidate =
+      (body.paymentRequirements as EscrowPaymentRequired[] | undefined)?.find(
+        (r) => r.scheme === "escrow"
+      ) ?? body.paymentRequired;
+
+    if (!isEscrowPaymentRequired(candidate)) {
+      throw new InvalidPaymentHeaderError(
+        "No valid escrow payment requirement found in 402 response"
+      );
+    }
+    paymentRequired = candidate;
   }
 
-  if (!paymentRequired || paymentRequired.scheme !== "escrow") {
-    throw new Error(
-      `Unsupported payment scheme: ${paymentRequired?.scheme ?? "unknown"}`
-    );
+  if (paymentRequired.scheme !== "escrow") {
+    throw new UnsupportedSchemeError(paymentRequired.scheme);
   }
 
   console.log(
@@ -103,19 +161,18 @@ export async function escrowFetch(
 
   // Check seller reputation if callback provided
   if (options.onSellerReputation) {
-    // Try to get reputation from response body
     try {
-      const body = await firstResponse.clone().json() as any;
+      const body = (await firstResponse.clone().json()) as {
+        sellerReputation?: SellerReputationInfo;
+      };
       if (body.sellerReputation) {
         const shouldProceed = options.onSellerReputation(body.sellerReputation);
         if (!shouldProceed) {
-          throw new Error(
-            `Payment aborted: seller reputation check failed (score=${body.sellerReputation.score})`
-          );
+          throw new ReputationAbortError(body.sellerReputation.score);
         }
       }
-    } catch (err: any) {
-      if (err.message.startsWith("Payment aborted")) throw err;
+    } catch (err) {
+      if (err instanceof ReputationAbortError) throw err;
       // If body parsing fails, continue without reputation check
     }
   }
@@ -132,15 +189,27 @@ export async function escrowFetch(
   // Retry with payment (send both standard and legacy headers)
   const paymentHeader = encodeBase64(JSON.stringify(payload));
 
-  const retryResponse = await fetch(url, {
-    ...init,
-    headers: {
-      ...((init?.headers as Record<string, string>) ?? {}),
-      "PAYMENT-SIGNATURE": paymentHeader,
-      "X-PAYMENT": paymentHeader,
-      "Content-Type": "application/json",
-    },
-  });
+  let retryResponse: Response;
+  try {
+    retryResponse = await fetchWithTimeout(
+      url,
+      {
+        ...init,
+        headers: {
+          ...((init?.headers as Record<string, string>) ?? {}),
+          "PAYMENT-SIGNATURE": paymentHeader,
+          "X-PAYMENT": paymentHeader,
+          "Content-Type": "application/json",
+        },
+      },
+      timeoutMs
+    );
+  } catch (err) {
+    throw new NetworkError(
+      `Failed to submit payment to ${url}: ${err instanceof Error ? err.message : String(err)}`,
+      err instanceof Error ? err : undefined
+    );
+  }
 
   // Parse payment response (prefer standard, fallback to legacy)
   let payment: EscrowPaymentResponse | undefined;
@@ -148,8 +217,30 @@ export async function escrowFetch(
     retryResponse.headers.get("payment-response") ??
     retryResponse.headers.get("x-payment-response");
   if (paymentResponseHeader) {
-    payment = JSON.parse(decodeBase64(paymentResponseHeader));
+    try {
+      payment = JSON.parse(decodeBase64(paymentResponseHeader));
+    } catch {
+      // If payment response header is malformed, fall through to body parsing
+    }
   }
 
   return { response: retryResponse, payment };
+}
+
+/** Fetch with AbortController-based timeout */
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit | undefined,
+  timeoutMs: number
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }

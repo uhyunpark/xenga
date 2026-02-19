@@ -18,20 +18,21 @@ export async function getEscrow(escrowId: number): Promise<OnChainEscrow> {
     args: [BigInt(escrowId)],
   });
 
-  // Foundry returns a tuple, viem returns an object
-  const r = result as any;
+  // Viem may return a named struct or a positional tuple depending on ABI encoding.
+  // Use a record type to safely index both named and positional fields.
+  const r = result as Record<string | number, unknown>;
   return {
-    orderId: r.orderId ?? r[0],
-    buyer: r.buyer ?? r[1],
-    seller: r.seller ?? r[2],
-    amount: BigInt(r.amount ?? r[3]),
-    serviceType: r.serviceType ?? r[4],
-    state: Number(r.state ?? r[5]) as EscrowState,
-    createdAt: BigInt(r.createdAt ?? r[6]),
-    releaseWindow: BigInt(r.releaseWindow ?? r[7]),
-    deliveryConfirmedAt: BigInt(r.deliveryConfirmedAt ?? r[8]),
-    disputeWindow: BigInt(r.disputeWindow ?? r[9]),
-    facilitatorFee: BigInt(r.facilitatorFee ?? r[10]),
+    orderId: (r["orderId"] ?? r[0] ?? "0x") as Hash,
+    buyer: (r["buyer"] ?? r[1] ?? "0x") as Address,
+    seller: (r["seller"] ?? r[2] ?? "0x") as Address,
+    amount: BigInt((r["amount"] ?? r[3] ?? 0) as string | number | bigint),
+    serviceType: (r["serviceType"] ?? r[4] ?? "") as string,
+    state: Number((r["state"] ?? r[5] ?? 0) as string | number) as EscrowState,
+    createdAt: BigInt((r["createdAt"] ?? r[6] ?? 0) as string | number | bigint),
+    releaseWindow: BigInt((r["releaseWindow"] ?? r[7] ?? 0) as string | number | bigint),
+    deliveryConfirmedAt: BigInt((r["deliveryConfirmedAt"] ?? r[8] ?? 0) as string | number | bigint),
+    disputeWindow: BigInt((r["disputeWindow"] ?? r[9] ?? 0) as string | number | bigint),
+    facilitatorFee: BigInt((r["facilitatorFee"] ?? r[10] ?? 0) as string | number | bigint),
   };
 }
 

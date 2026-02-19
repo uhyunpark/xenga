@@ -79,7 +79,8 @@ export async function settleEscrow(
         topics: log.topics,
       });
       if (decoded.eventName === "EscrowCreated") {
-        escrowId = Number((decoded.args as any).escrowId);
+        const args = decoded.args as { escrowId?: bigint };
+        escrowId = Number(args.escrowId ?? 0n);
         break;
       }
     } catch {
