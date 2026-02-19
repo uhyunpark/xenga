@@ -80,7 +80,7 @@ export function ReputationSummary({
       <div className="flex items-center justify-between border-b border-border-default px-5 py-3">
         <h3 className="text-sm font-semibold text-text-primary">Reputation Impact</h3>
         <Badge variant={scenario === "dispute" ? "error" : scenario === "reputation" ? "info" : "success"}>
-          {scenario === "happy" ? "Happy Path" : scenario === "dispute" ? "Dispute Path" : "Trust Building"}
+          {scenario === "happy" ? "Successful Payment" : scenario === "dispute" ? "Dispute & Resolution" : "Reputation Over Time"}
         </Badge>
       </div>
 

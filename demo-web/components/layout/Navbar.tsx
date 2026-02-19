@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { WalletSelector } from "@/components/ui/WalletSelector";
 
 const NAV_ITEMS = [
-  { href: "/marketplace", label: "Marketplace" },
+  { href: "/marketplace", label: "Human Escrow" },
   { href: "/agent", label: "Agent" },
 ];
 

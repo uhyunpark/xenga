@@ -615,7 +615,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
       : "Ready";
 
   const scenarioLabel = (s: Scenario) =>
-    s === "happy" ? "Happy Path" : s === "dispute" ? "Dispute Path" : "Trust Building";
+    s === "happy" ? "Successful Payment" : s === "dispute" ? "Dispute & Resolution" : "Reputation Over Time";
 
   return (
     <div className="space-y-4">
@@ -646,7 +646,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
       ) : (
         <div className="panel-surface flex flex-wrap items-center gap-3 rounded-xl p-3">
           <span className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
-            Agent Runtime
+            Scenario
           </span>
           <span
             className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
@@ -684,21 +684,21 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
                 disabled={!operatorAddress}
                 className="rounded-lg bg-accent-purple px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-accent-purple/90 disabled:opacity-50"
               >
-                {operatorAddress ? "Happy Path" : "Loading..."}
+                {operatorAddress ? "Successful Payment" : "Loading..."}
               </button>
               <button
                 onClick={() => runDemo("dispute")}
                 disabled={!operatorAddress}
                 className="rounded-lg border border-error/30 bg-error/10 px-5 py-2.5 text-sm font-semibold text-error transition-all hover:bg-error/20 disabled:opacity-50"
               >
-                Dispute Path
+                Dispute & Resolution
               </button>
               <button
                 onClick={runReputationDemo}
                 disabled={!operatorAddress}
                 className="rounded-lg border border-violet-400/30 bg-violet-400/10 px-5 py-2.5 text-sm font-semibold text-violet-400 transition-all hover:bg-violet-400/20 disabled:opacity-50"
               >
-                Trust Building
+                Reputation Over Time
               </button>
             </div>
           )}
@@ -715,7 +715,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
                   onClick={() => runDemo("happy")}
                   className="rounded-lg border border-accent-purple/30 bg-accent-purple/10 px-4 py-2 text-sm font-medium text-accent-purple transition-colors hover:bg-accent-purple/20"
                 >
-                  Try Happy Path
+                  Try Successful Payment
                 </button>
               )}
               {activeScenario !== "dispute" && (
@@ -723,7 +723,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
                   onClick={() => runDemo("dispute")}
                   className="rounded-lg border border-error/30 bg-error/10 px-4 py-2 text-sm font-medium text-error transition-colors hover:bg-error/20"
                 >
-                  Try Dispute Path
+                  Try Dispute & Resolution
                 </button>
               )}
               {activeScenario !== "reputation" && (
@@ -731,7 +731,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
                   onClick={runReputationDemo}
                   className="rounded-lg border border-violet-400/30 bg-violet-400/10 px-4 py-2 text-sm font-medium text-violet-400 transition-colors hover:bg-violet-400/20"
                 >
-                  Try Trust Building
+                  Try Reputation Over Time
                 </button>
               )}
             </div>
@@ -758,7 +758,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
         >
           {lines.length === 0 && !isRunning && (
             <div className="text-text-tertiary">
-              Click &quot;Happy Path&quot;, &quot;Dispute Path&quot;, or &quot;Trust Building&quot; to start...
+              Click &quot;Successful Payment&quot;, &quot;Dispute &amp; Resolution&quot;, or &quot;Reputation Over Time&quot; to start...
             </div>
           )}
           <AnimatePresence>

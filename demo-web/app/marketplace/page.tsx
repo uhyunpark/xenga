@@ -19,7 +19,7 @@ export default function MarketplacePage() {
                 {isMockChainClient ? "Mock Chain" : "Base Sepolia"}
               </span>
             </div>
-            <h1 className="mt-3 text-2xl font-bold md:text-3xl">Marketplace Escrow Demo</h1>
+            <h1 className="mt-3 text-2xl font-bold md:text-3xl">Human Escrow Demo</h1>
             <p className="mt-1 text-sm text-text-secondary">
               Simulate buyer-side checkout, typed-data signing, escrow settlement, and release/dispute decisions.
             </p>
