@@ -2,7 +2,7 @@
   "name": "x402-escrow",
   "version": "0.1.0",
   "private": true,
-  "description": "x402 Escrow Payment System — Agentic payments with escrow protection",
+  "description": "On-chain escrow and reputation system for trust-minimized USDC transactions",
   "workspaces": ["demo-web"],
   "scripts": {
     "dev": "bun --watch src/server/index.ts",

@@ -7,7 +7,7 @@ const tabs = [
   {
     label: "Client SDK",
     lang: "TypeScript",
-    code: `// Automatic 402 payment flow
+    code: `// Automatic escrow payment flow
 const { payment } = await escrowFetch(
   "https://api.example.com/order/123/pay",
   { method: "POST" },

@@ -1,66 +1,110 @@
-## Foundry
+# Contracts
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+Solidity smart contracts for the escrow and reputation system. Built with Foundry.
 
-Foundry consists of:
+## EscrowVault
 
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+Core escrow contract for USDC payments with gasless deposits (ERC-3009).
 
-## Documentation
+### State Machine
 
-https://book.getfoundry.sh/
-
-## Usage
-
-### Build
-
-```shell
-$ forge build
+```
+None ─→ Active ─→ DeliveryConfirmed ─→ Completed      (buyer releases)
+           │              │              AutoReleased   (timeout, anyone triggers)
+           │              └───────────→ Disputed ──→ Resolved (arbiter splits %)
+           └──────────────────────────→ Refunded   (seller voluntary / arbiter)
 ```
 
-### Test
+### Roles
 
-```shell
-$ forge test
+- **Buyer** — deposits USDC (via ERC-3009 gasless authorization or approve+transferFrom), releases funds, files disputes
+- **Seller** — confirms delivery (starts dispute window), can voluntarily refund
+- **Arbiter** — resolves disputes by splitting funds (0-100% to buyer), can force refund
+- **Facilitator** (operator) — submits gasless transactions on behalf of buyers, pays gas
+
+### Key Functions
+
+| Function | Access | Description |
+|---|---|---|
+| `createEscrowWithAuth` | anyone (gasless) | Create escrow via ERC-3009 signed authorization |
+| `createEscrow` | buyer | Create escrow via approve+transferFrom |
+| `confirmDelivery` | seller | Confirm delivery, start dispute window |
+| `releaseFunds` | buyer | Release funds to seller (from Active or DeliveryConfirmed) |
+| `autoRelease` | anyone | Release after timeout — see timing below |
+| `dispute` | buyer | File dispute within dispute window |
+| `resolveDispute` | arbiter | Split funds by buyer percentage (0-100) |
+| `refund` | seller or arbiter | Full refund to buyer (facilitator absorbs fee) |
+
+### Timing
+
+- **Release window**: configurable per escrow (minimum = dispute window = 3 days)
+- **Dispute window**: 3 days (`DEFAULT_DISPUTE_WINDOW`)
+- **Auto-release from Active**: requires `releaseWindow + disputeWindow` to pass (gives buyer time to dispute even without delivery confirmation)
+- **Auto-release from DeliveryConfirmed**: requires both `releaseWindow` from creation AND `disputeWindow` from delivery confirmation to pass
+- **Dispute from DeliveryConfirmed**: within `disputeWindow` of `deliveryConfirmedAt`
+- **Dispute from Active**: between `releaseWindow - disputeWindow` and `releaseWindow + disputeWindow` from creation
+
+### On-Chain Stats (Reputation Data)
+
+Per-address transaction counters — the raw data for reputation scoring.
+
+```
+sellerStats[address]  ─┐
+buyerStats[address]   ─┤─→ Stats { totalEscrows, totalAmount,
+serviceStats[string]  ─┘       completedCount, completedAmount,
+                               disputedCount, disputedAmount,
+                               resolvedCount,
+                               refundedCount, refundedAmount }
 ```
 
-### Format
+View functions: `getSellerStats(address)`, `getBuyerStats(address)`, `getServiceTypeStats(string)`
 
-```shell
-$ forge fmt
+Permissionless — anyone can read the raw data and compute their own reputation scores.
+
+### Fee System
+
+- `feeBps` / `feeRecipient` set by owner via `setFeeConfig()`
+- Fee computed at escrow creation: `fee = (amount * feeBps) / 10000`
+- Deducted from seller payout on release/autoRelease/resolve
+- Full refund to buyer on refund (facilitator absorbs the fee)
+- `MAX_FEE_BPS = 1000` (10% cap)
+
+## SessionEscrow
+
+Authorize-once, use-many session escrow for high-frequency micropayments.
+
+```
+None ─→ Active ─→ Settled    (facilitator finalizes, refunds unused)
+           │
+           └────→ Expired    (buyer reclaims after session timeout)
 ```
 
-### Gas Snapshots
+- Buyer deposits USDC for a session with a time limit
+- Facilitator calls `captureSession()` to batch-settle usage incrementally
+- `settleSession()` finalizes: captures remaining usage + refunds unused balance
+- `reclaimExpired()` safety valve: buyer reclaims uncaptured funds after session expires
 
-```shell
-$ forge snapshot
+## AutoReleaseKeeper
+
+Chainlink Automation compatible contract for batch auto-releasing timed-out escrows.
+
+- `checkUpkeep(startId, endId)` scans an escrow ID range, returns releasable IDs
+- `performUpkeep(escrowIds)` batch-calls `autoRelease` on each (skips failures gracefully)
+- Configurable `maxBatchSize` and optional `forwarder` restriction
+
+## Build & Test
+
+```bash
+forge build
+forge test
+forge test --match-test test_specificName   # single test
+forge test -vvvv                            # verbose with traces
 ```
 
-### Anvil
+**Note:** `via_ir = true` in `foundry.toml` is required — OpenZeppelin contracts cause "stack too deep" without it.
 
-```shell
-$ anvil
-```
+## Dependencies
 
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+- OpenZeppelin Contracts (ERC20, Ownable2Step, Pausable, SafeERC20)
+- Forge-std (testing)
+- `IERC3009` and `AutomationCompatibleInterface` defined locally in `src/interfaces/` (Chainlink repo too large to install as dependency)

@@ -26,32 +26,31 @@ bun run build:contracts && bun run sync-abi
 
 ## Architecture
 
-x402 escrow payment system on Base Sepolia using USDC (ERC-3009 gasless transfers).
+On-chain escrow and reputation system on Base Sepolia using USDC (ERC-3009 gasless transfers). The x402 protocol provides the HTTP integration layer.
 
 **Four layers:**
-- **`contracts/`** — Foundry project: EscrowVault (escrow state machine), AutoReleaseKeeper (Chainlink automation), MockUSDC (test token)
-- **`src/server/`** — Express server: x402 middleware intercepts requests, returns 402 with payment requirements, verifies EIP-712 signatures, settles on-chain
-- **`src/client/`** — SDK: `escrowFetch` wraps fetch to handle the 402 flow automatically (with optional `onSellerReputation` callback), `escrowScheme` handles EIP-712 ReceiveWithAuthorization signing, `createEscrowClient` includes `getReputation()`
-- **`demo-web/`** — Next.js 15 App Router demo: interactive webpage showcasing the x402 escrow flow with Protocol Inspector
+- **`contracts/`** — Foundry project: EscrowVault (escrow state machine + stats), SessionEscrow (session micropayments), AutoReleaseKeeper (Chainlink automation), MockUSDC (test token)
+- **`src/server/`** — Facilitator server: settles escrows on-chain, computes reputation scores, serves API. Includes x402 payment middleware for HTTP-triggered escrow creation.
+- **`src/client/`** — Client SDK: EIP-712 signing, reputation lookup (`getReputation()`), and x402 payment flow (`escrowFetch` with optional `onSellerReputation` callback)
+- **`demo-web/`** — Next.js 15 App Router demo: interactive escrow lifecycle with Protocol Inspector
 
 **Shared code** (`src/shared/`): types, constants, EIP-712 domain/types, and auto-generated ABIs (`abi.ts` — never edit manually, use `sync-abi`). Note: `getBuyerStats`/`buyerStats` ABI entries were manually added pending a `sync-abi` run after contract redeployment.
 
-### x402 Payment Flow
+### Escrow Lifecycle (On-Chain)
 
-1. Client POSTs to a payment-protected endpoint without `X-PAYMENT` header
-2. Middleware returns **402** with `X-PAYMENT-REQUIRED` header (base64 JSON: amount, token, escrow address, order details)
-3. Client signs ERC-3009 `ReceiveWithAuthorization` via EIP-712 (USDC gasless transfer to EscrowVault)
-4. Client retries with `X-PAYMENT` header containing the signature
-5. Server verifies signature off-chain (`facilitator/verifier.ts`), submits `createEscrowWithAuth` on-chain (`facilitator/settler.ts`)
-6. Returns **200** with `X-PAYMENT-RESPONSE` header
+```
+None → Active → DeliveryConfirmed → Completed      (buyer releases)
+         │             │              AutoReleased   (timeout, anyone triggers)
+         │             └────────────→ Disputed ──→ Resolved (arbiter splits %)
+         └───────────────────────────→ Refunded   (seller voluntary / arbiter)
+```
 
-### Service Types
-
-Service types (`src/server/service-types/`) define escrow parameters per use case:
-- **marketplace**: 7-day release window, manual delivery confirmation
-- **agent-service**: 1-hour release window, auto-verify delivery
-
-Each service type can implement `adjustParams(params, reputation)` to dynamically adjust escrow parameters (e.g. release window) based on counterparty reputation scores.
+- **Active**: escrow created, USDC locked. Buyer can release anytime, seller can confirm delivery or refund.
+- **DeliveryConfirmed**: seller confirmed delivery, dispute window (3 days) starts. Buyer can release or dispute.
+- **AutoRelease timing**: From Active state, requires `releaseWindow + disputeWindow`. From DeliveryConfirmed, requires `releaseWindow` from creation AND `disputeWindow` from delivery confirmation.
+- **Dispute timing**: From DeliveryConfirmed, within `disputeWindow` of confirmation. From Active, between `releaseWindow - disputeWindow` and `releaseWindow + disputeWindow` from creation.
+- **Resolved**: arbiter splits funds by buyer percentage (0-100). Fee goes to feeRecipient, split applies to `amount - fee`.
+- **Refunded**: buyer gets full deposit back including fee — facilitator absorbs cost.
 
 ### Reputation System
 
@@ -61,7 +60,7 @@ On-chain credit scoring for agents/wallets, computed from escrow transaction his
 - **On-chain**: `buyerStats[address]` and `sellerStats[address]` mappings in EscrowVault track totalEscrows, completedCount, disputedCount, refundedCount, resolvedCount, and amounts. Raw data is permissionless — anyone can read and compute their own scores.
 - **Off-chain**: `reputationService.ts` computes weighted scores (0-100) with confidence levels, cached 60s in-memory.
 - **Dynamic params**: Service types use `adjustParams()` to shorten/extend release windows based on counterparty reputation (e.g. high-trust pairs get 3-day instead of 7-day marketplace window).
-- **402 integration**: Seller reputation is included in 402 response body; clients can check via `onSellerReputation` callback before paying.
+- **Client integration**: Seller reputation is included in payment responses; clients can check via `onSellerReputation` callback before paying.
 
 **Scoring formulas:**
 - Seller: completionRate×40 + (1-disputeRate)×25 + (1-refundRate)×15 + resolutionFairness×10 + volumeBonus×10
@@ -91,13 +90,24 @@ The facilitator pays all gas fees for on-chain transactions (createEscrowWithAut
 
 **Config:** `FEE_BPS` and `FEE_RECIPIENT` env vars (see `.env.example`). Default: 0 (no fee).
 
-### Escrow Lifecycle (On-Chain)
+### Service Types
 
-`None → Active → DeliveryConfirmed → Completed` (happy path: seller confirms, buyer releases)
-- **AutoReleased**: anyone triggers after release window expires
-- **Disputed**: buyer files within 3-day window after delivery confirmation
-- **Resolved**: arbiter splits funds by percentage
-- **Refunded**: seller or arbiter refunds buyer
+Service types (`src/server/service-types/`) define escrow parameters per use case:
+- **marketplace**: 7-day release window, manual delivery confirmation
+- **agent-service**: 1-hour release window, auto-verify delivery
+
+Each service type can implement `adjustParams(params, reputation)` to dynamically adjust escrow parameters (e.g. release window) based on counterparty reputation scores.
+
+### x402 Integration Layer
+
+HTTP transport for triggering escrow creation. The contracts can also be called directly.
+
+1. Client POSTs to a payment-protected endpoint without `X-PAYMENT` header
+2. Middleware returns **402** with `X-PAYMENT-REQUIRED` header (base64 JSON: amount, token, escrow address, order details)
+3. Client signs ERC-3009 `ReceiveWithAuthorization` via EIP-712 (USDC gasless transfer to EscrowVault)
+4. Client retries with `X-PAYMENT` header containing the signature
+5. Server verifies signature off-chain (`facilitator/verifier.ts`), submits `createEscrowWithAuth` on-chain (`facilitator/settler.ts`)
+6. Returns **200** with `X-PAYMENT-RESPONSE` header
 
 ## Demo Web (`demo-web/`)
 
