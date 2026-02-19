@@ -83,7 +83,7 @@ export function getConfidence(
 }
 
 // Mirrors agent-service.ts adjustParams logic
-function getReleaseWindowTier(
+export function getReleaseWindowTier(
   buyerScore: number,
   sellerScore: number,
   buyerConf: "low" | "medium" | "high",
@@ -200,39 +200,66 @@ export function simulateRounds(rounds: RoundDefinition[]): RoundSnapshot[] {
 
 export const TRUST_BUILDING_ROUNDS: RoundDefinition[] = [
   {
-    label: "Round 1: First API Call",
-    description:
-      "First interaction — agent purchases weather data; seller delivers correctly.",
+    label: "First Call",
+    description: "First interaction — agent purchases weather data; seller delivers correctly.",
+    outcome: "completed",
+    amount: 0.5,
+  },
+  {
+    label: "Repeat Purchase",
+    description: "Positive experience leads to repeat purchase. Track record growing.",
+    outcome: "completed",
+    amount: 0.8,
+  },
+  {
+    label: "Growing Trust",
+    description: "Agent increases commitment with a larger order. Clean delivery.",
     outcome: "completed",
     amount: 1.0,
   },
   {
-    label: "Round 2: Repeat Purchase",
-    description:
-      "Positive experience leads to second purchase. Track record growing.",
+    label: "Steady Use",
+    description: "Consistent usage pattern. Reliability building on both sides.",
     outcome: "completed",
-    amount: 2.0,
+    amount: 0.8,
   },
   {
-    label: "Round 3: Quality Dispute",
-    description:
-      "Seller delivers stale data. Agent files dispute; arbiter rules 70% to buyer.",
+    label: "Larger Order",
+    description: "Agent places a larger order, demonstrating confidence in the seller.",
+    outcome: "completed",
+    amount: 1.0,
+  },
+  {
+    label: "Quality Dispute",
+    description: "Seller delivers stale data. Agent files dispute; arbiter rules 70% to buyer.",
     outcome: "disputed",
-    amount: 1.5,
+    amount: 0.8,
     buyerPct: 70,
   },
   {
-    label: "Round 4: Recovery",
-    description:
-      "Seller improves data quality after dispute. Clean delivery rebuilds trust.",
+    label: "Recovery",
+    description: "Seller improves data quality after dispute. Clean delivery rebuilds trust.",
     outcome: "completed",
-    amount: 1.5,
+    amount: 0.7,
   },
   {
-    label: "Round 5: Trust Restored",
-    description:
-      "Agent commits again. Scores recover, confirming reputation resilience.",
+    label: "Partial Dispute",
+    description: "Minor accuracy issue. Arbiter rules 60% buyer, 40% seller — less severe.",
+    outcome: "disputed",
+    amount: 0.6,
+    buyerPct: 60,
+  },
+  {
+    label: "Rebuilding",
+    description: "Seller delivers perfectly. Trust recovering after two disputes.",
     outcome: "completed",
-    amount: 2.0,
+    amount: 1.0,
+  },
+  {
+    label: "Trust Established",
+    description: "High confidence reached (10 escrows). Trust fully established.",
+    outcome: "completed",
+    amount: 1.3,
   },
 ];
+// Total: 8.50 USDC — fits within the 10 USDC faucet amount

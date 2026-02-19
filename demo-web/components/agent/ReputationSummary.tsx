@@ -208,7 +208,7 @@ export function ReputationSummary({
             ? "Escrow created but not yet released — completion stats update after the 1-hour auto-release window. Repeating transactions builds confidence and unlocks shorter release windows."
             : scenario === "dispute"
               ? "Dispute recorded in on-chain stats. Both buyer's dispute rate and seller's dispute rate are now tracked. Resolution fairness (arbiter rulings) shapes long-term reputation scores."
-              : "Simulated using the same scoring formulas applied to on-chain data. The dispute in round 3 dropped the seller score by 21 points, but two subsequent completions restored trust. In production, these scores drive release window adjustments once confidence reaches \"high\" (10+ escrows)."}
+              : "Built from 10 real escrow transactions with on-chain settlement. Disputes in rounds 6 and 8 impacted seller scores, but recovery through clean completions restored trust. At 10 escrows, confidence reaches \"high\" — enabling shorter release windows for trusted pairs."}
           {" "}Confidence thresholds: Low (&lt;3 escrows), Medium (3-9), High (10+). Parameter adjustments activate at Medium confidence.
         </p>
       </div>

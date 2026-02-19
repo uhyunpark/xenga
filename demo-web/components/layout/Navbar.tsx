@@ -6,8 +6,8 @@ import { usePathname } from "next/navigation";
 import { WalletSelector } from "@/components/ui/WalletSelector";
 
 const NAV_ITEMS = [
-  { href: "/marketplace", label: "Marketplace" },
-  { href: "/agent", label: "Agent" },
+  { href: "/marketplace", label: "By Human" },
+  { href: "/agent", label: "By Agent" },
 ];
 
 export function Navbar() {

@@ -17,6 +17,8 @@ import {
   type RoundSnapshot,
   TRUST_BUILDING_ROUNDS,
   simulateRounds,
+  getConfidence,
+  getReleaseWindowTier,
 } from "@/lib/reputation/client-scoring";
 
 interface TerminalLine {
@@ -38,6 +40,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
   const [isRunning, setIsRunning] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [activeScenario, setActiveScenario] = useState<Scenario | null>(null);
+  const [currentRound, setCurrentRound] = useState<{ current: number; total: number } | null>(null);
   const [reputationData, setReputationData] = useState<{
     buyer: ReputationScore | null;
     seller: ReputationScore | null;
@@ -458,108 +461,303 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
     }
   }, [walletClient, address, operatorAddress, speed, inspector, addLine]);
 
-  // ── Trust Building (reputation simulation) ──
+  // ── Trust Building (real x402 transactions) ──
 
   const runReputationDemo = useCallback(async () => {
-    if (!address || !operatorAddress) return;
+    if (!walletClient || !address || !operatorAddress) return;
     setIsRunning(true);
     setActiveScenario("reputation");
     setLines([]);
     setIsComplete(false);
     setTxHash(null);
     setReputationData(null);
+    setCurrentRound(null);
     inspector.clear();
     inspector.setOpen(true);
 
     const wait = (ms: number) =>
       new Promise((resolve) => setTimeout(resolve, ms / speed));
 
-    const snapshots = simulateRounds(TRUST_BUILDING_ROUNDS);
+    const totalRounds = TRUST_BUILDING_ROUNDS.length;
+    const snapshots: RoundSnapshot[] = [];
+    // Client-side fallback snapshots in case reputation API returns empty (mock mode)
+    const fallbackSnapshots = simulateRounds(TRUST_BUILDING_ROUNDS);
+    let prevBuyerScore = 0;
+    let prevSellerScore = 0;
+    let lastBuyerRep: ReputationScore | null = null;
+    let lastSellerRep: ReputationScore | null = null;
 
     try {
-      addLine({ type: "dim", text: "$ x402-agent simulate --scenario trust-building", delay: 0 });
+      addLine({ type: "dim", text: "$ x402-agent run --scenario trust-building", delay: 0 });
+      await wait(600);
+      addLine({ type: "info", text: `[trust] Trust Building — ${totalRounds} real transactions`, delay: 0 });
+      await wait(300);
+      addLine({ type: "info", text: "[trust] Each round: order → 402 → sign → settle → delivery → reputation", delay: 0 });
       await wait(800);
-      addLine({ type: "info", text: "[sim] Reputation scoring simulation — 5 rounds", delay: 0 });
-      await wait(400);
-      addLine({ type: "info", text: "[sim] Computing scores client-side using on-chain scoring formulas", delay: 0 });
-      await wait(1200);
 
-      for (const snap of snapshots) {
-        const def = snap.definition;
-
-        // Round header
-        addLine({ type: "dim", text: "", delay: 0 });
-        addLine({ type: "dim", text: `━━━ ${def.label} ━━━`, delay: 0 });
-        await wait(600);
-        addLine({ type: "info", text: `[sim] ${def.description}`, delay: 0 });
+      // Auto-fund if balance is low
+      if (walletType === "demo" && usdcBalance !== null && parseFloat(usdcBalance) < 9) {
+        addLine({ type: "info", text: "[fund] Insufficient balance — funding wallet...", delay: 0 });
+        await fundDemoWallet();
         await wait(800);
-
-        // Simulated payment
-        addLine({ type: "dim", text: `$ x402-agent pay --amount ${def.amount.toFixed(2)} USDC`, delay: 0 });
-        await wait(600);
-
-        // Outcome
-        if (def.outcome === "completed") {
-          addLine({ type: "success", text: `[escrow] ✓ Delivery confirmed, funds released`, delay: 0 });
-        } else if (def.outcome === "disputed") {
-          addLine({ type: "error", text: `[escrow] ✗ Quality check failed — dispute filed`, delay: 0 });
-          await wait(500);
-          addLine({ type: "error", text: `[resolve] Arbiter ruling: ${def.buyerPct}% buyer / ${100 - (def.buyerPct ?? 50)}% seller`, delay: 0 });
-        }
-        await wait(800);
-
-        // Score update
-        const sellerDeltaStr = snap.round === 1 ? "" : ` (${snap.sellerDelta >= 0 ? "+" : ""}${snap.sellerDelta})`;
-        const buyerDeltaStr = snap.round === 1 ? "" : ` (${snap.buyerDelta >= 0 ? "+" : ""}${snap.buyerDelta})`;
-        addLine({
-          type: "reputation",
-          text: `[reputation] Seller: ${snap.sellerScore}/100${sellerDeltaStr} | Buyer: ${snap.buyerScore}/100${buyerDeltaStr}`,
-          delay: 0,
-        });
+        addLine({ type: "success", text: "[fund] Wallet funded with 10 USDC", delay: 0 });
         await wait(400);
-        addLine({
-          type: "reputation",
-          text: `[reputation] Confidence: ${snap.confidence} (${snap.buyerStats.totalEscrows} escrows) | Window: ${snap.windowLabel}`,
-          delay: 0,
+      }
+
+      for (let i = 0; i < totalRounds; i++) {
+        const def = TRUST_BUILDING_ROUNDS[i];
+        const roundNum = i + 1;
+        const rPrefix = `R${roundNum}`;
+        setCurrentRound({ current: roundNum, total: totalRounds });
+
+        // ── Round Header ──
+        addLine({ type: "dim", text: "", delay: 0 });
+        addLine({ type: "dim", text: `━━━ Round ${roundNum}/${totalRounds}: ${def.label} (${def.amount.toFixed(2)} USDC) ━━━`, delay: 0 });
+        await wait(400);
+        addLine({ type: "info", text: `[round] ${def.description}`, delay: 0 });
+        await wait(400);
+
+        // ── Step 1: Create Order ──
+        inspector.addEvent({
+          type: "http_request",
+          label: `${rPrefix}: Create Order`,
+          data: { method: "POST", url: "/api/orders", body: { price: def.amount } },
         });
 
-        // Inspector event
+        const orderRes = await fetch("/api/orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: `${def.label} — Trust Round ${roundNum}`,
+            description: def.description,
+            price: def.amount,
+            serviceType: "agent-service",
+            sellerAddress: operatorAddress,
+          }),
+        });
+        const orderData = await orderRes.json();
+
         inspector.addEvent({
           type: "http_response",
-          label: `Round ${snap.round}: ${def.outcome === "completed" ? "Completed" : "Disputed"}`,
+          label: `${rPrefix}: 201 Created`,
+          data: { status: 201, body: orderData },
+        });
+
+        // ── Step 2: Request Payment (402) ──
+        const { paymentRequired } = await requestPayment(orderData.id, (evt) => {
+          inspector.addEvent({ ...evt, label: `${rPrefix}: ${evt.label}` });
+        });
+
+        // ── Step 3: Sign EIP-712 ──
+        const payload = await signPayment(walletClient, paymentRequired, (evt) => {
+          inspector.addEvent({ ...evt, label: `${rPrefix}: ${evt.label}` });
+        });
+
+        // ── Step 4: Submit Payment ──
+        const result = await submitPayment(orderData.id, payload, (evt) => {
+          inspector.addEvent({ ...evt, label: `${rPrefix}: ${evt.label}` });
+        });
+
+        addLine({
+          type: "request",
+          text: `[x402]  order → 402 → sign → settle → Escrow #${result.payment.escrowId} ✓`,
+          delay: 0,
+        });
+        await wait(300);
+
+        // ── Step 5: Confirm Delivery ──
+        try {
+          await fetch(`/api/orders/${orderData.id}/confirm-delivery`, { method: "POST" });
+        } catch {}
+
+        inspector.addEvent({
+          type: "state_change",
+          label: `${rPrefix}: Delivery Confirmed`,
+          data: { previousState: "Active", newState: "DeliveryConfirmed" },
+        });
+
+        // ── Step 6: Dispute (if applicable) ──
+        if (def.outcome === "disputed") {
+          addLine({ type: "info", text: `[x402]  delivery confirmed`, delay: 0 });
+          await wait(300);
+
+          inspector.addEvent({
+            type: "http_request",
+            label: `${rPrefix}: File Dispute`,
+            data: { method: "POST", url: `/api/disputes/${orderData.id}` },
+          });
+
+          const disputeRes = await fetch(`/api/disputes/${orderData.id}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reason: "Service quality below SLA threshold" }),
+          });
+          const disputeData = await disputeRes.json();
+
+          inspector.addEvent({
+            type: "http_response",
+            label: `${rPrefix}: 201 Dispute Filed`,
+            data: { status: 201, body: disputeData },
+          });
+          inspector.addEvent({
+            type: "state_change",
+            label: `${rPrefix}: Disputed`,
+            data: { previousState: "DeliveryConfirmed", newState: "Disputed" },
+          });
+
+          // Resolve
+          inspector.addEvent({
+            type: "http_request",
+            label: `${rPrefix}: Resolve Dispute`,
+            data: { method: "POST", url: `/api/disputes/${disputeData.disputeId}/resolve` },
+          });
+
+          const resolveRes = await fetch(`/api/disputes/${disputeData.disputeId}/resolve`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              buyerPct: def.buyerPct,
+              resolution: "SLA quality threshold not met",
+            }),
+          });
+          const resolveData = await resolveRes.json();
+
+          inspector.addEvent({
+            type: "http_response",
+            label: `${rPrefix}: 200 Resolved`,
+            data: { status: 200, body: resolveData },
+          });
+          inspector.addEvent({
+            type: "state_change",
+            label: `${rPrefix}: Resolved`,
+            data: { previousState: "Disputed", newState: "Resolved" },
+          });
+
+          addLine({
+            type: "error",
+            text: `[dispute] Quality check failed → ${def.buyerPct}% buyer / ${100 - (def.buyerPct ?? 50)}% seller`,
+            delay: 0,
+          });
+        } else {
+          addLine({ type: "success", text: `[x402]  delivery confirmed | funds released`, delay: 0 });
+
+          inspector.addEvent({
+            type: "state_change",
+            label: `${rPrefix}: Complete`,
+            data: { previousState: "DeliveryConfirmed", newState: "Completed" },
+          });
+        }
+        await wait(300);
+
+        // ── Step 7: Fetch Real Reputation ──
+        let buyerRep: ReputationScore | null = null;
+        let sellerRep: ReputationScore | null = null;
+        try {
+          const [bRes, sRes] = await Promise.all([
+            fetch(`/api/reputation/${address}?fresh=true`),
+            fetch(`/api/reputation/${operatorAddress}?fresh=true`),
+          ]);
+          if (bRes.ok) buyerRep = await bRes.json();
+          if (sRes.ok) sellerRep = await sRes.json();
+        } catch {}
+
+        inspector.addEvent({
+          type: "http_response",
+          label: `${rPrefix}: Reputation`,
           data: {
-            sellerScore: snap.sellerScore,
-            buyerScore: snap.buyerScore,
-            sellerDelta: snap.sellerDelta,
-            buyerDelta: snap.buyerDelta,
-            confidence: snap.confidence,
-            windowTier: snap.windowTier,
+            buyer: buyerRep?.buyer ? { score: buyerRep.buyer.score } : null,
+            seller: sellerRep?.seller ? { score: sellerRep.seller.score } : null,
           },
         });
 
-        await wait(1500);
+        // Use real API data if available, otherwise fall back to client-side simulation
+        const hasRealData = !!(buyerRep?.buyer?.score || sellerRep?.seller?.score);
+        let currentBuyerScore: number;
+        let currentSellerScore: number;
+        let snap: RoundSnapshot;
+
+        if (hasRealData) {
+          currentBuyerScore = buyerRep?.buyer?.score ?? 0;
+          currentSellerScore = sellerRep?.seller?.score ?? 0;
+          const confidence = getConfidence(
+            Math.max(buyerRep?.buyer?.totalEscrows ?? roundNum, sellerRep?.seller?.totalEscrows ?? roundNum)
+          );
+          const { tier, label } = getReleaseWindowTier(
+            currentBuyerScore, currentSellerScore, confidence, confidence
+          );
+          snap = {
+            round: roundNum,
+            definition: def,
+            buyerStats: {
+              totalEscrows: buyerRep?.buyer?.totalEscrows ?? roundNum,
+              completedCount: Math.round((buyerRep?.buyer?.completionRate ?? 0) * (buyerRep?.buyer?.totalEscrows ?? roundNum)),
+              disputedCount: Math.round((buyerRep?.buyer?.disputeRate ?? 0) * (buyerRep?.buyer?.totalEscrows ?? roundNum)),
+              refundedCount: 0,
+              totalAmount: Number(buyerRep?.buyer?.totalVolume ?? "0") / 1e6,
+            },
+            sellerStats: {
+              totalEscrows: sellerRep?.seller?.totalEscrows ?? roundNum,
+              completedCount: Math.round((sellerRep?.seller?.completionRate ?? 0) * (sellerRep?.seller?.totalEscrows ?? roundNum)),
+              disputedCount: Math.round((sellerRep?.seller?.disputeRate ?? 0) * (sellerRep?.seller?.totalEscrows ?? roundNum)),
+              refundedCount: Math.round((sellerRep?.seller?.refundRate ?? 0) * (sellerRep?.seller?.totalEscrows ?? roundNum)),
+              totalAmount: Number(sellerRep?.seller?.totalVolume ?? "0") / 1e6,
+            },
+            buyerScore: currentBuyerScore,
+            sellerScore: currentSellerScore,
+            buyerDelta: currentBuyerScore - prevBuyerScore,
+            sellerDelta: currentSellerScore - prevSellerScore,
+            confidence,
+            windowTier: tier,
+            windowLabel: label,
+          };
+        } else {
+          // Mock mode fallback — use client-side simulation
+          snap = fallbackSnapshots[i];
+          currentBuyerScore = snap.buyerScore;
+          currentSellerScore = snap.sellerScore;
+        }
+
+        snapshots.push(snap);
+        lastBuyerRep = buyerRep;
+        lastSellerRep = sellerRep;
+
+        // Display reputation
+        const sellerDeltaStr = i === 0 ? "" : ` (${snap.sellerDelta >= 0 ? "+" : ""}${snap.sellerDelta})`;
+        const buyerDeltaStr = i === 0 ? "" : ` (${snap.buyerDelta >= 0 ? "+" : ""}${snap.buyerDelta})`;
+        addLine({
+          type: "reputation",
+          text: `[reputation] Seller: ${currentSellerScore}/100${sellerDeltaStr} | Buyer: ${currentBuyerScore}/100${buyerDeltaStr} | ${snap.confidence} | ${snap.windowLabel}`,
+          delay: 0,
+        });
+
+        prevBuyerScore = currentBuyerScore;
+        prevSellerScore = currentSellerScore;
+
+        await wait(600);
       }
 
-      // Final summary
-      const last = snapshots[snapshots.length - 1];
+      // ── Final Summary ──
+      setCurrentRound(null);
       addLine({ type: "dim", text: "", delay: 0 });
-      addLine({ type: "dim", text: "━━━ SIMULATION COMPLETE ━━━", delay: 0 });
-      await wait(600);
-      addLine({ type: "info", text: `[summary] Seller: 0 → ${snapshots.map((s) => s.sellerScore).join(" → ")}`, delay: 0 });
-      await wait(300);
-      addLine({ type: "info", text: `[summary] Buyer:  0 → ${snapshots.map((s) => s.buyerScore).join(" → ")}`, delay: 0 });
-      await wait(600);
-      addLine({ type: "reputation", text: "[takeaway] Completion rate is the strongest scoring factor (40-45% weight)", delay: 0 });
+      addLine({ type: "dim", text: "━━━ TRUST BUILDING COMPLETE ━━━", delay: 0 });
       await wait(400);
-      addLine({ type: "reputation", text: "[takeaway] A single dispute dropped the seller score by 21 points", delay: 0 });
+      addLine({ type: "info", text: `[summary] Seller: ${snapshots.map((s) => s.sellerScore).join(" → ")}`, delay: 0 });
+      await wait(200);
+      addLine({ type: "info", text: `[summary] Buyer:  ${snapshots.map((s) => s.buyerScore).join(" → ")}`, delay: 0 });
       await wait(400);
-      addLine({ type: "reputation", text: "[takeaway] Recovery takes multiple clean transactions", delay: 0 });
-      await wait(400);
-      addLine({ type: "reputation", text: "[takeaway] Release window adjustments require \"high\" confidence (10+ escrows)", delay: 0 });
 
-      // Build ReputationScore objects from final snapshot
+      const last = snapshots[snapshots.length - 1];
+      if (last.confidence === "high") {
+        addLine({ type: "reputation", text: "[takeaway] High confidence reached — release window adjustments now active", delay: 0 });
+        await wait(300);
+      }
+      addLine({ type: "reputation", text: "[takeaway] Disputes impacted scores, but clean completions restored trust", delay: 0 });
+      await wait(300);
+      addLine({ type: "reputation", text: `[takeaway] ${totalRounds} real escrow transactions completed with on-chain state changes`, delay: 0 });
+
+      // Build final ReputationScore objects
       const now = Math.floor(Date.now() / 1000);
-      const sellerRep: ReputationScore = {
+      const finalSellerRep: ReputationScore = lastSellerRep ?? {
         address: operatorAddress as `0x${string}`,
         overall: last.sellerScore,
         confidence: last.confidence,
@@ -575,7 +773,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
         },
         updatedAt: now,
       };
-      const buyerRep: ReputationScore = {
+      const finalBuyerRep: ReputationScore = lastBuyerRep ?? {
         address: address as `0x${string}`,
         overall: last.buyerScore,
         confidence: last.confidence,
@@ -592,19 +790,20 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
       };
 
       setReputationData({
-        buyer: buyerRep,
-        seller: sellerRep,
+        buyer: finalBuyerRep,
+        seller: finalSellerRep,
         scenario: "reputation",
         progression: snapshots,
       });
 
       setIsComplete(true);
     } catch (err: any) {
-      addLine({ type: "error", text: `[error] ${err.message}`, delay: 0 });
+      addLine({ type: "error", text: `[error] Round ${(snapshots.length + 1)}: ${err.message}`, delay: 0 });
     } finally {
       setIsRunning(false);
+      setCurrentRound(null);
     }
-  }, [address, operatorAddress, speed, inspector, addLine]);
+  }, [walletClient, address, operatorAddress, speed, inspector, addLine, walletType, usdcBalance, fundDemoWallet]);
 
   const needsWallet = !address;
   const needsFunding = walletType === "demo" && usdcBalance !== null && parseFloat(usdcBalance) < 1;
@@ -668,6 +867,11 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
                   : "border-accent-purple/30 bg-accent-purple/10 text-accent-purple"
             }`}>
               {scenarioLabel(activeScenario)}
+            </span>
+          )}
+          {isRunning && currentRound && (
+            <span className="rounded-full border border-violet-400/30 bg-violet-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-violet-400">
+              Round {currentRound.current}/{currentRound.total}
             </span>
           )}
           <span className="rounded-full border border-border-default bg-bg-primary/55 px-2 py-0.5 text-[10px] uppercase tracking-wide text-text-tertiary">

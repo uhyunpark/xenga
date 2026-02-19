@@ -7,7 +7,7 @@ import { isMockChainClient } from "@/lib/env/isMockChainClient";
 
 const demos = [
   {
-    title: "Marketplace Demo",
+    title: "By Human",
     description:
       "Buyer-driven escrow checkout with delivery confirmation and dispute controls.",
     href: "/marketplace",
@@ -23,7 +23,7 @@ const demos = [
     color: "accent",
   },
   {
-    title: "Agent Service Demo",
+    title: "By Agent",
     description:
       "Autonomous machine-to-machine payments with simulated operator verification.",
     href: "/agent",
