@@ -13,6 +13,11 @@ import {
 } from "@/lib/api/payment-flow";
 import { ReputationSummary } from "./ReputationSummary";
 import type { ReputationScore } from "@shared/types";
+import {
+  type RoundSnapshot,
+  TRUST_BUILDING_ROUNDS,
+  simulateRounds,
+} from "@/lib/reputation/client-scoring";
 
 interface TerminalLine {
   id: string;
@@ -21,7 +26,7 @@ interface TerminalLine {
   delay: number;
 }
 
-type Scenario = "happy" | "dispute";
+type Scenario = "happy" | "dispute" | "reputation";
 
 interface AgentTerminalProps {
   speed: number;
@@ -37,6 +42,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
     buyer: ReputationScore | null;
     seller: ReputationScore | null;
     scenario: Scenario;
+    progression?: RoundSnapshot[];
   } | null>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
   const { walletClient, address, connectDemo, fundDemoWallet, usdcBalance, type: walletType } = useWallet();
@@ -452,6 +458,154 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
     }
   }, [walletClient, address, operatorAddress, speed, inspector, addLine]);
 
+  // ── Trust Building (reputation simulation) ──
+
+  const runReputationDemo = useCallback(async () => {
+    if (!address || !operatorAddress) return;
+    setIsRunning(true);
+    setActiveScenario("reputation");
+    setLines([]);
+    setIsComplete(false);
+    setTxHash(null);
+    setReputationData(null);
+    inspector.clear();
+    inspector.setOpen(true);
+
+    const wait = (ms: number) =>
+      new Promise((resolve) => setTimeout(resolve, ms / speed));
+
+    const snapshots = simulateRounds(TRUST_BUILDING_ROUNDS);
+
+    try {
+      addLine({ type: "dim", text: "$ x402-agent simulate --scenario trust-building", delay: 0 });
+      await wait(800);
+      addLine({ type: "info", text: "[sim] Reputation scoring simulation — 5 rounds", delay: 0 });
+      await wait(400);
+      addLine({ type: "info", text: "[sim] Computing scores client-side using on-chain scoring formulas", delay: 0 });
+      await wait(1200);
+
+      for (const snap of snapshots) {
+        const def = snap.definition;
+
+        // Round header
+        addLine({ type: "dim", text: "", delay: 0 });
+        addLine({ type: "dim", text: `━━━ ${def.label} ━━━`, delay: 0 });
+        await wait(600);
+        addLine({ type: "info", text: `[sim] ${def.description}`, delay: 0 });
+        await wait(800);
+
+        // Simulated payment
+        addLine({ type: "dim", text: `$ x402-agent pay --amount ${def.amount.toFixed(2)} USDC`, delay: 0 });
+        await wait(600);
+
+        // Outcome
+        if (def.outcome === "completed") {
+          addLine({ type: "success", text: `[escrow] ✓ Delivery confirmed, funds released`, delay: 0 });
+        } else if (def.outcome === "disputed") {
+          addLine({ type: "error", text: `[escrow] ✗ Quality check failed — dispute filed`, delay: 0 });
+          await wait(500);
+          addLine({ type: "error", text: `[resolve] Arbiter ruling: ${def.buyerPct}% buyer / ${100 - (def.buyerPct ?? 50)}% seller`, delay: 0 });
+        }
+        await wait(800);
+
+        // Score update
+        const sellerDeltaStr = snap.round === 1 ? "" : ` (${snap.sellerDelta >= 0 ? "+" : ""}${snap.sellerDelta})`;
+        const buyerDeltaStr = snap.round === 1 ? "" : ` (${snap.buyerDelta >= 0 ? "+" : ""}${snap.buyerDelta})`;
+        addLine({
+          type: "reputation",
+          text: `[reputation] Seller: ${snap.sellerScore}/100${sellerDeltaStr} | Buyer: ${snap.buyerScore}/100${buyerDeltaStr}`,
+          delay: 0,
+        });
+        await wait(400);
+        addLine({
+          type: "reputation",
+          text: `[reputation] Confidence: ${snap.confidence} (${snap.buyerStats.totalEscrows} escrows) | Window: ${snap.windowLabel}`,
+          delay: 0,
+        });
+
+        // Inspector event
+        inspector.addEvent({
+          type: "http_response",
+          label: `Round ${snap.round}: ${def.outcome === "completed" ? "Completed" : "Disputed"}`,
+          data: {
+            sellerScore: snap.sellerScore,
+            buyerScore: snap.buyerScore,
+            sellerDelta: snap.sellerDelta,
+            buyerDelta: snap.buyerDelta,
+            confidence: snap.confidence,
+            windowTier: snap.windowTier,
+          },
+        });
+
+        await wait(1500);
+      }
+
+      // Final summary
+      const last = snapshots[snapshots.length - 1];
+      addLine({ type: "dim", text: "", delay: 0 });
+      addLine({ type: "dim", text: "━━━ SIMULATION COMPLETE ━━━", delay: 0 });
+      await wait(600);
+      addLine({ type: "info", text: `[summary] Seller: 0 → ${snapshots.map((s) => s.sellerScore).join(" → ")}`, delay: 0 });
+      await wait(300);
+      addLine({ type: "info", text: `[summary] Buyer:  0 → ${snapshots.map((s) => s.buyerScore).join(" → ")}`, delay: 0 });
+      await wait(600);
+      addLine({ type: "reputation", text: "[takeaway] Completion rate is the strongest scoring factor (40-45% weight)", delay: 0 });
+      await wait(400);
+      addLine({ type: "reputation", text: "[takeaway] A single dispute dropped the seller score by 21 points", delay: 0 });
+      await wait(400);
+      addLine({ type: "reputation", text: "[takeaway] Recovery takes multiple clean transactions", delay: 0 });
+      await wait(400);
+      addLine({ type: "reputation", text: "[takeaway] Release window adjustments require \"high\" confidence (10+ escrows)", delay: 0 });
+
+      // Build ReputationScore objects from final snapshot
+      const now = Math.floor(Date.now() / 1000);
+      const sellerRep: ReputationScore = {
+        address: operatorAddress as `0x${string}`,
+        overall: last.sellerScore,
+        confidence: last.confidence,
+        seller: {
+          score: last.sellerScore,
+          completionRate: last.sellerStats.completedCount / last.sellerStats.totalEscrows,
+          disputeRate: last.sellerStats.disputedCount / last.sellerStats.totalEscrows,
+          refundRate: last.sellerStats.refundedCount / last.sellerStats.totalEscrows,
+          resolutionFairness: 0,
+          totalVolume: String(Math.round(last.sellerStats.totalAmount * 1e6)),
+          totalEscrows: last.sellerStats.totalEscrows,
+          firstSeen: now,
+        },
+        updatedAt: now,
+      };
+      const buyerRep: ReputationScore = {
+        address: address as `0x${string}`,
+        overall: last.buyerScore,
+        confidence: last.confidence,
+        buyer: {
+          score: last.buyerScore,
+          disputeRate: last.buyerStats.disputedCount / last.buyerStats.totalEscrows,
+          frivolousDisputeRate: 0,
+          completionRate: last.buyerStats.completedCount / last.buyerStats.totalEscrows,
+          totalVolume: String(Math.round(last.buyerStats.totalAmount * 1e6)),
+          totalEscrows: last.buyerStats.totalEscrows,
+          firstSeen: now,
+        },
+        updatedAt: now,
+      };
+
+      setReputationData({
+        buyer: buyerRep,
+        seller: sellerRep,
+        scenario: "reputation",
+        progression: snapshots,
+      });
+
+      setIsComplete(true);
+    } catch (err: any) {
+      addLine({ type: "error", text: `[error] ${err.message}`, delay: 0 });
+    } finally {
+      setIsRunning(false);
+    }
+  }, [address, operatorAddress, speed, inspector, addLine]);
+
   const needsWallet = !address;
   const needsFunding = walletType === "demo" && usdcBalance !== null && parseFloat(usdcBalance) < 1;
   const terminalStatus = isRunning
@@ -460,8 +614,8 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
       ? "Complete"
       : "Ready";
 
-  const otherScenario: Scenario = activeScenario === "happy" ? "dispute" : "happy";
-  const scenarioLabel = (s: Scenario) => s === "happy" ? "Happy Path" : "Dispute Path";
+  const scenarioLabel = (s: Scenario) =>
+    s === "happy" ? "Happy Path" : s === "dispute" ? "Dispute Path" : "Trust Building";
 
   return (
     <div className="space-y-4">
@@ -509,7 +663,9 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
             <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
               activeScenario === "dispute"
                 ? "border-error/30 bg-error/10 text-error"
-                : "border-accent-purple/30 bg-accent-purple/10 text-accent-purple"
+                : activeScenario === "reputation"
+                  ? "border-violet-400/30 bg-violet-400/10 text-violet-400"
+                  : "border-accent-purple/30 bg-accent-purple/10 text-accent-purple"
             }`}>
               {scenarioLabel(activeScenario)}
             </span>
@@ -537,26 +693,47 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
               >
                 Dispute Path
               </button>
+              <button
+                onClick={runReputationDemo}
+                disabled={!operatorAddress}
+                className="rounded-lg border border-violet-400/30 bg-violet-400/10 px-5 py-2.5 text-sm font-semibold text-violet-400 transition-all hover:bg-violet-400/20 disabled:opacity-50"
+              >
+                Trust Building
+              </button>
             </div>
           )}
           {isComplete && (
             <div className="ml-auto flex gap-2">
               <button
-                onClick={() => runDemo(activeScenario ?? "happy")}
+                onClick={() => activeScenario === "reputation" ? runReputationDemo() : runDemo(activeScenario ?? "happy")}
                 className="rounded-lg border border-border-default px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-bg-tertiary"
               >
                 Replay
               </button>
-              <button
-                onClick={() => runDemo(otherScenario)}
-                className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                  otherScenario === "dispute"
-                    ? "border border-error/30 bg-error/10 text-error hover:bg-error/20"
-                    : "border border-accent-purple/30 bg-accent-purple/10 text-accent-purple hover:bg-accent-purple/20"
-                }`}
-              >
-                Try {scenarioLabel(otherScenario)}
-              </button>
+              {activeScenario !== "happy" && (
+                <button
+                  onClick={() => runDemo("happy")}
+                  className="rounded-lg border border-accent-purple/30 bg-accent-purple/10 px-4 py-2 text-sm font-medium text-accent-purple transition-colors hover:bg-accent-purple/20"
+                >
+                  Try Happy Path
+                </button>
+              )}
+              {activeScenario !== "dispute" && (
+                <button
+                  onClick={() => runDemo("dispute")}
+                  className="rounded-lg border border-error/30 bg-error/10 px-4 py-2 text-sm font-medium text-error transition-colors hover:bg-error/20"
+                >
+                  Try Dispute Path
+                </button>
+              )}
+              {activeScenario !== "reputation" && (
+                <button
+                  onClick={runReputationDemo}
+                  className="rounded-lg border border-violet-400/30 bg-violet-400/10 px-4 py-2 text-sm font-medium text-violet-400 transition-colors hover:bg-violet-400/20"
+                >
+                  Try Trust Building
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -581,7 +758,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
         >
           {lines.length === 0 && !isRunning && (
             <div className="text-text-tertiary">
-              Click &quot;Happy Path&quot; or &quot;Dispute Path&quot; to start...
+              Click &quot;Happy Path&quot;, &quot;Dispute Path&quot;, or &quot;Trust Building&quot; to start...
             </div>
           )}
           <AnimatePresence>
@@ -614,7 +791,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
         </div>
       </div>
 
-      {txHash && (
+      {txHash && activeScenario !== "reputation" && (
         <div className="panel-surface flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-text-tertiary">
           <span>{isMockChainClient ? "Transaction ID:" : "View on BaseScan:"}</span>
           {isMockChainClient ? (
@@ -641,6 +818,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
           buyerRep={reputationData.buyer}
           sellerRep={reputationData.seller}
           scenario={reputationData.scenario}
+          progression={reputationData.progression}
         />
       )}
     </div>
