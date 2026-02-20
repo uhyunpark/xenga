@@ -13,7 +13,7 @@ The demo-web Next.js 15 app has **minimal SEO**: just a basic `title` and `descr
 Expand the existing `metadata` export with:
 
 - **`metadataBase`** — canonical base URL via `process.env.NEXT_PUBLIC_BASE_URL` with a sensible fallback (e.g. `http://localhost:3000`)
-- **`openGraph`** — `title`, `description`, `siteName: "EscrowVault"`, `type: "website"`, `locale: "en_US"`
+- **`openGraph`** — `title`, `description`, `siteName: "Zenga"`, `type: "website"`, `locale: "en_US"`
 - **`twitter`** — `card: "summary"` (not `summary_large_image` since we have no OG image), `title`, `description`
 - **`robots`** — `index: true, follow: true`
 - **`authors`** / **`creator`** — project attribution
@@ -26,11 +26,11 @@ Both pages currently have `"use client"` at the top, which prevents exporting `m
 
 **Marketplace:**
 - Rename existing `app/marketplace/page.tsx` → `app/marketplace/MarketplacePage.tsx` (keep `"use client"` and all existing code)
-- New `app/marketplace/page.tsx`: exports `metadata` (`title: "Marketplace Demo — EscrowVault"`, marketplace-specific description + OG/twitter) and renders `<MarketplacePage />`
+- New `app/marketplace/page.tsx`: exports `metadata` (`title: "Marketplace Demo — Zenga"`, marketplace-specific description + OG/twitter) and renders `<MarketplacePage />`
 
 **Agent:**
 - Rename existing `app/agent/page.tsx` → `app/agent/AgentPage.tsx` (keep `"use client"` and all existing code)
-- New `app/agent/page.tsx`: exports `metadata` (`title: "Agent Service Demo — EscrowVault"`, agent-specific description + OG/twitter) and renders `<AgentPage />`
+- New `app/agent/page.tsx`: exports `metadata` (`title: "Agent Service Demo — Zenga"`, agent-specific description + OG/twitter) and renders `<AgentPage />`
 
 ### 3. Add `app/sitemap.ts`
 
@@ -60,7 +60,7 @@ Skip `apple-icon.png` for now — generating a real PNG requires design tooling 
 ### 6. Add `app/manifest.ts`
 
 Web app manifest via Next.js `MetadataRoute.Manifest`:
-- `name: "EscrowVault"`, `short_name: "EscrowVault"`
+- `name: "Zenga"`, `short_name: "Zenga"`
 - `description` matching the root metadata
 - `start_url: "/"`, `display: "standalone"`
 - `theme_color` and `background_color` matching the dark theme (`#0a0a0f` / `#12121a`)
