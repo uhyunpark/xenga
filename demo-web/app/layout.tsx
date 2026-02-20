@@ -5,10 +5,33 @@ import { Navbar } from "@/components/layout/Navbar";
 import { WalletProvider } from "@/lib/wallet/WalletProvider";
 import { InspectorProvider } from "@/lib/protocol-inspector/context";
 
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+
 export const metadata: Metadata = {
-  title: "EscrowVault — On-Chain Escrow Demo",
+  metadataBase: new URL(baseUrl),
+  title: {
+    default: "EscrowVault — On-Chain Escrow Demo",
+    template: "%s — EscrowVault",
+  },
   description:
-    "Interactive demo of on-chain escrow settlement with reputation scoring, dispute resolution, and programmable release logic.",
+    "Interactive demo of on-chain escrow settlement with reputation scoring, dispute resolution, and programmable release logic on Base Sepolia.",
+  authors: [{ name: "EscrowVault" }],
+  creator: "EscrowVault",
+  robots: { index: true, follow: true },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    siteName: "EscrowVault",
+    title: "EscrowVault — On-Chain Escrow Demo",
+    description:
+      "Interactive demo of on-chain escrow settlement with reputation scoring, dispute resolution, and programmable release logic on Base Sepolia.",
+  },
+  twitter: {
+    card: "summary",
+    title: "EscrowVault — On-Chain Escrow Demo",
+    description:
+      "On-chain escrow settlement with reputation scoring, dispute resolution, and programmable release logic.",
+  },
 };
 
 export default function RootLayout({
