@@ -4,10 +4,10 @@ import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 
 const scoringFactors = [
-  { label: "Completion Rate", weight: "40–45%", color: "bg-accent" },
-  { label: "Non-Dispute Rate", weight: "25%", color: "bg-warning" },
-  { label: "Non-Refund / Non-Frivolous", weight: "15–20%", color: "bg-accent-purple" },
-  { label: "Volume Bonus", weight: "10%", color: "bg-success" },
+  { label: "Completion Rate",    color: "bg-accent" },
+  { label: "Dispute Rate",       color: "bg-warning" },
+  { label: "Refund Rate",        color: "bg-accent-purple" },
+  { label: "Transaction Volume", color: "bg-success" },
 ];
 
 const confidenceLevels = [
@@ -89,19 +89,18 @@ export function ReputationSection() {
                   <rect x="14" y="3" width="3" height="14" rx="0.5" />
                 </svg>
               </div>
-              <h3 className="text-sm font-semibold">Score Formula</h3>
+              <h3 className="text-sm font-semibold">Score Signals</h3>
             </div>
             <div className="space-y-2">
               {scoringFactors.map((factor) => (
                 <div key={factor.label} className="flex items-center gap-2.5">
                   <div className={`h-2.5 w-2.5 shrink-0 rounded-full ${factor.color}`} />
                   <span className="flex-1 text-xs text-text-secondary">{factor.label}</span>
-                  <span className="font-mono text-xs font-medium text-text-primary">{factor.weight}</span>
                 </div>
               ))}
             </div>
             <p className="mt-3 text-[11px] text-text-tertiary">
-              Computed from on-chain stats. Seller and buyer formulas weight factors differently.
+              Computed from on-chain escrow history. Separate scores for buyers and sellers.
             </p>
           </motion.div>
 
