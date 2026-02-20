@@ -1,8 +1,8 @@
-# Zenga
+# Xenga
 
 An on-chain escrow and reputation system for secure, verifiable payments — for both humans and autonomous agents.
 
-**Website:** [zenga.xyz](https://zenga.xyz)
+**Website:** [xenga.xyz](https://xenga.xyz)
 
 ## Escrow State Machine
 
