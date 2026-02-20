@@ -118,46 +118,63 @@ setInterval(() => {
 
 // ──────────────────────── SQLite Queries ────────────────────────
 
-interface ResolutionRow {
-  sellerFavorRate: number | null;
-  resolvedCount: number;
-}
-
-function getSellerResolutionFairness(sellerAddress: string): ResolutionRow {
-  const db = getDb();
-  const row = db
-    .prepare(
-      `SELECT
-        AVG(CASE WHEN d.buyer_pct <= 50 THEN 1.0 ELSE 0.0 END) as sellerFavorRate,
-        COUNT(*) as resolvedCount
-      FROM disputes d
-      JOIN orders o ON d.order_id = o.order_id
-      WHERE d.status = 'resolved'
-        AND LOWER(o.seller_address) = LOWER(?)`
-    )
-    .get(sellerAddress) as ResolutionRow | undefined;
-  return row ?? { sellerFavorRate: null, resolvedCount: 0 };
-}
-
-interface FrivolousRow {
-  frivolousCount: number;
+interface DisputeOutcomes {
+  wonCount: number;
+  lostCount: number;
+  partialCount: number;
+  openCount: number;
   totalResolved: number;
+  // legacy fields kept for backward compat computation
+  frivolousCount: number;
+  sellerFavorRate: number | null;
 }
 
-function getBuyerFrivolousDisputeRate(buyerAddress: string): FrivolousRow {
+// SQL column names cannot be parameterized — two separate prepared statements required.
+
+function getSellerDisputeOutcomes(sellerAddress: string): DisputeOutcomes {
   const db = getDb();
   const row = db
     .prepare(
       `SELECT
-        COUNT(CASE WHEN d.buyer_pct < 30 THEN 1 END) as frivolousCount,
-        COUNT(*) as totalResolved
+        COUNT(CASE WHEN d.status='resolved' AND d.buyer_pct < 50  THEN 1 END) as wonCount,
+        COUNT(CASE WHEN d.status='resolved' AND d.buyer_pct > 70  THEN 1 END) as lostCount,
+        COUNT(CASE WHEN d.status='resolved' AND d.buyer_pct >= 50 AND d.buyer_pct <= 70 THEN 1 END) as partialCount,
+        COUNT(CASE WHEN d.status='open' THEN 1 END) as openCount,
+        COUNT(CASE WHEN d.status='resolved' THEN 1 END) as totalResolved,
+        COUNT(CASE WHEN d.status='resolved' AND d.buyer_pct < 30 THEN 1 END) as frivolousCount,
+        AVG(CASE WHEN d.status='resolved' AND d.buyer_pct <= 50 THEN 1.0 ELSE 0.0 END) as sellerFavorRate
       FROM disputes d
       JOIN orders o ON d.order_id = o.order_id
-      WHERE d.status = 'resolved'
-        AND LOWER(o.buyer_address) = LOWER(?)`
+      WHERE LOWER(o.seller_address) = LOWER(?)`
     )
-    .get(buyerAddress) as FrivolousRow | undefined;
-  return row ?? { frivolousCount: 0, totalResolved: 0 };
+    .get(sellerAddress) as DisputeOutcomes | undefined;
+  return row ?? {
+    wonCount: 0, lostCount: 0, partialCount: 0, openCount: 0,
+    totalResolved: 0, frivolousCount: 0, sellerFavorRate: null,
+  };
+}
+
+function getBuyerDisputeOutcomes(buyerAddress: string): DisputeOutcomes {
+  const db = getDb();
+  const row = db
+    .prepare(
+      `SELECT
+        COUNT(CASE WHEN d.status='resolved' AND d.buyer_pct >= 50 THEN 1 END) as wonCount,
+        COUNT(CASE WHEN d.status='resolved' AND d.buyer_pct < 30  THEN 1 END) as lostCount,
+        COUNT(CASE WHEN d.status='resolved' AND d.buyer_pct >= 30 AND d.buyer_pct < 50 THEN 1 END) as partialCount,
+        COUNT(CASE WHEN d.status='open' THEN 1 END) as openCount,
+        COUNT(CASE WHEN d.status='resolved' THEN 1 END) as totalResolved,
+        COUNT(CASE WHEN d.status='resolved' AND d.buyer_pct < 30 THEN 1 END) as frivolousCount,
+        NULL as sellerFavorRate
+      FROM disputes d
+      JOIN orders o ON d.order_id = o.order_id
+      WHERE LOWER(o.buyer_address) = LOWER(?)`
+    )
+    .get(buyerAddress) as DisputeOutcomes | undefined;
+  return row ?? {
+    wonCount: 0, lostCount: 0, partialCount: 0, openCount: 0,
+    totalResolved: 0, frivolousCount: 0, sellerFavorRate: null,
+  };
 }
 
 function getFirstSeen(
@@ -184,47 +201,69 @@ function computeVolumeBonus(totalAmount: bigint): number {
   return Math.min(10, Math.log10(usdc) * 3.33);
 }
 
+// Outcome-weighted dispute rates: won disputes penalize minimally; lost disputes penalize fully.
+// Denominator is totalEscrows so the rate reflects overall trustworthiness, not just disputes.
+
+function computeAdjustedSellerDisputeRate(
+  outcomes: DisputeOutcomes,
+  totalEscrows: number
+): number {
+  if (totalEscrows === 0) return 0;
+  const weightedSum =
+    outcomes.wonCount * 0.0 +    // seller won (buyerPct < 50): no penalty
+    outcomes.partialCount * 0.3 + // partial (50 <= buyerPct <= 70): mild penalty
+    outcomes.lostCount * 1.0 +    // seller at fault (buyerPct > 70): full penalty
+    outcomes.openCount * 0.3;     // open dispute: provisional
+  return weightedSum / totalEscrows;
+}
+
+function computeAdjustedBuyerDisputeRate(
+  outcomes: DisputeOutcomes,
+  totalEscrows: number
+): number {
+  if (totalEscrows === 0) return 0;
+  const weightedSum =
+    outcomes.wonCount * 0.0 +    // buyer won (buyerPct >= 50): vindicated, no penalty
+    outcomes.partialCount * 0.3 + // partial (30 <= buyerPct < 50): mild penalty
+    outcomes.lostCount * 1.0 +    // frivolous (buyerPct < 30): full penalty
+    outcomes.openCount * 0.2;     // open dispute: provisional
+  return weightedSum / totalEscrows;
+}
+
 function computeSellerScore(
   stats: Stats,
-  resolutionFairness: number
+  adjustedDisputeRate: number
 ): number {
   const total = Number(stats.totalEscrows);
   if (total === 0) return 0;
 
-  const completionRate =
-    Number(stats.completedCount) / total;
-  const disputeRate =
-    Number(stats.disputedCount) / total;
-  const refundRate =
-    Number(stats.refundedCount) / total;
+  const completionRate = Number(stats.completedCount) / total;
+  const refundRate = Number(stats.refundedCount) / total;
   const volumeBonus = computeVolumeBonus(stats.totalAmount);
 
   return Math.round(
     completionRate * 40 +
-      (1 - disputeRate) * 25 +
+      (1 - adjustedDisputeRate) * 35 +
       (1 - refundRate) * 15 +
-      resolutionFairness * 10 +
       volumeBonus * 10
   );
 }
 
 function computeBuyerScore(
   stats: Stats,
-  frivolousDisputeRate: number
+  adjustedDisputeRate: number
 ): number {
   const total = Number(stats.totalEscrows);
   if (total === 0) return 0;
 
-  const completionRate =
-    Number(stats.completedCount) / total;
-  const disputeRate =
-    Number(stats.disputedCount) / total;
+  // Exclude seller-initiated refunds from completion denominator
+  const adjustedTotal = Math.max(1, total - Number(stats.refundedCount));
+  const adjustedCompletionRate = Number(stats.completedCount) / adjustedTotal;
   const volumeBonus = computeVolumeBonus(stats.totalAmount);
 
   return Math.round(
-    completionRate * 45 +
-      (1 - disputeRate) * 25 +
-      (1 - frivolousDisputeRate) * 20 +
+    adjustedCompletionRate * 45 +
+      (1 - adjustedDisputeRate) * 45 +
       volumeBonus * 10
   );
 }
@@ -263,19 +302,29 @@ export async function computeReputation(
 
   // Compute seller reputation
   if (sellerStats && Number(sellerStats.totalEscrows) > 0) {
-    const resolution = getSellerResolutionFairness(address);
+    const sellerOutcomes = getSellerDisputeOutcomes(address);
+    const adjSellerRate = computeAdjustedSellerDisputeRate(
+      sellerOutcomes,
+      Number(sellerStats.totalEscrows)
+    );
+    // resolutionFairness kept for backward compat
     const resolutionFairness =
-      resolution.resolvedCount > 0
-        ? (resolution.sellerFavorRate ?? 0)
-        : 0.5; // neutral default
+      sellerOutcomes.totalResolved > 0
+        ? (sellerOutcomes.sellerFavorRate ?? 0)
+        : 0.5;
     const total = Number(sellerStats.totalEscrows);
 
     seller = {
-      score: computeSellerScore(sellerStats, resolutionFairness),
+      score: computeSellerScore(sellerStats, adjSellerRate),
       completionRate: Number(sellerStats.completedCount) / total,
       disputeRate: Number(sellerStats.disputedCount) / total,
       refundRate: Number(sellerStats.refundedCount) / total,
       resolutionFairness,
+      adjustedDisputeRate: adjSellerRate,
+      wonDisputeCount: sellerOutcomes.wonCount,
+      lostDisputeCount: sellerOutcomes.lostCount,
+      partialDisputeCount: sellerOutcomes.partialCount,
+      openDisputeCount: sellerOutcomes.openCount,
       totalVolume: sellerStats.totalAmount.toString(),
       totalEscrows: total,
       firstSeen: getFirstSeen(address, "seller"),
@@ -285,18 +334,33 @@ export async function computeReputation(
 
   // Compute buyer reputation
   if (buyerStats && Number(buyerStats.totalEscrows) > 0) {
-    const frivolous = getBuyerFrivolousDisputeRate(address);
-    const frivolousRate =
-      frivolous.totalResolved > 0
-        ? frivolous.frivolousCount / frivolous.totalResolved
+    const buyerOutcomes = getBuyerDisputeOutcomes(address);
+    const adjBuyerRate = computeAdjustedBuyerDisputeRate(
+      buyerOutcomes,
+      Number(buyerStats.totalEscrows)
+    );
+    // frivolousDisputeRate kept for backward compat
+    const frivolousDisputeRate =
+      buyerOutcomes.totalResolved > 0
+        ? buyerOutcomes.lostCount / buyerOutcomes.totalResolved
         : 0;
     const total = Number(buyerStats.totalEscrows);
+    const adjustedTotal = Math.max(
+      1,
+      total - Number(buyerStats.refundedCount)
+    );
 
     buyer = {
-      score: computeBuyerScore(buyerStats, frivolousRate),
+      score: computeBuyerScore(buyerStats, adjBuyerRate),
       disputeRate: Number(buyerStats.disputedCount) / total,
-      frivolousDisputeRate: frivolousRate,
+      frivolousDisputeRate,
       completionRate: Number(buyerStats.completedCount) / total,
+      adjustedDisputeRate: adjBuyerRate,
+      adjustedCompletionRate: Number(buyerStats.completedCount) / adjustedTotal,
+      wonDisputeCount: buyerOutcomes.wonCount,
+      lostDisputeCount: buyerOutcomes.lostCount,
+      partialDisputeCount: buyerOutcomes.partialCount,
+      openDisputeCount: buyerOutcomes.openCount,
       totalVolume: buyerStats.totalAmount.toString(),
       totalEscrows: total,
       firstSeen: getFirstSeen(address, "buyer"),

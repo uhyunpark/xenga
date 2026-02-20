@@ -42,34 +42,31 @@ function computeVolumeBonus(usdc: number): number {
 
 function computeSellerScoreRaw(
   stats: SimulatedStats,
-  resolutionFairness: number
+  adjustedDisputeRate: number
 ): number {
   if (stats.totalEscrows === 0) return 0;
   const completionRate = stats.completedCount / stats.totalEscrows;
-  const disputeRate = stats.disputedCount / stats.totalEscrows;
   const refundRate = stats.refundedCount / stats.totalEscrows;
   const volumeBonus = computeVolumeBonus(stats.totalAmount);
   return Math.round(
     completionRate * 40 +
-      (1 - disputeRate) * 25 +
+      (1 - adjustedDisputeRate) * 35 +
       (1 - refundRate) * 15 +
-      resolutionFairness * 10 +
       volumeBonus * 10
   );
 }
 
 function computeBuyerScoreRaw(
   stats: SimulatedStats,
-  frivolousDisputeRate: number
+  adjustedDisputeRate: number
 ): number {
   if (stats.totalEscrows === 0) return 0;
-  const completionRate = stats.completedCount / stats.totalEscrows;
-  const disputeRate = stats.disputedCount / stats.totalEscrows;
+  const adjustedTotal = Math.max(1, stats.totalEscrows - stats.refundedCount);
+  const adjustedCompletionRate = stats.completedCount / adjustedTotal;
   const volumeBonus = computeVolumeBonus(stats.totalAmount);
   return Math.round(
-    completionRate * 45 +
-      (1 - disputeRate) * 25 +
-      (1 - frivolousDisputeRate) * 20 +
+    adjustedCompletionRate * 45 +
+      (1 - adjustedDisputeRate) * 45 +
       volumeBonus * 10
   );
 }
@@ -137,31 +134,31 @@ export function simulateRounds(rounds: RoundDefinition[]): RoundSnapshot[] {
       resolvedDisputes.push({ buyerPct: def.buyerPct ?? 50 });
     } else if (def.outcome === "refunded") {
       sellerStats.refundedCount++;
+      buyerStats.refundedCount++; // mirrors on-chain behavior
     }
 
-    // Compute resolution fairness (seller-favor rate among resolved disputes)
-    const resolutionFairness =
-      resolvedDisputes.length > 0
-        ? resolvedDisputes.filter((d) => d.buyerPct <= 50).length /
-          resolvedDisputes.length
-        : 0.5; // neutral default when no disputes
+    // Outcome-weighted adjusted dispute rates (mirrors server formula exactly)
+    const adjSellerNum = resolvedDisputes.reduce((sum, d) => {
+      if (d.buyerPct < 50) return sum + 0.0;   // seller won: no penalty
+      if (d.buyerPct <= 70) return sum + 0.3;  // partial: mild penalty
+      return sum + 1.0;                          // seller at fault: full penalty
+    }, 0);
+    const adjSellerRate = sellerStats.totalEscrows > 0
+      ? adjSellerNum / sellerStats.totalEscrows
+      : 0;
 
-    // Compute frivolous dispute rate (buyer got < 30%)
-    const frivolousDisputeRate =
-      resolvedDisputes.length > 0
-        ? resolvedDisputes.filter((d) => d.buyerPct < 30).length /
-          resolvedDisputes.length
-        : 0;
+    const adjBuyerNum = resolvedDisputes.reduce((sum, d) => {
+      if (d.buyerPct >= 50) return sum + 0.0;  // buyer won: no penalty
+      if (d.buyerPct >= 30) return sum + 0.3;  // partial: mild penalty
+      return sum + 1.0;                          // frivolous: full penalty
+    }, 0);
+    const adjBuyerRate = buyerStats.totalEscrows > 0
+      ? adjBuyerNum / buyerStats.totalEscrows
+      : 0;
 
     // Raw scores (unclamped, for delta computation)
-    const rawSeller = computeSellerScoreRaw(
-      { ...sellerStats },
-      resolutionFairness
-    );
-    const rawBuyer = computeBuyerScoreRaw(
-      { ...buyerStats },
-      frivolousDisputeRate
-    );
+    const rawSeller = computeSellerScoreRaw({ ...sellerStats }, adjSellerRate);
+    const rawBuyer = computeBuyerScoreRaw({ ...buyerStats }, adjBuyerRate);
 
     const confidence = getConfidence(
       Math.max(buyerStats.totalEscrows, sellerStats.totalEscrows)
@@ -216,18 +213,22 @@ export interface ScreeningAgentProfile {
     totalEscrows: number;
     completionRate: number;
     disputeRate: number;
+    adjustedDisputeRate: number; // outcome-weighted; the key comparison vs raw disputeRate
     totalAmount: number;
   };
 }
 
-// Pre-computed profiles — scores verified against computeSellerScoreRaw formula:
-//   score = completionRate*40 + (1-disputeRate)*25 + (1-refundRate)*15 + fairness*10 + volumeBonus*10
+// Pre-computed profiles — scores verified against computeSellerScoreRaw formula (NEW):
+//   score = completionRate*40 + (1-adjDisputeRate)*35 + (1-refundRate)*15 + volumeBonus*10
+//   adjDisputeRate = sum(weights) / totalEscrows
+//   Seller weights: buyer-won (pct<50)=0.0, partial (50-70)=0.3, seller-fault (pct>70)=1.0
 //   volumeBonus = min(10, log10(amount) * 3.33)
 //
-// Alice:  0 escrows  → score 0,  confidence "low"    → REJECTED (no history)
-// Bob:   12 escrows  → score 39, confidence "high"   → REJECTED (below threshold 50)
-// Carol:  7 escrows  → score 64, confidence "medium" → ACCEPTED (1-hour window)
-// Dave:  18 escrows  → score 92, confidence "high"   → ACCEPTED (30-min fast lane)
+// Alice:  0 escrows → score 0,  "low"    → REJECTED (no history)
+// Bob:   12 escrows → score 40, "high"   → REJECTED (below threshold 50; 7 seller-fault disputes)
+// Carol:  7 escrows → score 63, "medium" → ACCEPTED (1-hour window)
+// Dave:  18 escrows → score 92, "high"   → ACCEPTED (30-min fast lane)
+//        Dave's 1 dispute was a frivolous buyer complaint — adjDisputeRate=0, no seller penalty.
 export const SCREENING_AGENTS: ScreeningAgentProfile[] = [
   {
     id: "alice",
@@ -237,28 +238,30 @@ export const SCREENING_AGENTS: ScreeningAgentProfile[] = [
     confidence: "low",
     decision: "rejected",
     rejectionReason: "No transaction history — minimum 3 escrows required",
-    stats: { totalEscrows: 0, completionRate: 0, disputeRate: 0, totalAmount: 0 },
+    stats: { totalEscrows: 0, completionRate: 0, disputeRate: 0, adjustedDisputeRate: 0, totalAmount: 0 },
   },
   {
     id: "bob",
     name: "Bob",
     address: "0xB0b5a8c1...0002",
-    score: 39,
+    score: 40,
     confidence: "high",
     decision: "rejected",
-    rejectionReason: "Score 39 below threshold 50 — high dispute rate (58%)",
-    stats: { totalEscrows: 12, completionRate: 0.25, disputeRate: 0.58, totalAmount: 60 },
+    rejectionReason: "Score 40 below threshold 50 — 7 seller-fault disputes (58%)",
+    // adjustedDisputeRate = 7×1.0/12 ≈ 0.58 (all disputes were buyer-won → seller at fault)
+    stats: { totalEscrows: 12, completionRate: 0.25, disputeRate: 0.58, adjustedDisputeRate: 0.58, totalAmount: 60 },
   },
   {
     id: "carol",
     name: "Carol",
     address: "0xCA30b2f7...0003",
-    score: 64,
+    score: 63,
     confidence: "medium",
     decision: "accepted",
     windowLabel: "1 hour (standard)",
     windowTier: "default",
-    stats: { totalEscrows: 7, completionRate: 0.57, disputeRate: 0.29, totalAmount: 35 },
+    // adjustedDisputeRate = 2×1.0/7 ≈ 0.29 (all disputes were buyer-won → seller at fault)
+    stats: { totalEscrows: 7, completionRate: 0.57, disputeRate: 0.29, adjustedDisputeRate: 0.29, totalAmount: 35 },
   },
   {
     id: "dave",
@@ -269,7 +272,8 @@ export const SCREENING_AGENTS: ScreeningAgentProfile[] = [
     decision: "accepted",
     windowLabel: "30 min (fast lane)",
     windowTier: "high",
-    stats: { totalEscrows: 18, completionRate: 0.94, disputeRate: 0.06, totalAmount: 180 },
+    // adjustedDisputeRate = 0: Dave's 1 dispute was a frivolous buyer (buyerPct=20 → seller won → weight 0.0)
+    stats: { totalEscrows: 18, completionRate: 0.94, disputeRate: 0.06, adjustedDisputeRate: 0.00, totalAmount: 180 },
   },
 ];
 
@@ -291,24 +295,34 @@ export const TRUST_BUILDING_ROUNDS: RoundDefinition[] = [
     amount: 2.0,
   },
   {
-    label: "Round 3: Quality Dispute",
+    label: "Round 3: Legitimate Dispute",
     description:
-      "Seller delivers stale data. Agent files dispute; arbiter rules 70% to buyer.",
+      "Seller delivers stale data. Buyer disputes; arbiter rules 70% to buyer. " +
+      "Buyer score drops only −9 — winning a justified dispute carries almost no penalty.",
     outcome: "disputed",
     amount: 1.5,
     buyerPct: 70,
   },
   {
-    label: "Round 4: Recovery",
+    label: "Round 4: Frivolous Dispute",
     description:
-      "Seller improves data quality after dispute. Clean delivery rebuilds trust.",
+      "Buyer disputes a correct delivery. Arbiter rules 20% to buyer — clearly frivolous. " +
+      "Buyer drops −15. Seller loses only −2 since arbiter cleared them.",
+    outcome: "disputed",
+    amount: 1.5,
+    buyerPct: 20,
+  },
+  {
+    label: "Round 5: Recovery",
+    description:
+      "Buyer resumes honest trading. Clean delivery starts rebuilding trust.",
     outcome: "completed",
     amount: 1.5,
   },
   {
-    label: "Round 5: Trust Restored",
+    label: "Round 6: Trust Restored",
     description:
-      "Agent commits again. Scores recover, confirming reputation resilience.",
+      "Consistent completions restore scores. Frivolous dispute diluted by history.",
     outcome: "completed",
     amount: 2.0,
   },

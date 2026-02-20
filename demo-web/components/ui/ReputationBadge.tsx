@@ -41,15 +41,25 @@ export function ReputationBadge({
 
   const badgeContent = isNew ? "New" : `${rep.overall}/100`;
 
+  const disputeInfo = (() => {
+    const b = rep.buyer;
+    if (!b) return "";
+    const parts: string[] = [];
+    if (b.wonDisputeCount > 0) parts.push(`${b.wonDisputeCount} won`);
+    if (b.lostDisputeCount > 0) parts.push(`${b.lostDisputeCount} lost`);
+    if (b.openDisputeCount > 0) parts.push(`${b.openDisputeCount} open`);
+    return parts.length > 0 ? ` · Disputes: ${parts.join(", ")}` : "";
+  })();
+
   const tooltipText = isNew
     ? "New address — fewer than 3 escrows. Default escrow parameters apply."
-    : `Score ${rep.overall}/100 · ${rep.confidence} confidence. ${
+    : `Score ${rep.overall}/100 · ${rep.confidence} confidence${disputeInfo}. ${
         rep.overall >= 70
           ? "High trust — may qualify for shorter release windows."
           : rep.overall >= 40
             ? "Moderate trust — standard escrow parameters."
             : "Low trust — extended release windows may apply."
-      }`;
+      } Legitimate disputes don't hurt your score.`;
 
   const badge = (
     <Badge

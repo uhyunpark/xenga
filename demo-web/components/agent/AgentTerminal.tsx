@@ -119,7 +119,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
         const s = sellerRep.seller;
         addLine({ type: "reputation", text: `[reputation] Seller score: ${s.score}/100 (${sellerRep.confidence} confidence)`, delay: 0 });
         await wait(400);
-        addLine({ type: "reputation", text: `[reputation] Completion: ${(s.completionRate * 100).toFixed(0)}% | Disputes: ${(s.disputeRate * 100).toFixed(0)}% | Volume: ${(Number(s.totalVolume) / 1e6).toFixed(2)} USDC`, delay: 0 });
+        addLine({ type: "reputation", text: `[reputation] Completion: ${(s.completionRate * 100).toFixed(0)}% | Adj. Disputes: ${((s.adjustedDisputeRate ?? s.disputeRate) * 100).toFixed(0)}% | Volume: ${(Number(s.totalVolume) / 1e6).toFixed(2)} USDC`, delay: 0 });
         await wait(400);
         const trust = sellerRep.confidence === "low"
           ? "NEW SELLER — default escrow parameters"
@@ -483,7 +483,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
     try {
       addLine({ type: "dim", text: "$ x402-agent simulate --scenario trust-building", delay: 0 });
       await wait(800);
-      addLine({ type: "info", text: "[sim] Reputation scoring simulation — 5 rounds", delay: 0 });
+      addLine({ type: "info", text: "[sim] Reputation scoring simulation — 6 rounds", delay: 0 });
       await wait(400);
       addLine({ type: "info", text: "[sim] Computing scores client-side using on-chain scoring formulas", delay: 0 });
       await wait(1200);
@@ -528,14 +528,22 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
         });
 
         // Inspector event — reputation_check switches to Reputation tab automatically
+        const outcomeLabel = def.outcome === "completed"
+          ? "Completed"
+          : def.buyerPct != null && def.buyerPct >= 50
+            ? "Buyer Won"
+            : def.buyerPct != null && def.buyerPct >= 30
+              ? "Partial"
+              : "Frivolous";
         inspector.addEvent({
           type: "reputation_check",
-          label: `Round ${snap.round}: ${def.outcome === "completed" ? "Completed" : "Disputed"}`,
+          label: `Round ${snap.round}: ${outcomeLabel}`,
           data: {
             mode: "round",
             round: snap.round,
             label: def.label,
             outcome: def.outcome,
+            buyerPct: def.buyerPct ?? null,
             sellerScore: snap.sellerScore,
             buyerScore: snap.buyerScore,
             sellerDelta: snap.sellerDelta,
@@ -558,11 +566,11 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
       await wait(300);
       addLine({ type: "info", text: `[summary] Buyer:  0 → ${snapshots.map((s) => s.buyerScore).join(" → ")}`, delay: 0 });
       await wait(600);
-      addLine({ type: "reputation", text: "[takeaway] Completion rate is the strongest scoring factor (40-45% weight)", delay: 0 });
+      addLine({ type: "reputation", text: "[takeaway] Winning a legitimate dispute (R3) costs only −9 buyer points — nearly no penalty", delay: 0 });
       await wait(400);
-      addLine({ type: "reputation", text: "[takeaway] A single dispute dropped the seller score by 21 points", delay: 0 });
+      addLine({ type: "reputation", text: "[takeaway] A frivolous dispute (R4) costs −15 buyer points; seller loses only −2 (arbiter cleared them)", delay: 0 });
       await wait(400);
-      addLine({ type: "reputation", text: "[takeaway] Recovery takes multiple clean transactions", delay: 0 });
+      addLine({ type: "reputation", text: "[takeaway] Outcome weighting makes scores fair: raw dispute rate ≠ adjusted dispute rate", delay: 0 });
       await wait(400);
       addLine({ type: "reputation", text: "[takeaway] Release window adjustments require \"high\" confidence (10+ escrows)", delay: 0 });
 
@@ -578,6 +586,11 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
           disputeRate: last.sellerStats.disputedCount / last.sellerStats.totalEscrows,
           refundRate: last.sellerStats.refundedCount / last.sellerStats.totalEscrows,
           resolutionFairness: 0,
+          adjustedDisputeRate: 0,
+          wonDisputeCount: 0,
+          lostDisputeCount: 0,
+          partialDisputeCount: 0,
+          openDisputeCount: 0,
           totalVolume: String(Math.round(last.sellerStats.totalAmount * 1e6)),
           totalEscrows: last.sellerStats.totalEscrows,
           firstSeen: now,
@@ -593,6 +606,12 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
           disputeRate: last.buyerStats.disputedCount / last.buyerStats.totalEscrows,
           frivolousDisputeRate: 0,
           completionRate: last.buyerStats.completedCount / last.buyerStats.totalEscrows,
+          adjustedDisputeRate: 0,
+          adjustedCompletionRate: last.buyerStats.completedCount / last.buyerStats.totalEscrows,
+          wonDisputeCount: 0,
+          lostDisputeCount: 0,
+          partialDisputeCount: 0,
+          openDisputeCount: 0,
           totalVolume: String(Math.round(last.buyerStats.totalAmount * 1e6)),
           totalEscrows: last.buyerStats.totalEscrows,
           firstSeen: now,

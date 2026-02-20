@@ -20,17 +20,15 @@ interface ReputationSummaryProps {
 }
 
 const BUYER_FORMULA = [
-  { label: "Completion", weight: 45, color: "bg-accent" },
-  { label: "Non-Dispute", weight: 25, color: "bg-warning" },
-  { label: "Non-Frivolous", weight: 20, color: "bg-violet" },
+  { label: "Adj. Completion", weight: 45, color: "bg-accent" },
+  { label: "Outcome-Wtd Disputes", weight: 45, color: "bg-warning" },
   { label: "Volume", weight: 10, color: "bg-success" },
 ];
 
 const SELLER_FORMULA = [
   { label: "Completion", weight: 40, color: "bg-accent" },
-  { label: "Non-Dispute", weight: 25, color: "bg-warning" },
+  { label: "Outcome-Wtd Disputes", weight: 35, color: "bg-warning" },
   { label: "Non-Refund", weight: 15, color: "bg-error/60" },
-  { label: "Fairness", weight: 10, color: "bg-violet" },
   { label: "Volume", weight: 10, color: "bg-success" },
 ];
 
@@ -195,6 +193,7 @@ export function ReputationSummary({
                 totalEscrows: buyerRep.buyer.totalEscrows,
                 completionRate: buyerRep.buyer.completionRate,
                 disputeRate: buyerRep.buyer.disputeRate,
+                adjustedDisputeRate: buyerRep.buyer.adjustedDisputeRate,
                 totalVolume: buyerRep.buyer.totalVolume,
               } : null}
             />
@@ -208,6 +207,7 @@ export function ReputationSummary({
                 totalEscrows: sellerRep.seller.totalEscrows,
                 completionRate: sellerRep.seller.completionRate,
                 disputeRate: sellerRep.seller.disputeRate,
+                adjustedDisputeRate: sellerRep.seller.adjustedDisputeRate,
                 totalVolume: sellerRep.seller.totalVolume,
               } : null}
             />
@@ -309,7 +309,7 @@ export function ReputationSummary({
             : scenario === "dispute"
               ? "Dispute recorded in on-chain stats. Both buyer's dispute rate and seller's dispute rate are now tracked. Resolution fairness (arbiter rulings) shapes long-term reputation scores."
               : scenario === "reputation"
-                ? "Simulated using the same scoring formulas applied to on-chain data. The dispute in round 3 dropped the seller score by 21 points, but two subsequent completions restored trust. In production, these scores drive release window adjustments once confidence reaches \"high\" (10+ escrows)."
+                ? "Simulated with outcome-weighted scoring. Round 3 (legitimate dispute, 70% to buyer): buyer drops only −9 — winning justified disputes barely hurts. Round 4 (frivolous dispute, 20% to buyer): buyer drops −15, seller loses only −2 since arbiter cleared them. Recovery across rounds 5-6 confirms score resilience."
                 : "Reputation is a portable on-chain credential. Services set their own thresholds — agents rejected here can build history elsewhere and re-apply. High-trust agents earn faster settlement (30 min vs 1 hour) as a tangible incentive."}
           {" "}Confidence thresholds: Low (&lt;3 escrows), Medium (3-9), High (10+). Parameter adjustments activate at Medium confidence.
         </p>
@@ -333,6 +333,7 @@ function PartyStats({
     totalEscrows: number;
     completionRate: number;
     disputeRate: number;
+    adjustedDisputeRate?: number;
     totalVolume: string;
   } | null;
 }) {
@@ -364,7 +365,10 @@ function PartyStats({
           <div className="grid grid-cols-2 gap-2">
             <StatCell label="Escrows" value={String(data.totalEscrows)} />
             <StatCell label="Completed" value={`${(data.completionRate * 100).toFixed(0)}%`} />
-            <StatCell label="Disputes" value={`${(data.disputeRate * 100).toFixed(0)}%`} />
+            <StatCell label="Raw Disputes" value={`${(data.disputeRate * 100).toFixed(0)}%`} />
+            {data.adjustedDisputeRate !== undefined && (
+              <StatCell label="Adj. Disputes" value={`${(data.adjustedDisputeRate * 100).toFixed(0)}%`} />
+            )}
             <StatCell label="Volume" value={`${formatVolume(data.totalVolume)} USDC`} />
           </div>
         </>

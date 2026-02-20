@@ -127,7 +127,7 @@ function ScreeningCard({ event }: { event: { data: Record<string, any> } }) {
       {stats && stats.totalEscrows > 0 && (
         <div className="flex gap-3 text-[10px] text-text-tertiary">
           <span>Completion <span className="text-text-secondary">{(stats.completionRate * 100).toFixed(0)}%</span></span>
-          <span>Disputes <span className={stats.disputeRate > 0.3 ? "text-error" : "text-text-secondary"}>{(stats.disputeRate * 100).toFixed(0)}%</span></span>
+          <span>Adj. Disputes <span className={(stats.adjustedDisputeRate ?? stats.disputeRate) > 0.3 ? "text-error" : "text-text-secondary"}>{((stats.adjustedDisputeRate ?? stats.disputeRate) * 100).toFixed(0)}%</span></span>
           <span>Volume <span className="text-text-secondary">{stats.totalAmount} USDC</span></span>
         </div>
       )}
@@ -154,6 +154,7 @@ function RoundCard({ event }: { event: { data: Record<string, any> } }) {
     round,
     label,
     outcome,
+    buyerPct,
     sellerScore,
     buyerScore,
     sellerDelta,
@@ -164,18 +165,32 @@ function RoundCard({ event }: { event: { data: Record<string, any> } }) {
 
   const disputed = outcome === "disputed";
 
+  // Determine dispute outcome tier for badge + annotation
+  const disputeTier =
+    !disputed ? null
+    : buyerPct != null && buyerPct >= 50 ? "buyer-won"
+    : buyerPct != null && buyerPct >= 30 ? "partial"
+    : "frivolous";
+
+  const badgeClass =
+    !disputed ? "bg-success/10 text-success"
+    : disputeTier === "buyer-won" ? "bg-warning/10 text-warning"
+    : disputeTier === "partial" ? "bg-warning/10 text-warning"
+    : "bg-error/10 text-error";
+
+  const badgeLabel =
+    !disputed ? "Completed"
+    : disputeTier === "buyer-won" ? "Buyer Won"
+    : disputeTier === "partial" ? "Partial"
+    : "Frivolous";
+
   return (
     <div className="rounded-lg border border-border-default bg-bg-secondary p-3 space-y-2">
       {/* Header */}
       <div className="flex items-center justify-between">
         <span className="text-[10px] font-semibold text-text-secondary">{label ?? `Round ${round}`}</span>
-        <span
-          className={cn(
-            "rounded-full px-2 py-0.5 text-[10px] font-medium",
-            disputed ? "bg-error/10 text-error" : "bg-success/10 text-success"
-          )}
-        >
-          {disputed ? "Disputed" : "Completed"}
+        <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", badgeClass)}>
+          {badgeLabel}
         </span>
       </div>
 
@@ -184,6 +199,23 @@ function RoundCard({ event }: { event: { data: Record<string, any> } }) {
         <ScoreBar label="Seller" score={sellerScore} delta={sellerDelta} isFirst={round === 1} />
         <ScoreBar label="Buyer" score={buyerScore} delta={buyerDelta} isFirst={round === 1} />
       </div>
+
+      {/* Arbiter annotation (disputed rounds only) */}
+      {disputed && buyerPct != null && (
+        <div className={cn(
+          "rounded px-2 py-1 text-[10px]",
+          disputeTier === "buyer-won" ? "bg-success/10 text-success"
+          : disputeTier === "partial" ? "bg-warning/10 text-warning"
+          : "bg-error/10 text-error"
+        )}>
+          Arbiter: {buyerPct}% to buyer
+          {disputeTier === "buyer-won"
+            ? " — buyer vindicated, no score penalty"
+            : disputeTier === "partial"
+              ? " — partial outcome, mild penalty"
+              : " — frivolous claim, full penalty to buyer"}
+        </div>
+      )}
 
       {/* Footer */}
       <div className="flex items-center justify-between text-[10px] text-text-tertiary">

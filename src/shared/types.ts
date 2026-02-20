@@ -234,9 +234,14 @@ export interface ReputationScore {
 export interface SellerReputation {
   score: number; // 0-100
   completionRate: number; // 0-1
-  disputeRate: number; // 0-1
+  disputeRate: number; // 0-1 (raw, kept for backward compat)
   refundRate: number; // 0-1
-  resolutionFairness: number; // 0-1 (arbiter ruled in seller's favor)
+  resolutionFairness: number; // 0-1 (kept for backward compat)
+  adjustedDisputeRate: number; // 0-1 (outcome-weighted: won=0.0, partial=0.3, lost=1.0)
+  wonDisputeCount: number; // resolved disputes where buyerPct < 50 (seller won)
+  lostDisputeCount: number; // resolved disputes where buyerPct > 70 (seller at fault)
+  partialDisputeCount: number; // resolved disputes where 50 <= buyerPct <= 70
+  openDisputeCount: number; // disputes with status = 'open'
   totalVolume: string; // USDC bigint as string
   totalEscrows: number;
   firstSeen: number; // unix timestamp
@@ -244,9 +249,15 @@ export interface SellerReputation {
 
 export interface BuyerReputation {
   score: number; // 0-100
-  disputeRate: number; // 0-1
-  frivolousDisputeRate: number; // 0-1 (arbiter gave buyer <30%)
-  completionRate: number; // 0-1
+  disputeRate: number; // 0-1 (raw, kept for backward compat)
+  frivolousDisputeRate: number; // 0-1 (kept for backward compat)
+  completionRate: number; // 0-1 (raw, kept for backward compat)
+  adjustedDisputeRate: number; // 0-1 (outcome-weighted: won=0.0, partial=0.3, lost=1.0)
+  adjustedCompletionRate: number; // completedCount / (totalEscrows - refundedCount)
+  wonDisputeCount: number; // resolved disputes where buyerPct >= 50 (buyer won)
+  lostDisputeCount: number; // resolved disputes where buyerPct < 30 (frivolous)
+  partialDisputeCount: number; // resolved disputes where 30 <= buyerPct < 50
+  openDisputeCount: number; // disputes with status = 'open'
   totalVolume: string;
   totalEscrows: number;
   firstSeen: number;
