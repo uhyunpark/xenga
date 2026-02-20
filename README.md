@@ -1,6 +1,6 @@
 # EscrowVault
 
-On-chain escrow and reputation system for trust-minimized USDC transactions on Base.
+An on-chain escrow and reputation system for secure, verifiable payments — for both humans and autonomous agents.
 
 ## Escrow State Machine
 

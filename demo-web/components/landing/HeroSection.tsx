@@ -34,7 +34,7 @@ export function HeroSection() {
             className="gradient-text mt-5 text-4xl font-bold tracking-tight md:text-5xl lg:text-6xl"
             style={{ textWrap: "balance" }}
           >
-            On-chain escrow for autonomous commerce
+            On-chain escrow for humans and autonomous agents
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-text-secondary md:text-xl">
             {isMockChainClient
