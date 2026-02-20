@@ -5,10 +5,33 @@ import { Navbar } from "@/components/layout/Navbar";
 import { WalletProvider } from "@/lib/wallet/WalletProvider";
 import { InspectorProvider } from "@/lib/protocol-inspector/context";
 
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://zenga.xyz";
+
 export const metadata: Metadata = {
-  title: "EscrowVault — On-Chain Escrow Demo",
+  metadataBase: new URL(baseUrl),
+  title: {
+    default: "Zenga — On-Chain Escrow for Agents",
+    template: "%s — Zenga",
+  },
   description:
-    "Interactive demo of on-chain escrow settlement with reputation scoring, dispute resolution, and programmable release logic.",
+    "On-chain escrow settlement for autonomous agents and marketplaces — reputation scoring, dispute resolution, and programmable release logic on Base.",
+  authors: [{ name: "Zenga" }],
+  creator: "Zenga",
+  robots: { index: true, follow: true },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    siteName: "Zenga",
+    title: "Zenga — On-Chain Escrow for Agents",
+    description:
+      "On-chain escrow settlement for autonomous agents and marketplaces — reputation scoring, dispute resolution, and programmable release logic on Base.",
+  },
+  twitter: {
+    card: "summary",
+    title: "Zenga — On-Chain Escrow for Agents",
+    description:
+      "On-chain escrow settlement for autonomous agents and marketplaces with reputation scoring and dispute resolution.",
+  },
 };
 
 export default function RootLayout({
