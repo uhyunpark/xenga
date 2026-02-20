@@ -5,30 +5,30 @@ import { Navbar } from "@/components/layout/Navbar";
 import { WalletProvider } from "@/lib/wallet/WalletProvider";
 import { InspectorProvider } from "@/lib/protocol-inspector/context";
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://zenga.xyz";
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://xenga.xyz";
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: "Zenga — On-Chain Escrow for Agents",
-    template: "%s — Zenga",
+    default: "Xenga — On-Chain Escrow for Agents",
+    template: "%s — Xenga",
   },
   description:
     "On-chain escrow settlement for autonomous agents and marketplaces — reputation scoring, dispute resolution, and programmable release logic on Base.",
-  authors: [{ name: "Zenga" }],
-  creator: "Zenga",
+  authors: [{ name: "Xenga" }],
+  creator: "Xenga",
   robots: { index: true, follow: true },
   openGraph: {
     type: "website",
     locale: "en_US",
-    siteName: "Zenga",
-    title: "Zenga — On-Chain Escrow for Agents",
+    siteName: "Xenga",
+    title: "Xenga — On-Chain Escrow for Agents",
     description:
       "On-chain escrow settlement for autonomous agents and marketplaces — reputation scoring, dispute resolution, and programmable release logic on Base.",
   },
   twitter: {
     card: "summary",
-    title: "Zenga — On-Chain Escrow for Agents",
+    title: "Xenga — On-Chain Escrow for Agents",
     description:
       "On-chain escrow settlement for autonomous agents and marketplaces with reputation scoring and dispute resolution.",
   },

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { isMockChainClient } from "@/lib/env/isMockChainClient";
 
 const codeLines = [
-  'import { escrowFetch } from "x402-escrow";',
+  'import { escrowFetch } from "xenga";',
   "",
   "const { payment } = await escrowFetch(",
   '  "https://merchant.xyz/api/order/981/pay",',
