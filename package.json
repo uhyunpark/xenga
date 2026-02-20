@@ -2,7 +2,7 @@
   "name": "x402-escrow",
   "version": "0.1.0",
   "private": true,
-  "description": "On-chain escrow and reputation system for trust-minimized USDC transactions",
+  "description": "An on-chain escrow and reputation system for secure, verifiable payments — for both humans and autonomous agents",
   "workspaces": ["packages/*", "demo-web"],
   "scripts": {
     "dev": "bun --watch src/server/index.ts",
