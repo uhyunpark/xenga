@@ -6,12 +6,12 @@ export const metadata: Metadata = {
   description:
     "Watch an autonomous agent execute discovery, payment, and on-chain escrow settlement — including dispute resolution on Base Sepolia.",
   openGraph: {
-    title: "Agent Service Demo — EscrowVault",
+    title: "Agent Service Demo — Zenga",
     description:
       "Autonomous agent demo with machine-to-machine escrow payments, on-chain settlement, and dispute resolution.",
   },
   twitter: {
-    title: "Agent Service Demo — EscrowVault",
+    title: "Agent Service Demo — Zenga",
     description:
       "Autonomous agent demo with machine-to-machine escrow payments and on-chain settlement.",
   },

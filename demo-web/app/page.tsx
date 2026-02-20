@@ -9,10 +9,10 @@ export default function LandingPage() {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebApplication",
-    name: "EscrowVault",
+    name: "Zenga",
     description:
-      "Interactive demo of on-chain escrow settlement with reputation scoring, dispute resolution, and programmable release logic on Base Sepolia.",
-    url: process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000",
+      "On-chain escrow settlement for autonomous agents and marketplaces — reputation scoring, dispute resolution, and programmable release logic on Base.",
+    url: process.env.NEXT_PUBLIC_BASE_URL || "https://zenga.xyz",
     applicationCategory: "DeveloperApplication",
     operatingSystem: "Web",
   };

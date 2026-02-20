@@ -5,32 +5,32 @@ import { Navbar } from "@/components/layout/Navbar";
 import { WalletProvider } from "@/lib/wallet/WalletProvider";
 import { InspectorProvider } from "@/lib/protocol-inspector/context";
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://zenga.xyz";
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: "EscrowVault — On-Chain Escrow Demo",
-    template: "%s — EscrowVault",
+    default: "Zenga — On-Chain Escrow for Agents",
+    template: "%s — Zenga",
   },
   description:
-    "Interactive demo of on-chain escrow settlement with reputation scoring, dispute resolution, and programmable release logic on Base Sepolia.",
-  authors: [{ name: "EscrowVault" }],
-  creator: "EscrowVault",
+    "On-chain escrow settlement for autonomous agents and marketplaces — reputation scoring, dispute resolution, and programmable release logic on Base.",
+  authors: [{ name: "Zenga" }],
+  creator: "Zenga",
   robots: { index: true, follow: true },
   openGraph: {
     type: "website",
     locale: "en_US",
-    siteName: "EscrowVault",
-    title: "EscrowVault — On-Chain Escrow Demo",
+    siteName: "Zenga",
+    title: "Zenga — On-Chain Escrow for Agents",
     description:
-      "Interactive demo of on-chain escrow settlement with reputation scoring, dispute resolution, and programmable release logic on Base Sepolia.",
+      "On-chain escrow settlement for autonomous agents and marketplaces — reputation scoring, dispute resolution, and programmable release logic on Base.",
   },
   twitter: {
     card: "summary",
-    title: "EscrowVault — On-Chain Escrow Demo",
+    title: "Zenga — On-Chain Escrow for Agents",
     description:
-      "On-chain escrow settlement with reputation scoring, dispute resolution, and programmable release logic.",
+      "On-chain escrow settlement for autonomous agents and marketplaces with reputation scoring and dispute resolution.",
   },
 };
 
