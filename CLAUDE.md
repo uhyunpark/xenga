@@ -78,17 +78,18 @@ On-chain credit scoring for agents/wallets, computed from escrow transaction his
 The facilitator pays all gas fees for on-chain transactions (createEscrowWithAuth, confirmDelivery, resolveDispute, refund). To cover costs and earn margin, a configurable facilitator fee is deducted from the seller's payout at settlement (seller-pays model, like Stripe/PayPal).
 
 **How it works:**
-- `feeBps` and `feeRecipient` are global contract state, set by owner via `setFeeConfig()`
-- Fee is computed at escrow creation: `fee = (amount * feeBps) / 10000`, stored in `Escrow.facilitatorFee`
+- `feeBps`, `flatFee`, and `feeRecipient` are global contract state, set by owner via `setFeeConfig()`
+- Fee is computed at escrow creation: `fee = (amount * feeBps) / 10000 + flatFee`, stored in `Escrow.facilitatorFee`
+- The percentage component (`feeBps`) covers facilitator profit/margin; the fixed component (`flatFee`) covers gas costs — similar to Stripe's `2.9% + $0.30` model
 - Buyer pays exactly `orderPrice` — no amount inflation
 - On release/autoRelease: seller gets `amount - fee`, feeRecipient gets `fee`
 - On refund: buyer gets full `amount` back (facilitator absorbs cost)
 - On dispute resolution: fee goes to feeRecipient, `buyerPct` split applies to `amount - fee`
-- `MAX_FEE_BPS = 1000` (10% cap)
-- Safety guard: `if (fee > 0 && feeRecipient != address(0))` prevents revert if feeRecipient changed to zero while escrows are active
+- `MAX_FEE_BPS = 1000` (10% cap), `MAX_FLAT_FEE = 50_000_000` (50 USDC cap)
+- Safety guards: `if (fee >= amount) revert InvalidFee()` prevents tiny escrows where fee exceeds deposit; `if (fee > 0 && feeRecipient != address(0))` prevents revert if feeRecipient changed to zero while escrows are active
 - Stats track gross `amount` (not net) — reputation scoring uses transaction volume
 
-**Config:** `FEE_BPS` and `FEE_RECIPIENT` env vars (see `.env.example`). Default: 0 (no fee).
+**Config:** `FEE_BPS`, `FEE_FLAT_USDC`, and `FEE_RECIPIENT` env vars (see `.env.example`). Defaults: 0 (no fee).
 
 ### Service Types
 
