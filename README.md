@@ -1,6 +1,8 @@
-# EscrowVault
+# Xenga
 
 An on-chain escrow and reputation system for secure, verifiable payments — for both humans and autonomous agents.
+
+**Website:** [xenga.xyz](https://xenga.xyz)
 
 ## Escrow State Machine
 

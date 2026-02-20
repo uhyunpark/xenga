@@ -16,8 +16,7 @@ export function Footer() {
           {/* Brand */}
           <div>
             <div className="mb-2 flex items-center gap-2 font-semibold">
-              <span className="text-accent">x402</span>
-              <span className="text-text-secondary">Escrow</span>
+              <span className="text-accent">Xenga</span>
             </div>
             <p className="text-sm text-text-tertiary">
               {isMockChain
@@ -102,8 +101,8 @@ export function Footer() {
 
         <div className="mt-10 border-t border-border-default pt-6 text-center text-xs text-text-tertiary">
           {isMockChain
-            ? "x402 Escrow Protocol · Mock Chain Mode · Events and tx hashes are simulated"
-            : "x402 Escrow Protocol · Built on Base Sepolia · All transactions use testnet USDC"}
+            ? "Xenga · Mock Chain Mode · Events and tx hashes are simulated"
+            : "Xenga · Built on Base Sepolia · All transactions use testnet USDC"}
         </div>
       </div>
     </footer>

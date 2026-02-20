@@ -42,8 +42,7 @@ export function Navbar() {
               href="/"
               className="flex items-center gap-2 rounded-lg border border-border-default bg-bg-secondary px-2.5 py-1.5 font-semibold transition-colors hover:border-border-active"
             >
-              <span className="text-accent">x402</span>
-              <span className="text-text-secondary">Escrow</span>
+              <span className="text-accent">Xenga</span>
             </Link>
 
             <div className="hidden items-center gap-1 md:flex">
