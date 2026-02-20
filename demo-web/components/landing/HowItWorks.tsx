@@ -30,22 +30,6 @@ app.post("/api/orders/:id/pay",
   }
 );`,
   },
-  {
-    label: "Smart Contract",
-    lang: "Solidity",
-    code: `// EscrowVault.sol — gasless escrow
-function createEscrowWithAuth(
-  bytes32 orderId,
-  address seller,
-  uint256 amount,
-  string serviceType,
-  uint256 releaseWindow,
-  // ERC-3009 signature params
-  address from, uint256 validAfter,
-  uint256 validBefore, bytes32 nonce,
-  uint8 v, bytes32 r, bytes32 s
-) external { ... }`,
-  },
 ];
 
 export function HowItWorks() {
@@ -61,7 +45,7 @@ export function HowItWorks() {
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           className="mb-4 text-center text-2xl font-semibold md:text-3xl"
         >
-          How It Works
+          Add escrow payments in minutes
         </motion.h2>
         <motion.p
           initial={{ opacity: 0, y: 20 }}
@@ -69,8 +53,7 @@ export function HowItWorks() {
           transition={{ delay: 0.1 }}
           className="mb-10 text-center text-text-secondary"
         >
-          Three layers working together: client SDK, server middleware, and smart
-          contract.
+          Two SDK calls — client and server. The rest is handled on-chain.
         </motion.p>
 
         <motion.div
