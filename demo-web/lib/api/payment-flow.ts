@@ -15,6 +15,7 @@ export interface PaymentRequired {
   serviceType: string;
   facilitatorFee?: string;
   feeBps?: number;
+  flatFee?: string;
 }
 
 export interface PaymentPayload {

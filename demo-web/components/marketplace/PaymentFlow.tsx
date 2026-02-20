@@ -723,7 +723,7 @@ export function PaymentFlow() {
                       {state.paymentRequired.facilitatorFee && BigInt(state.paymentRequired.facilitatorFee) > 0n && (
                         <>
                           <div className="flex justify-between text-text-tertiary">
-                            <span>Facilitator Fee ({state.paymentRequired.feeBps ? `${(state.paymentRequired.feeBps / 100).toFixed(1)}%` : ""})</span>
+                            <span>Facilitator Fee ({[state.paymentRequired.feeBps ? `${(state.paymentRequired.feeBps / 100).toFixed(1)}%` : "", state.paymentRequired.flatFee && BigInt(state.paymentRequired.flatFee) > 0n ? `$${formatUsdc(state.paymentRequired.flatFee)}` : ""].filter(Boolean).join(" + ") || ""})</span>
                             <span className="font-mono">
                               -{formatUsdc(state.paymentRequired.facilitatorFee)} USDC
                             </span>

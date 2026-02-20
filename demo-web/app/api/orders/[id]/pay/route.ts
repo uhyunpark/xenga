@@ -35,6 +35,7 @@ function buildDeps(): PaymentDeps {
       escrowVaultAddress: config.escrowVaultAddress,
       usdcAddress: config.usdcAddress,
       feeBps: config.feeBps,
+      flatFee: config.flatFee,
     },
   };
 }

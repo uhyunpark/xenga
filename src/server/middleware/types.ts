@@ -101,6 +101,7 @@ export interface PaymentDeps {
     escrowVaultAddress: Address;
     usdcAddress: Address;
     feeBps: number;
+    flatFee: bigint;
   };
 
   // ── Logging (optional) ──
