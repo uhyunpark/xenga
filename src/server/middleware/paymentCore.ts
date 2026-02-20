@@ -97,7 +97,8 @@ export async function processEscrowPayment(
 
   // ── Verify ──
   const feeBps = deps.config.feeBps;
-  const verifyFee = computeFee(BigInt(payload.value), feeBps);
+  const flatFee = deps.config.flatFee;
+  const verifyFee = computeFee(BigInt(payload.value), feeBps, flatFee);
 
   const paymentRequired: EscrowPaymentRequired = {
     scheme: "escrow",
@@ -111,6 +112,7 @@ export async function processEscrowPayment(
     serviceType: payload.serviceType,
     facilitatorFee: verifyFee.toString(),
     feeBps,
+    flatFee: flatFee.toString(),
   };
 
   const verification = await deps.verify(payload, paymentRequired);
@@ -236,7 +238,8 @@ async function buildPaymentRequiredResponse(
   }
 
   const feeBps = deps.config.feeBps;
-  const fee = computeFee(order.price, feeBps);
+  const flatFee = deps.config.flatFee;
+  const fee = computeFee(order.price, feeBps, flatFee);
 
   const paymentRequired: EscrowPaymentRequired = {
     scheme: "escrow",
@@ -250,6 +253,7 @@ async function buildPaymentRequiredResponse(
     serviceType: order.serviceType,
     facilitatorFee: fee.toString(),
     feeBps,
+    flatFee: flatFee.toString(),
   };
 
   const paymentRequirements = [paymentRequired];

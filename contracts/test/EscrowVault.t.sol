@@ -22,13 +22,14 @@ contract EscrowVaultTest is Test {
     bytes32 constant ORDER_ID = keccak256("order-1");
     uint256 constant AMOUNT = 5_000_000; // 5 USDC
     uint256 constant FEE_BPS = 100; // 1%
-    uint256 constant FEE = (AMOUNT * FEE_BPS) / 10000; // 50_000 (0.05 USDC)
+    uint256 constant FLAT_FEE = 50_000; // $0.05 USDC
+    uint256 constant FEE = (AMOUNT * FEE_BPS) / 10000 + FLAT_FEE; // 100_000 ($0.10)
     uint256 constant RELEASE_WINDOW = 7 days;
     uint256 constant DISPUTE_WINDOW = 3 days;
 
     function setUp() public {
         usdc = new MockUSDC();
-        vault = new EscrowVault(address(usdc), arbiter, feeRecipient, FEE_BPS);
+        vault = new EscrowVault(address(usdc), arbiter, feeRecipient, FEE_BPS, FLAT_FEE);
 
         // Mint USDC to buyer
         usdc.mint(buyer, 100_000_000); // 100 USDC
@@ -222,9 +223,11 @@ contract EscrowVaultTest is Test {
 
         e = vault.getEscrow(escrowId);
         assertEq(uint256(e.state), uint256(EscrowVault.EscrowState.Resolved));
-        // tradeAmount = AMOUNT - FEE = 4_950_000; buyer 70% = 3_465_000; seller 30% = 1_485_000
-        assertEq(usdc.balanceOf(buyer), 100_000_000 - AMOUNT + 3_465_000);
-        assertEq(usdc.balanceOf(seller), 1_485_000);
+        uint256 tradeAmount = AMOUNT - FEE;
+        uint256 expectedBuyer = (tradeAmount * 70) / 100;
+        uint256 expectedSeller = tradeAmount - expectedBuyer;
+        assertEq(usdc.balanceOf(buyer), 100_000_000 - AMOUNT + expectedBuyer);
+        assertEq(usdc.balanceOf(seller), expectedSeller);
         assertEq(usdc.balanceOf(feeRecipient), FEE);
     }
 
@@ -862,6 +865,8 @@ contract EscrowVaultTest is Test {
 
     function testFuzz_createEscrow(uint256 amount) public {
         vm.assume(amount > 0 && amount < 1e18);
+        uint256 expectedFee = (amount * FEE_BPS) / 10000 + FLAT_FEE;
+        vm.assume(expectedFee < amount); // fee must not exceed amount
 
         usdc.mint(buyer, amount);
 
@@ -872,7 +877,7 @@ contract EscrowVaultTest is Test {
 
         EscrowVault.Escrow memory e = vault.getEscrow(escrowId);
         assertEq(e.amount, amount);
-        assertEq(e.facilitatorFee, (amount * FEE_BPS) / 10000);
+        assertEq(e.facilitatorFee, expectedFee);
         assertEq(e.buyer, buyer);
         assertEq(e.seller, seller);
         assertEq(uint256(e.state), uint256(EscrowVault.EscrowState.Active));
@@ -882,33 +887,45 @@ contract EscrowVaultTest is Test {
 
     function test_setFeeConfig() public {
         address newRecipient = makeAddr("newFeeRecipient");
-        vault.setFeeConfig(newRecipient, 200);
+        vault.setFeeConfig(newRecipient, 200, 100_000);
 
-        (address recipient, uint256 bps) = vault.getFeeConfig();
+        (address recipient, uint256 bps, uint256 flat) = vault.getFeeConfig();
         assertEq(recipient, newRecipient);
         assertEq(bps, 200);
+        assertEq(flat, 100_000);
     }
 
     function test_setFeeConfigNotOwner() public {
         vm.prank(seller);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, seller));
-        vault.setFeeConfig(makeAddr("x"), 200);
+        vault.setFeeConfig(makeAddr("x"), 200, 0);
     }
 
     function test_feeExceedsMax() public {
         vm.expectRevert(EscrowVault.InvalidFee.selector);
-        vault.setFeeConfig(feeRecipient, 1001);
+        vault.setFeeConfig(feeRecipient, 1001, 0);
+    }
+
+    function test_flatFeeExceedsMax() public {
+        vm.expectRevert(EscrowVault.InvalidFee.selector);
+        vault.setFeeConfig(feeRecipient, 0, 50_000_001);
     }
 
     function test_feeWithZeroRecipient() public {
         // feeBps > 0 but feeRecipient == address(0) should revert
         vm.expectRevert(EscrowVault.InvalidFeeRecipient.selector);
-        vault.setFeeConfig(address(0), 100);
+        vault.setFeeConfig(address(0), 100, 0);
+    }
+
+    function test_flatFeeWithZeroRecipient() public {
+        // flatFee > 0 but feeRecipient == address(0) should revert
+        vm.expectRevert(EscrowVault.InvalidFeeRecipient.selector);
+        vault.setFeeConfig(address(0), 0, 50_000);
     }
 
     function test_zeroFeeMode() public {
         // Deploy a vault with zero fee
-        EscrowVault zeroFeeVault = new EscrowVault(address(usdc), arbiter, address(0), 0);
+        EscrowVault zeroFeeVault = new EscrowVault(address(usdc), arbiter, address(0), 0, 0);
 
         usdc.mint(buyer, AMOUNT);
         vm.startPrank(buyer);
@@ -931,7 +948,7 @@ contract EscrowVaultTest is Test {
 
         EscrowVault.Escrow memory e = vault.getEscrow(escrowId);
         assertEq(e.facilitatorFee, FEE);
-        assertEq(e.facilitatorFee, (AMOUNT * FEE_BPS) / 10000);
+        assertEq(e.facilitatorFee, (AMOUNT * FEE_BPS) / 10000 + FLAT_FEE);
     }
 
     function test_feeDistributionOnRelease() public {
@@ -963,12 +980,15 @@ contract EscrowVaultTest is Test {
         assertEq(usdc.balanceOf(feeRecipient), feeBalBefore);
     }
 
-    function testFuzz_feeAlwaysMatchesBps(uint256 amount, uint256 bps) public {
+    function testFuzz_feeAlwaysMatchesBpsAndFlat(uint256 amount, uint256 bps, uint256 flat) public {
         vm.assume(amount > 0 && amount < 1e18);
         vm.assume(bps <= 1000);
+        vm.assume(flat <= 50_000_000);
+        uint256 expectedFee = (amount * bps) / 10000 + flat;
+        vm.assume(expectedFee < amount); // fee must not exceed amount
 
-        address recipient = bps > 0 ? feeRecipient : address(0);
-        EscrowVault fuzzVault = new EscrowVault(address(usdc), arbiter, recipient, bps);
+        address recipient = (bps > 0 || flat > 0) ? feeRecipient : address(0);
+        EscrowVault fuzzVault = new EscrowVault(address(usdc), arbiter, recipient, bps, flat);
 
         usdc.mint(buyer, amount);
         vm.startPrank(buyer);
@@ -977,14 +997,50 @@ contract EscrowVaultTest is Test {
         vm.stopPrank();
 
         EscrowVault.Escrow memory e = fuzzVault.getEscrow(escrowId);
-        assertEq(e.facilitatorFee, (amount * bps) / 10000);
+        assertEq(e.facilitatorFee, expectedFee);
     }
 
     function test_zeroFeeAllowsZeroRecipient() public {
-        // feeBps = 0 allows feeRecipient = address(0)
-        vault.setFeeConfig(address(0), 0);
-        (address recipient, uint256 bps) = vault.getFeeConfig();
+        // feeBps = 0 and flatFee = 0 allows feeRecipient = address(0)
+        vault.setFeeConfig(address(0), 0, 0);
+        (address recipient, uint256 bps, uint256 flat) = vault.getFeeConfig();
         assertEq(recipient, address(0));
         assertEq(bps, 0);
+        assertEq(flat, 0);
+    }
+
+    // ──────────── Test: Flat fee specific ────────────
+
+    function test_flatFeeOnly() public {
+        // Deploy vault with feeBps=0, flatFee=50_000 ($0.05)
+        EscrowVault flatVault = new EscrowVault(address(usdc), arbiter, feeRecipient, 0, 50_000);
+
+        usdc.mint(buyer, AMOUNT);
+        vm.startPrank(buyer);
+        usdc.approve(address(flatVault), AMOUNT);
+        uint256 escrowId = flatVault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW);
+        vm.stopPrank();
+
+        EscrowVault.Escrow memory e = flatVault.getEscrow(escrowId);
+        assertEq(e.facilitatorFee, 50_000);
+
+        // Release — seller gets amount minus flat fee
+        vm.prank(buyer);
+        flatVault.releaseFunds(escrowId);
+
+        assertEq(usdc.balanceOf(seller), AMOUNT - 50_000);
+        assertEq(usdc.balanceOf(feeRecipient), 50_000);
+    }
+
+    function test_feeExceedsAmount() public {
+        // Deploy vault with flatFee equal to AMOUNT — creating escrow should revert
+        EscrowVault bigFeeVault = new EscrowVault(address(usdc), arbiter, feeRecipient, 0, AMOUNT);
+
+        usdc.mint(buyer, AMOUNT);
+        vm.startPrank(buyer);
+        usdc.approve(address(bigFeeVault), AMOUNT);
+        vm.expectRevert(EscrowVault.InvalidFee.selector);
+        bigFeeVault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW);
+        vm.stopPrank();
     }
 }

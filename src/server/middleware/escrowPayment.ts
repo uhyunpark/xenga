@@ -50,6 +50,7 @@ function buildExpressDeps(): PaymentDeps {
       escrowVaultAddress: config.escrowVaultAddress,
       usdcAddress: config.usdcAddress,
       feeBps: config.feeBps,
+      flatFee: config.flatFee,
     },
     logger,
   };

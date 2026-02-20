@@ -31,6 +31,7 @@ export const config = {
   sessionEscrowAddress: process.env.SESSION_ESCROW_ADDRESS as Address | undefined,
   facilitatorUrl: process.env.FACILITATOR_URL as string | undefined,
   feeBps: parseInt(process.env.FEE_BPS || "0", 10),
+  flatFee: BigInt(process.env.FEE_FLAT_USDC || "0"),
   feeRecipient: (process.env.FEE_RECIPIENT || undefined) as Address | undefined,
 };
 
@@ -59,8 +60,11 @@ export function validateConfig() {
   if (config.feeBps < 0 || config.feeBps > 1000) {
     throw new Error("FEE_BPS must be between 0 and 1000 (0-10%)");
   }
-  if (config.feeBps > 0 && !config.feeRecipient) {
-    throw new Error("FEE_RECIPIENT is required when FEE_BPS > 0");
+  if (config.flatFee < 0n || config.flatFee > 50_000_000n) {
+    throw new Error("FEE_FLAT_USDC must be between 0 and 50000000 (0-50 USDC)");
+  }
+  if ((config.feeBps > 0 || config.flatFee > 0n) && !config.feeRecipient) {
+    throw new Error("FEE_RECIPIENT is required when FEE_BPS > 0 or FEE_FLAT_USDC > 0");
   }
 }
 

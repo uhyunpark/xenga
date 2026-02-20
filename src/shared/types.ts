@@ -106,6 +106,7 @@ export interface EscrowPaymentRequired {
   serviceType: string;
   facilitatorFee?: string; // informational: stringified bigint
   feeBps?: number; // informational: basis points (100 = 1%)
+  flatFee?: string; // informational: stringified bigint (USDC smallest unit)
 }
 
 export interface EscrowPaymentPayload {

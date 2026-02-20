@@ -54,7 +54,9 @@ contract EscrowVault is Ownable2Step, Pausable {
     address public arbiter;
     address public feeRecipient;
     uint256 public feeBps;
+    uint256 public flatFee;
     uint256 public constant MAX_FEE_BPS = 1000; // 10% cap
+    uint256 public constant MAX_FLAT_FEE = 50_000_000; // 50 USDC cap (6 decimals)
 
     uint256 public nextEscrowId = 1;
     mapping(uint256 => Escrow) public escrows;
@@ -95,7 +97,7 @@ contract EscrowVault is Ownable2Step, Pausable {
     event DisputeResolved(uint256 indexed escrowId, uint256 buyerAmount, uint256 sellerAmount, uint256 feeAmount);
     event EscrowRefunded(uint256 indexed escrowId, uint256 buyerAmount);
     event ArbiterChanged(address indexed oldArbiter, address indexed newArbiter);
-    event FeeConfigUpdated(address indexed feeRecipient, uint256 feeBps);
+    event FeeConfigUpdated(address indexed feeRecipient, uint256 feeBps, uint256 flatFee);
 
     // ──────────────────────────── Errors ───────────────────────────
 
@@ -117,13 +119,15 @@ contract EscrowVault is Ownable2Step, Pausable {
 
     // ──────────────────────────── Constructor ──────────────────────
 
-    constructor(address _usdc, address _arbiter, address _feeRecipient, uint256 _feeBps) Ownable(msg.sender) {
+    constructor(address _usdc, address _arbiter, address _feeRecipient, uint256 _feeBps, uint256 _flatFee) Ownable(msg.sender) {
         if (_feeBps > MAX_FEE_BPS) revert InvalidFee();
-        if (_feeBps > 0 && _feeRecipient == address(0)) revert InvalidFeeRecipient();
+        if (_flatFee > MAX_FLAT_FEE) revert InvalidFee();
+        if ((_feeBps > 0 || _flatFee > 0) && _feeRecipient == address(0)) revert InvalidFeeRecipient();
         usdc = IERC20(_usdc);
         arbiter = _arbiter;
         feeRecipient = _feeRecipient;
         feeBps = _feeBps;
+        flatFee = _flatFee;
     }
 
     // ──────────────────────────── Modifiers ────────────────────────
@@ -210,7 +214,8 @@ contract EscrowVault is Ownable2Step, Pausable {
         if (buyer == seller) revert InvalidAddress();
         if (releaseWindow < DEFAULT_DISPUTE_WINDOW) revert ReleaseWindowTooShort();
 
-        uint256 fee = (amount * feeBps) / 10000;
+        uint256 fee = (amount * feeBps) / 10000 + flatFee;
+        if (fee >= amount) revert InvalidFee();
         escrowId = nextEscrowId++;
 
         escrows[escrowId] = Escrow({
@@ -479,15 +484,17 @@ contract EscrowVault is Ownable2Step, Pausable {
         emit ArbiterChanged(oldArbiter, _arbiter);
     }
 
-    function setFeeConfig(address _feeRecipient, uint256 _feeBps) external onlyOwner {
+    function setFeeConfig(address _feeRecipient, uint256 _feeBps, uint256 _flatFee) external onlyOwner {
         if (_feeBps > MAX_FEE_BPS) revert InvalidFee();
-        if (_feeBps > 0 && _feeRecipient == address(0)) revert InvalidFeeRecipient();
+        if (_flatFee > MAX_FLAT_FEE) revert InvalidFee();
+        if ((_feeBps > 0 || _flatFee > 0) && _feeRecipient == address(0)) revert InvalidFeeRecipient();
         feeRecipient = _feeRecipient;
         feeBps = _feeBps;
-        emit FeeConfigUpdated(_feeRecipient, _feeBps);
+        flatFee = _flatFee;
+        emit FeeConfigUpdated(_feeRecipient, _feeBps, _flatFee);
     }
 
-    function getFeeConfig() external view returns (address, uint256) {
-        return (feeRecipient, feeBps);
+    function getFeeConfig() external view returns (address, uint256, uint256) {
+        return (feeRecipient, feeBps, flatFee);
     }
 }

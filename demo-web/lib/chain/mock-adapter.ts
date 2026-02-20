@@ -24,7 +24,7 @@ export class MockChainAdapter implements ChainAdapter {
     payload: EscrowPaymentPayload
   ): Promise<{ txHash: Hash; escrowId: number }> {
     const feeBps = config.feeBps;
-    const fee = (BigInt(payload.value) * BigInt(feeBps)) / 10000n;
+    const fee = (BigInt(payload.value) * BigInt(feeBps)) / 10000n + config.flatFee;
 
     const escrowId = createMockEscrow({
       orderId: payload.orderId,
