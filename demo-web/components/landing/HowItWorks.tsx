@@ -1,11 +1,13 @@
 "use client";
 
 import { motion, useInView } from "framer-motion";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 
-const tabs = [
+const steps = [
   {
-    label: "Client SDK",
+    number: "01",
+    label: "Client",
+    description: "Sign and send the payment",
     lang: "TypeScript",
     code: `// Automatic escrow payment flow
 const { payment } = await escrowFetch(
@@ -18,7 +20,9 @@ const { payment } = await escrowFetch(
 // payment.escrowId — escrow ID`,
   },
   {
-    label: "Server Middleware",
+    number: "02",
+    label: "Server",
+    description: "Protect your endpoint",
     lang: "TypeScript",
     code: `// One-line payment protection
 app.post("/api/orders/:id/pay",
@@ -30,26 +34,9 @@ app.post("/api/orders/:id/pay",
   }
 );`,
   },
-  {
-    label: "Smart Contract",
-    lang: "Solidity",
-    code: `// EscrowVault.sol — gasless escrow
-function createEscrowWithAuth(
-  bytes32 orderId,
-  address seller,
-  uint256 amount,
-  string serviceType,
-  uint256 releaseWindow,
-  // ERC-3009 signature params
-  address from, uint256 validAfter,
-  uint256 validBefore, bytes32 nonce,
-  uint8 v, bytes32 r, bytes32 s
-) external { ... }`,
-  },
 ];
 
 export function HowItWorks() {
-  const [activeTab, setActiveTab] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-50px" });
 
@@ -69,49 +56,35 @@ export function HowItWorks() {
           transition={{ delay: 0.1 }}
           className="mb-10 text-center text-text-secondary"
         >
-          Three layers working together: client SDK, server middleware, and smart
-          contract.
+          Add escrow-protected payments to your API in two steps.
         </motion.p>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ delay: 0.2 }}
-          className="panel-surface overflow-hidden rounded-2xl"
-        >
-          {/* Tab bar */}
-          <div className="flex border-b border-border-default bg-bg-tertiary/55">
-            {tabs.map((tab, i) => (
-              <button
-                key={tab.label}
-                onClick={() => setActiveTab(i)}
-                className={`relative flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                  activeTab === i
-                    ? "text-text-primary"
-                    : "text-text-tertiary hover:text-text-secondary"
-                }`}
-              >
-                {tab.label}
-                {activeTab === i && (
-                  <motion.div
-                    layoutId="tab-underline"
-                    className="absolute bottom-0 left-0 right-0 h-[2px] bg-accent"
-                  />
-                )}
-              </button>
-            ))}
-          </div>
-
-          {/* Code content */}
-          <div className="p-4">
-            <div className="mb-2 text-xs text-text-tertiary">
-              {tabs[activeTab].lang}
-            </div>
-            <pre className="overflow-x-auto font-mono text-[13px] leading-relaxed text-text-secondary">
-              {highlightBlock(tabs[activeTab].code)}
-            </pre>
-          </div>
-        </motion.div>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          {steps.map((step, i) => (
+            <motion.div
+              key={step.number}
+              initial={{ opacity: 0, y: 20 }}
+              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              transition={{ delay: 0.2 + i * 0.1 }}
+              className="panel-surface overflow-hidden rounded-2xl p-5"
+            >
+              <div className="mb-3 flex items-baseline gap-2">
+                <span className="font-mono text-xs text-accent">
+                  {step.number}
+                </span>
+                <span className="text-sm font-semibold text-text-primary">
+                  {step.label}
+                </span>
+                <span className="text-xs text-text-secondary">
+                  — {step.description}
+                </span>
+              </div>
+              <pre className="overflow-x-auto font-mono text-[13px] leading-relaxed text-text-secondary">
+                {highlightBlock(step.code)}
+              </pre>
+            </motion.div>
+          ))}
+        </div>
       </div>
     </section>
   );
