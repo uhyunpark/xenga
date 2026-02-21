@@ -28,7 +28,6 @@ export const config = {
     process.env.ESCROW_VAULT_ADDRESS,
     isMock ? MOCK_ESCROW_VAULT_ADDRESS : undefined
   ),
-  sessionEscrowAddress: process.env.SESSION_ESCROW_ADDRESS as Address | undefined,
   facilitatorUrl: process.env.FACILITATOR_URL as string | undefined,
   feeBps: parseInt(process.env.FEE_BPS || "0", 10),
   flatFee: BigInt(process.env.FEE_FLAT_USDC || "0"),

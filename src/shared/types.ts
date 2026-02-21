@@ -156,62 +156,6 @@ export interface ResolveDisputeRequest {
   resolution: string;
 }
 
-// ──────────────────────── Session Types ────────────────────────
-
-export enum SessionState {
-  None = 0,
-  Active = 1,
-  Settled = 2,
-  Voided = 3,
-  Expired = 4,
-}
-
-export interface SessionPaymentRequired {
-  scheme: "session-escrow";
-  network: string;
-  sessionContract: Address;
-  asset: Address;
-  maxAmount: string;
-  sellerAddress: Address;
-  duration: number;
-  pricePerUse: string;
-}
-
-export interface SessionPaymentPayload {
-  scheme: "session-escrow";
-  network: string;
-  from: Address;
-  to: Address; // session contract
-  value: string;
-  validAfter: string;
-  validBefore: string;
-  nonce: Hash;
-  signature: {
-    v: number;
-    r: Hash;
-    s: Hash;
-  };
-  sellerAddress: Address;
-  duration: number;
-}
-
-export interface SessionPaymentResponse {
-  success: boolean;
-  txHash: Hash;
-  sessionId: number;
-  expiresAt: number;
-}
-
-export interface OnChainSession {
-  buyer: Address;
-  seller: Address;
-  depositAmount: bigint;
-  capturedAmount: bigint;
-  createdAt: bigint;
-  expiresAt: bigint;
-  state: SessionState;
-}
-
 // ──────────────────────── Reputation ────────────────────────
 
 /** Lightweight seller reputation info included in 402 responses */
