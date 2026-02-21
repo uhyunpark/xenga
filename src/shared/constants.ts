@@ -28,12 +28,6 @@ export const MARKETPLACE_RELEASE_WINDOW = 7 * 24 * 60 * 60; // 7 days
 export const MARKETPLACE_DISPUTE_WINDOW = 3 * 24 * 60 * 60; // 3 days
 export const AGENT_RELEASE_WINDOW = 60 * 60; // 1 hour
 
-// Session constants
-export const SERVICE_TYPE_SESSION = "session-api";
-export const DEFAULT_SESSION_DURATION = 60 * 60; // 1 hour
-export const DEFAULT_SESSION_DEPOSIT = 10_000000; // 10 USDC
-export const SESSION_PRICE_PER_USE = 100000; // 0.10 USDC per API call
-
 // ──────────────────────── Reputation Thresholds ────────────────────────
 
 export const REPUTATION_HIGH_THRESHOLD = 80;

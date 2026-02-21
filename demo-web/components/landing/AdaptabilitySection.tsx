@@ -52,7 +52,6 @@ const useCaseCards = [
     ),
     items: [
       "Auto-verified delivery for machine-to-machine payments",
-      "Session micropayments for high-frequency API access",
       "Reputation gating screens low-trust counterparties",
     ],
     footer:
