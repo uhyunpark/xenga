@@ -6,8 +6,8 @@ import { usePathname } from "next/navigation";
 import { WalletSelector } from "@/components/ui/WalletSelector";
 
 const NAV_ITEMS = [
-  { href: "/marketplace", label: "Human Escrow" },
   { href: "/agent", label: "Agent" },
+  { href: "/marketplace", label: "Human Escrow" },
 ];
 
 export function Navbar() {
@@ -40,9 +40,9 @@ export function Navbar() {
           <div className="flex items-center gap-6">
             <Link
               href="/"
-              className="flex items-center gap-2 rounded-lg border border-border-default bg-bg-secondary px-2.5 py-1.5 font-semibold transition-colors hover:border-border-active"
+              className="font-semibold text-accent transition-colors hover:text-accent/80"
             >
-              <span className="text-accent">Xenga</span>
+              Xenga
             </Link>
 
             <div className="hidden items-center gap-1 md:flex">

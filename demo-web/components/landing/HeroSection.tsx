@@ -42,7 +42,16 @@ export function HeroSection() {
               : "Explore the escrow lifecycle with on-chain settlement, signed USDC authorization, and programmable release logic."}
           </p>
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <Link
+              href="/agent"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent-purple px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-purple/90"
+            >
+              Launch Agent Demo
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 8h10M9 4l4 4-4 4" />
+              </svg>
+            </Link>
             <Link
               href="/marketplace"
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-accent/90"
