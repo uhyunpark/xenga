@@ -426,7 +426,16 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
       inspector.addEvent({
         type: "http_response",
         label: "Reputation Updated",
-        data: { buyer: buyerRep?.buyer ? { score: buyerRep.buyer.score } : null, seller: updatedSellerRep?.seller ? { score: updatedSellerRep.seller.score } : null },
+        data: {
+          status: 200,
+          body: {
+            buyer: buyerRep?.buyer ? { score: buyerRep.buyer.score, confidence: buyerRep.confidence } : null,
+            seller: updatedSellerRep?.seller ? { score: updatedSellerRep.seller.score, confidence: updatedSellerRep.confidence } : null,
+            ...(!buyerRep?.buyer && !updatedSellerRep?.seller
+              ? { note: "No on-chain stats yet (mock mode or new wallets)" }
+              : {}),
+          },
+        },
       });
 
       addLine({ type: "reputation", text: "[reputation] On-chain stats updated", delay: 0 });
@@ -819,7 +828,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
           </span>
 
           {!isRunning && !isComplete && (
-            <div className="ml-auto flex flex-wrap gap-2">
+            <div className="w-full flex flex-wrap justify-center gap-2">
               <button
                 onClick={() => runDemo("happy")}
                 disabled={!operatorAddress}
@@ -850,7 +859,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
             </div>
           )}
           {isComplete && (
-            <div className="ml-auto flex flex-wrap gap-2">
+            <div className="w-full flex flex-wrap justify-center gap-2">
               <button
                 onClick={() => {
                   if (activeScenario === "reputation") runReputationDemo();
