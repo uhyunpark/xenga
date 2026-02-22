@@ -4,7 +4,7 @@ import type { DisputeRequest, ResolveDisputeRequest } from "../../shared/types.j
 import { getDb } from "../db/index.js";
 import { getOrderById } from "../services/orderService.js";
 import { resolveDisputeOnChain } from "../facilitator/settler.js";
-import { walletAuth, type AuthenticatedRequest } from "../middleware/auth.js";
+import { walletAuth, apiKeyAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { getArbiterAddress } from "../config.js";
 
 const router = Router();
@@ -45,7 +45,7 @@ router.post("/:orderId/dispute", (req, res) => {
 });
 
 // ──────────── List disputes ────────────
-router.get("/", (_req, res) => {
+router.get("/", apiKeyAuth(), (_req, res) => {
   const db = getDb();
   const disputes = db.prepare("SELECT * FROM disputes ORDER BY created_at DESC").all();
   res.json(disputes);

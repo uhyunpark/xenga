@@ -9,13 +9,14 @@ import {
 } from "../services/orderService.js";
 import { getServiceType } from "../service-types/index.js";
 import { escrowPaymentMiddleware, type EscrowPaymentRequest } from "../middleware/escrowPayment.js";
+import { apiKeyAuth } from "../middleware/auth.js";
 
 const router = Router();
 
 const VALID_STATUSES: OrderStatus[] = ["created", "pending_payment", "escrowed", "delivery_confirmed", "completed", "disputed", "resolved", "refunded"];
 
 // ──────────── List orders ────────────
-router.get("/", (req, res) => {
+router.get("/", apiKeyAuth(), (req, res) => {
   const filters: { status?: OrderStatus; sellerAddress?: Address; limit?: number; offset?: number } = {};
   if (req.query.status) {
     const status = req.query.status as string;
@@ -59,7 +60,7 @@ router.get("/:id", (req, res) => {
 });
 
 // ──────────── Create order ────────────
-router.post("/", (req, res) => {
+router.post("/", apiKeyAuth(), (req, res) => {
   const body = req.body as CreateOrderRequest;
 
   if (!body.title || !body.price || !body.serviceType || !body.sellerAddress) {

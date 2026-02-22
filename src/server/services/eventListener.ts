@@ -15,6 +15,7 @@ import { getDb } from "../db/index.js";
 import { updateOrderStatus, getOrderByOrderId } from "./orderService.js";
 import { getServiceType } from "../service-types/index.js";
 import { logger } from "./logger.js";
+import { dispatchWebhookEvent, chainEventToWebhookType } from "./webhookService.js";
 
 let _publicClient: ReturnType<typeof createPublicClient> | undefined;
 const getPublicClient = () => {
@@ -190,6 +191,20 @@ function saveEvent(eventName: string, escrowId: number, log: any) {
       Number(log.logIndex),
       JSON.stringify(log.args ?? {})
     );
+
+    // Dispatch webhook for this event (non-blocking)
+    const webhookType = chainEventToWebhookType(eventName);
+    if (webhookType) {
+      const orderId = getEscrowOrderId(escrowId);
+      dispatchWebhookEvent({
+        type: webhookType,
+        escrowId,
+        orderId: orderId ?? undefined,
+        txHash: log.transactionHash,
+        data: log.args ?? {},
+        timestamp: Math.floor(Date.now() / 1000),
+      });
+    }
   } catch (err) {
     logger.error("events", `Failed to save event: ${(err as Error).message}`);
   }

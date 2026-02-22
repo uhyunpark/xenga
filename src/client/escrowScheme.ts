@@ -6,6 +6,7 @@ import {
   toHex,
 } from "viem";
 import { buildReceiveAuthSigningParams } from "../shared/eip712.js";
+import { networkToChainId } from "../shared/constants.js";
 import type { EscrowPaymentPayload, EscrowPaymentRequired } from "../shared/types.js";
 
 /**
@@ -34,6 +35,7 @@ export async function signEscrowPayment(
     amount: BigInt(paymentRequired.amount),
     nonce,
     usdcAddress: usdcAddress ?? (paymentRequired.asset as Address),
+    chainId: networkToChainId(paymentRequired.network),
   });
 
   // Sign EIP-712 typed data

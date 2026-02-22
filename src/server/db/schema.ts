@@ -40,6 +40,14 @@ export const SCHEMA = `
     UNIQUE(tx_hash, log_index)
   );
 
+  CREATE TABLE IF NOT EXISTS webhooks (
+    id TEXT PRIMARY KEY,
+    url TEXT NOT NULL,
+    secret TEXT NOT NULL,
+    event_types TEXT NOT NULL DEFAULT '[]',
+    created_at INTEGER NOT NULL
+  );
+
   CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
   CREATE INDEX IF NOT EXISTS idx_orders_seller ON orders(seller_address);
   CREATE INDEX IF NOT EXISTS idx_orders_buyer ON orders(buyer_address);
