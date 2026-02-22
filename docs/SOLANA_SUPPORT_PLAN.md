@@ -76,15 +76,16 @@ pub struct EscrowConfig {
     pub bump: u8,
 }
 
-// Escrow — PDA seed: [b"escrow", escrow_id.to_le_bytes()]
+// Escrow — PDA seed: [b"escrow", order_id.as_ref()]  (see Errata E5 — orderId avoids race condition)
 #[account]
 pub struct Escrow {
-    pub escrow_id: u64,
-    pub order_id: [u8; 32],       // bytes32 matching EVM orderId
+    pub escrow_id: u64,            // informational counter (not used for PDA)
+    pub order_id: [u8; 32],       // bytes32 matching EVM orderId — ALSO used as PDA seed
     pub buyer: Pubkey,
     pub seller: Pubkey,
     pub amount: u64,              // USDC atomic units (6 decimals)
-    pub service_type: String,     // max 32 chars
+    #[max_len(32)]
+    pub service_type: String,     // max 32 chars (see Errata E12)
     pub state: EscrowState,       // u8 enum matching EVM states
     pub created_at: i64,
     pub release_window: i64,
@@ -109,8 +110,9 @@ pub struct Stats {
     pub bump: u8,
 }
 
-// Escrow vault token account — PDA seed: [b"vault", escrow_id.to_le_bytes()]
+// Escrow vault token account — PDA seed: [b"vault", order_id.as_ref()]
 // (ATA owned by the escrow PDA, holds USDC for that escrow)
+// Note: facilitator pays ~0.002 SOL rent per vault ATA (see Errata E11)
 ```
 
 ### Token flow: Partial signing (replacing ERC-3009)
@@ -159,7 +161,7 @@ Anchor `emit!()` for all state transitions (EscrowCreated, DeliveryConfirmed, Es
 
 ```typescript
 import type { PaymentScheme, SettleResult } from "../../shared/schemes.js";
-import type { SolanaEscrowPayload } from "./types.js";
+import type { SolanaEscrowPayload } from "../solana/types.js";  // (see Errata E9)
 import { verifySolanaEscrowPayment } from "../solana/verifier.js";
 import { settleSolanaEscrow } from "../solana/settler.js";
 
@@ -392,10 +394,11 @@ export { signSolanaEscrowPayment } from "./solanaEscrowScheme.js";
 
 ### No changes needed (already chain-agnostic)
 
-- `paymentCore.ts` (through deps injection)
 - `dispatch.ts` / `facilitator.ts` routes (scheme registry handles routing)
 - Protocol Inspector (events are strings, works with any chain)
 - Navbar, landing page, marketplace/agent page structure
+
+**Note**: `paymentCore.ts` is EVM-typed and NOT chain-agnostic (see Errata E3). Solana orders bypass it via the scheme registry (`dispatch.ts` path) or a separate Solana payment handler.
 
 ---
 
@@ -520,8 +523,120 @@ SOLANA_USDC_MINT=4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU
 - `src/server/facilitator/settler.ts` — NO changes
 - `src/server/facilitator/verifier.ts` — NO changes
 - `src/server/services/eventListener.ts` — NO changes
-- `src/server/services/reputationService.ts` — NO changes (scoring logic is chain-agnostic)
 - `src/server/config.ts` — NO changes
 - `src/server/schemes/escrow.ts` — NO changes
 - `contracts/` — NO changes
 - All 59 files using viem types — NO changes
+
+---
+
+## Errata: Issues Found During Code Review
+
+The following issues were identified by reviewing every touched file against the plan. Each must be addressed during implementation.
+
+### E1 (Critical): `escrowFetch.ts` hardcodes `scheme === "escrow"`
+
+**Problem**: `src/client/escrowFetch.ts` line 45 — `isEscrowPaymentRequired()` rejects anything where `o.scheme !== "escrow"`. Line 119 searches for `r.scheme === "escrow"`. Line 154 throws `UnsupportedSchemeError` if scheme isn't `"escrow"`. The proposed "~10 lines" change is insufficient.
+
+**Fix**: Create a parallel `solanaEscrowFetch()` function in `src/client/solanaEscrowFetch.ts` with its own `isSolanaPaymentRequired()` validator and Solana wallet type. Export both from `index.ts`. Consumers choose which to call based on their chain context. The existing `escrowFetch` stays 100% unchanged — no risk to EVM flow.
+
+### E2 (Critical): `Order.sellerAddress: Address` type mismatch
+
+**Problem**: `Order` interface in `src/shared/types.ts` uses `sellerAddress: Address` where `Address = \`0x${string}\``. Solana base58 pubkeys can't satisfy this type. Same for `buyerAddress`, `CreateOrderRequest.sellerAddress`, etc.
+
+**Fix**: The DB schema (`seller_address TEXT`) already stores plain strings. Don't change `types.ts`. Instead, when reading Solana orders from the DB, use `as unknown as Address` type assertions in the service layer. This is safe because the viem `Address` type is only used for type-checking, not runtime validation. The existing EVM code paths never encounter Solana addresses.
+
+### E3 (Critical): `PaymentDeps` interface is EVM-typed
+
+**Problem**: `src/server/middleware/types.ts:71` — `PaymentDeps` has `config.escrowVaultAddress: Address`, `config.usdcAddress: Address`, `OrderStatusUpdate.txHash: \`0x${string}\``, `OrderStatusUpdate.buyerAddress: Address`. None of these work for Solana.
+
+**Fix**: For Solana orders, **bypass `paymentCore.ts` entirely**. Create a separate `src/server/middleware/solanaPaymentCore.ts` (or handle Solana settlement directly in the Solana scheme's `settle()` method — which already happens via `dispatch.ts`). The 402 response for Solana orders is built in `solanaEscrowScheme.buildRequirement()` and returned via the facilitator route. The demo-web Solana pay route wires `deps.settle` to the Solana chain adapter instead of the EVM one.
+
+### E4 (Medium): `reputationService.ts` can't handle Solana addresses
+
+**Problem**: `computeReputation()` takes `Address` (viem type) and calls EVM `readContract()`. Can't be called with Solana pubkeys.
+
+**Fix**: Extract the pure scoring functions (`computeSellerScore`, `computeBuyerScore`, `computeVolumeBonus`, `getConfidence`) into `src/server/services/reputationScoring.ts`. Create `src/server/solana/reputationService.ts` that reads Stats PDAs and calls the same scoring functions. The reputation route dispatches: `address.startsWith("0x") ? computeReputation() : computeSolanaReputation()`.
+
+### E5 (Medium): Escrow PDA race condition with sequential IDs
+
+**Problem**: Using `next_escrow_id` as PDA seed — two concurrent clients reading the same ID would create a collision.
+
+**Fix**: Use `order_id: [u8; 32]` as the PDA seed instead. Change seeds to:
+- Escrow PDA: `[b"escrow", order_id.as_ref()]`
+- Vault PDA: `[b"vault", order_id.as_ref()]`
+
+The `order_id` is unique per order (it's a keccak256 hash) and known to the client before tx building. Keep `next_escrow_id` in config for informational purposes only.
+
+### E6 (Medium): Route address validation rejects Solana addresses
+
+**Problem**: `reputation.ts:18` and `orders.ts:83` both call `isAddress()` from viem, which rejects Solana base58 addresses.
+
+**Fix**: Add Solana address detection before the viem check:
+```typescript
+const isSolanaAddress = (addr: string) =>
+  !addr.startsWith("0x") && addr.length >= 32 && addr.length <= 44 && /^[1-9A-HJ-NP-Za-km-z]+$/.test(addr);
+```
+In `orders.ts`, branch validation based on `body.network`. In `reputation.ts`, accept either format.
+
+### E7 (Medium): Blockhash expiry in partial-signing flow
+
+**Problem**: Solana tx blockhash expires after ~60 seconds. Client→server→Solana latency may exceed this.
+
+**Fix**: Use **durable nonces** (Solana's NonceAccount feature). The facilitator maintains a nonce account. The 402 response includes `nonceAccount` and `nonceAuthority` pubkeys. The client uses `SystemProgram.nonceAdvance()` instruction instead of a blockhash. Add `src/server/solana/nonce.ts` for nonce account management.
+
+### E8 (Low): `events` table assumes EVM concepts
+
+**Problem**: `block_number INTEGER` and `log_index INTEGER` with `UNIQUE(tx_hash, log_index)`. Solana has slots, not blocks, and no log_index concept.
+
+**Fix**: Store Solana slot number in `block_number`, use `0` for `log_index`. The uniqueness constraint still works since Solana tx signatures are globally unique.
+
+### E9 (Low): Import path error in scheme code
+
+**Problem**: Plan shows `import from "./types.js"` in `src/server/schemes/solana-escrow.ts`, but types are at `src/server/solana/types.ts`.
+
+**Fix**: Correct path: `"../solana/types.js"`.
+
+### E10 (Low): demo-web `ChainAdapter` is EVM-typed
+
+**Problem**: `demo-web/lib/chain/types.ts` has `ChainAdapter` with `settleEscrow(payload: EscrowPaymentPayload)`, `fundWallet(address: Address)` — all EVM types. The pay route calls `getChainAdapter().settleEscrow(payload)`.
+
+**Fix**: Create `SolanaChainAdapter` implementing a new `SolanaChainAdapterInterface` in `demo-web/lib/chain/solana-adapter.ts`. Modify `getChainAdapter()` to accept an optional `network` parameter, or create a separate `getSolanaChainAdapter()` factory.
+
+### E11 (Low): Account rent for vault ATAs
+
+**Problem**: Each escrow creates a vault ATA (~0.002 SOL rent). Plan doesn't address who pays.
+
+**Fix**: The facilitator (as tx fee payer) pays rent. Document that the facilitator Solana wallet needs sufficient SOL. Consider a shared vault ATA approach to reduce rent costs.
+
+### E12 (Low): `String` in Anchor needs `max_len`
+
+**Problem**: `service_type: String` in Escrow struct needs a max length for Anchor to compute account size.
+
+**Fix**: Add `#[max_len(32)]` attribute on the `service_type` field.
+
+### E13 (Low): `demo-web/lib/api/payment-flow.ts` is EVM-typed
+
+**Problem**: Lines 6-35 define `PaymentRequired` and `PaymentPayload` with viem `Address`, `Hash` types. These local types mirror `EscrowPaymentRequired`/`EscrowPaymentPayload`.
+
+**Fix**: Create a parallel `solana-payment-flow.ts` for the Solana path, or make the payment flow function accept a generic `signPayment` callback that can be either EVM or Solana.
+
+---
+
+### Revised modified files count (accounting for errata)
+
+The errata adds ~5 new files and adjusts complexity of existing modifications:
+
+**Additional new files**:
+- `src/client/solanaEscrowFetch.ts` (E1 — parallel to escrowFetch.ts)
+- `src/server/services/reputationScoring.ts` (E4 — extracted pure scoring functions)
+- `src/server/solana/reputationService.ts` (E4 — Solana stats → scoring)
+- `src/server/solana/nonce.ts` (E7 — durable nonce management)
+- `demo-web/lib/chain/solana-adapter.ts` (E10 — Solana chain adapter)
+- `demo-web/lib/api/solana-payment-flow.ts` (E13 — Solana payment flow)
+
+**Adjusted modifications**:
+- `src/server/routes/reputation.ts` — ~15 lines (was ~10; E6 adds address detection)
+- `src/server/routes/orders.ts` — ~10 lines (was ~5; E7 adds address validation branching)
+- `src/server/services/reputationService.ts` — Extract scoring functions to new file (E4; the existing file still works, just imports from the new file)
+- `demo-web/app/api/orders/[id]/pay/route.ts` — ~10 lines (E3/E10; route Solana orders to Solana adapter)
