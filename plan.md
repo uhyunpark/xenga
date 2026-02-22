@@ -1,111 +1,91 @@
-# SEO Improvements Plan for demo-web
+# Plan: Buyer Identity Verification for Reputation-Aware Escrow Terms
 
-## Current State
+## Problem
 
-The demo-web Next.js 15 app has **minimal SEO**: just a basic `title` and `description` in the root `layout.tsx`. There are no OpenGraph tags, no Twitter cards, no sitemap, no robots.txt, no favicon, no structured data, no page-level metadata, and no `public/` directory.
+At 402 time (step 1), the buyer hasn't identified themselves yet. The server uses
+a placeholder `buyerScore: 50, buyerConfidence: "low"` when calling `adjustParams()`.
+This means the "both sides 80+ = fast lane" path is effectively dead code — it can
+never trigger because the buyer score is always 50.
 
----
+If we naively add a `X-BUYER-ADDRESS` header to step 1, anyone could claim a
+high-reputation address to get better terms. We need cryptographic verification.
 
-## Plan
+## Approach: Claim-then-Verify
 
-### 1. Enhance root metadata in `app/layout.tsx`
+**Step 1 (402 path):** Buyer sends their address via `X-BUYER-ADDRESS` header.
+Server uses it for `adjustParams()` and returns personalized terms in the 402
+response. This gives accurate escrow parameters upfront.
 
-Expand the existing `metadata` export with:
+**Step 2 (settlement path):** The ERC-3009 signature reveals the real buyer
+address (`payload.from`). The server **re-runs `adjustParams()`** with the real
+buyer to compute the authoritative `releaseWindow`, and uses THAT for the on-chain
+escrow — ignoring whatever the payload claimed.
 
-- **`metadataBase`** — canonical base URL via `process.env.NEXT_PUBLIC_BASE_URL` with a sensible fallback (e.g. `http://localhost:3000`)
-- **`openGraph`** — `title`, `description`, `siteName: "Xenga"`, `type: "website"`, `locale: "en_US"`
-- **`twitter`** — `card: "summary"` (not `summary_large_image` since we have no OG image), `title`, `description`
-- **`robots`** — `index: true, follow: true`
-- **`authors`** / **`creator`** — project attribution
+No extra signature. No UX friction. The existing ERC-3009 sig is the proof.
+Spoofing is pointless because the server always re-computes with the real address.
 
-Note: `keywords` meta tag is intentionally omitted — Google ignores it and it provides no ranking benefit.
+## Changes
 
-### 2. Add page-level metadata for `/marketplace` and `/agent`
+### 1. `src/server/middleware/paymentCore.ts` — 402 path
 
-Both pages currently have `"use client"` at the top, which prevents exporting `metadata` (a server-only API). The standard Next.js pattern: split each into a thin server-component `page.tsx` wrapper + a client component.
-
-**Marketplace:**
-- Rename existing `app/marketplace/page.tsx` → `app/marketplace/MarketplacePage.tsx` (keep `"use client"` and all existing code)
-- New `app/marketplace/page.tsx`: exports `metadata` (`title: "Marketplace Demo — Xenga"`, marketplace-specific description + OG/twitter) and renders `<MarketplacePage />`
-
-**Agent:**
-- Rename existing `app/agent/page.tsx` → `app/agent/AgentPage.tsx` (keep `"use client"` and all existing code)
-- New `app/agent/page.tsx`: exports `metadata` (`title: "Agent Service Demo — Xenga"`, agent-specific description + OG/twitter) and renders `<AgentPage />`
-
-### 3. Add `app/sitemap.ts`
-
-Static sitemap using Next.js `MetadataRoute.Sitemap`:
-
-```
-/              priority: 1.0   changeFrequency: weekly
-/marketplace   priority: 0.8   changeFrequency: weekly
-/agent         priority: 0.8   changeFrequency: weekly
+In `processEscrowPayment()` (line 77), extract the claimed buyer address:
+```typescript
+const claimedBuyer = ctx.getHeader("x-buyer-address") as Address | undefined;
+return buildPaymentRequiredResponse(order, deps, log, claimedBuyer);
 ```
 
-Uses `metadataBase` or env var for the URL prefix.
+In `buildPaymentRequiredResponse()`, add `claimedBuyer?: Address` param:
+- If provided AND `deps.computeReputation` is available, fetch buyer rep
+  in parallel with seller rep via `Promise.all`
+- Pass real buyer scores to `adjustParams()` instead of placeholder
+- If absent, fall back to current behavior (buyerScore: 50, "low")
 
-### 4. Add `app/robots.ts`
+### 2. `src/server/middleware/paymentCore.ts` — settlement path
 
-Using Next.js `MetadataRoute.Robots`:
-- Allow all user agents on `/`
-- Disallow `/api/*` (API routes should not be indexed)
-- Reference the sitemap URL
+After `deps.verify()` succeeds (line 118), before settling:
+- Look up buyer reputation using `payload.from` (the cryptographically verified address)
+- Look up seller reputation (or reuse from 402 if cached)
+- Re-run `adjustParams()` with real buyer + seller scores
+- Override `payload.releaseWindow` with the re-computed authoritative value
+- Settle on-chain with the correct window
 
-### 5. Add favicon
+This ensures spoofing is impossible — even if step 1 used a fake address,
+step 2 always computes the real window from the real signer.
 
-Create `app/icon.svg` — a simple SVG favicon with an escrow/shield motif in the app's accent color scheme. Next.js auto-discovers `icon.svg` in the `app/` directory and serves it as the favicon with correct headers.
+### 3. `src/client/escrowFetch.ts`
 
-Skip `apple-icon.png` for now — generating a real PNG requires design tooling or `ImageResponse` overhead. Can be added later.
+In `escrowFetch()`, before the first request:
+- Extract buyer address from `options.walletClient.account.address`
+- Add `X-BUYER-ADDRESS` header to the initial request
 
-### 6. Add `app/manifest.ts`
+Backward-compatible: servers that don't understand the header ignore it.
 
-Web app manifest via Next.js `MetadataRoute.Manifest`:
-- `name: "Xenga"`, `short_name: "Xenga"`
-- `description` matching the root metadata
-- `start_url: "/"`, `display: "standalone"`
-- `theme_color` and `background_color` matching the dark theme (`#0a0a0f` / `#12121a`)
+### 4. `demo-web/lib/api/payment-flow.ts`
 
-### 7. Add JSON-LD structured data to the landing page
+In `requestPayment()`:
+- Add optional `buyerAddress?: Address` parameter
+- If provided, include `X-BUYER-ADDRESS` header in the initial POST
+- Update inspector event to show the new header
 
-Add a `<script type="application/ld+json">` block to `app/page.tsx`:
-- `@type: "WebApplication"`
-- `name`, `description`, `url`, `applicationCategory: "DeveloperApplication"`
-- `operatingSystem: "Web"`
+### 5. Demo components (callers of `requestPayment()`)
 
-The landing page is already a server component, so this is a simple inline script addition.
+Find where `requestPayment()` is called in marketplace and agent components,
+pass the wallet's `account.address`.
 
-### 8. Minor config tweaks in `next.config.ts`
+## Security Analysis
 
-- **`poweredByHeader: false`** — removes `X-Powered-By: Next.js` header (security hygiene, minor Lighthouse benefit)
+| Attack | Result |
+|---|---|
+| Claim high-rep address in step 1, sign with own key in step 2 | Server re-computes window from real signer → correct window on-chain. Attacker sees optimistic 402 but gets real terms. |
+| No header sent | Falls back to buyerScore: 50 (current behavior). No regression. |
+| Invalid/garbage address header | Reputation lookup returns 0 escrows → unknown buyer → default window. Harmless. |
 
-Note: Security headers (X-Frame-Options, CSP, etc.) are out of scope — they improve Lighthouse scores but aren't SEO per se.
+## Files Summary
 
----
-
-## Files to Create/Modify
-
-| File | Action | Details |
-|------|--------|---------|
-| `demo-web/app/layout.tsx` | **Modify** | Expand `metadata` with OG, twitter, robots, metadataBase |
-| `demo-web/app/marketplace/MarketplacePage.tsx` | **Create** | Move existing client component here (rename, no code changes) |
-| `demo-web/app/marketplace/page.tsx` | **Rewrite** | Server wrapper: metadata export + `<MarketplacePage />` |
-| `demo-web/app/agent/AgentPage.tsx` | **Create** | Move existing client component here (rename, no code changes) |
-| `demo-web/app/agent/page.tsx` | **Rewrite** | Server wrapper: metadata export + `<AgentPage />` |
-| `demo-web/app/page.tsx` | **Modify** | Add JSON-LD structured data script |
-| `demo-web/app/sitemap.ts` | **Create** | Static sitemap for 3 pages |
-| `demo-web/app/robots.ts` | **Create** | Allow public pages, disallow `/api/*` |
-| `demo-web/app/icon.svg` | **Create** | SVG favicon |
-| `demo-web/app/manifest.ts` | **Create** | Web app manifest |
-| `demo-web/next.config.ts` | **Modify** | Add `poweredByHeader: false` |
-
-**Total: 6 modified/rewritten, 5 new files**
-
-## Out of Scope
-
-- **OG image generation** (`opengraph-image.tsx`) — requires design assets; upgrade twitter card to `summary_large_image` when added
-- **`apple-icon.png`** — needs `ImageResponse` or design tooling
-- **`keywords` meta tag** — Google ignores it
-- **Security headers** (CSP, X-Frame-Options) — not SEO, separate concern
-- **Analytics / Search Console** — deployment-dependent
-- **i18n** — single-language project
-- **Performance** (image optimization, font subsetting) — separate concern
+| File | Change |
+|---|---|
+| `src/server/middleware/paymentCore.ts` | Read X-BUYER-ADDRESS in 402 path; re-compute release window at settlement |
+| `src/client/escrowFetch.ts` | Send X-BUYER-ADDRESS on initial request |
+| `demo-web/lib/api/payment-flow.ts` | Accept + forward buyerAddress |
+| `demo-web/components/marketplace/PaymentFlow.tsx` | Pass buyer address (if applicable) |
+| `demo-web/components/agent/AgentTerminal.tsx` | Pass buyer address (if applicable) |
