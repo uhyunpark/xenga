@@ -62,9 +62,11 @@ On-chain credit scoring for agents/wallets, computed from escrow transaction his
 - **Dynamic params**: Service types use `adjustParams()` to shorten/extend release windows based on counterparty reputation (e.g. high-trust pairs get 3-day instead of 7-day marketplace window).
 - **Client integration**: Seller reputation is included in payment responses; clients can check via `onSellerReputation` callback before paying.
 
-**Scoring formulas:**
-- Seller: completionRate×40 + (1-disputeRate)×25 + (1-refundRate)×15 + resolutionFairness×10 + volumeBonus×10
-- Buyer: completionRate×45 + (1-disputeRate)×25 + (1-frivolousDisputeRate)×20 + volumeBonus×10
+**Scoring formulas** (each component's max weight sums to 100):
+- Seller: completionRate×40 + (1-disputeRate)×25 + (1-refundRate)×15 + resolutionFairness×10 + volumeBonus (0-10, log-scaled)
+- Buyer: completionRate×45 + (1-disputeRate)×25 + (1-frivolousDisputeRate)×20 + volumeBonus (0-10, log-scaled)
+- Scores are clamped to [0, 100]. `resolutionFairness` defaults to 1.0 (clean record) when seller has no resolved disputes.
+- Overall score: escrow-count-weighted average of seller + buyer scores (not simple average).
 - Confidence: `"low"` (<3 escrows), `"medium"` (3-9), `"high"` (≥10)
 
 **Key files:**

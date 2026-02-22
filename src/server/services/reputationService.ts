@@ -199,12 +199,18 @@ function computeSellerScore(
     Number(stats.refundedCount) / total;
   const volumeBonus = computeVolumeBonus(stats.totalAmount);
 
-  return Math.round(
-    completionRate * 40 +
-      (1 - disputeRate) * 25 +
-      (1 - refundRate) * 15 +
-      resolutionFairness * 10 +
-      volumeBonus * 10
+  return Math.min(
+    100,
+    Math.max(
+      0,
+      Math.round(
+        completionRate * 40 +
+          (1 - disputeRate) * 25 +
+          (1 - refundRate) * 15 +
+          resolutionFairness * 10 +
+          volumeBonus
+      )
+    )
   );
 }
 
@@ -221,11 +227,17 @@ function computeBuyerScore(
     Number(stats.disputedCount) / total;
   const volumeBonus = computeVolumeBonus(stats.totalAmount);
 
-  return Math.round(
-    completionRate * 45 +
-      (1 - disputeRate) * 25 +
-      (1 - frivolousDisputeRate) * 20 +
-      volumeBonus * 10
+  return Math.min(
+    100,
+    Math.max(
+      0,
+      Math.round(
+        completionRate * 45 +
+          (1 - disputeRate) * 25 +
+          (1 - frivolousDisputeRate) * 20 +
+          volumeBonus
+      )
+    )
   );
 }
 
@@ -267,7 +279,7 @@ export async function computeReputation(
     const resolutionFairness =
       resolution.resolvedCount > 0
         ? (resolution.sellerFavorRate ?? 0)
-        : 0.5; // neutral default
+        : 1.0; // no disputes = clean record
     const total = Number(sellerStats.totalEscrows);
 
     seller = {
@@ -304,10 +316,15 @@ export async function computeReputation(
     maxEscrows = Math.max(maxEscrows, total);
   }
 
-  // Overall = weighted average of available scores
+  // Overall = escrow-count-weighted average of available scores
   let overall = 0;
   if (seller && buyer) {
-    overall = Math.round((seller.score + buyer.score) / 2);
+    const totalWeight = seller.totalEscrows + buyer.totalEscrows;
+    overall = Math.round(
+      (seller.score * seller.totalEscrows +
+        buyer.score * buyer.totalEscrows) /
+        totalWeight
+    );
   } else if (seller) {
     overall = seller.score;
   } else if (buyer) {

@@ -54,7 +54,7 @@ function computeSellerScoreRaw(
       (1 - disputeRate) * 25 +
       (1 - refundRate) * 15 +
       resolutionFairness * 10 +
-      volumeBonus * 10
+      volumeBonus
   );
 }
 
@@ -70,7 +70,7 @@ function computeBuyerScoreRaw(
     completionRate * 45 +
       (1 - disputeRate) * 25 +
       (1 - frivolousDisputeRate) * 20 +
-      volumeBonus * 10
+      volumeBonus
   );
 }
 
@@ -144,7 +144,7 @@ export function simulateRounds(rounds: RoundDefinition[]): RoundSnapshot[] {
       resolvedDisputes.length > 0
         ? resolvedDisputes.filter((d) => d.buyerPct <= 50).length /
           resolvedDisputes.length
-        : 0.5; // neutral default when no disputes
+        : 1.0; // no disputes = clean record
 
     // Compute frivolous dispute rate (buyer got < 30%)
     const frivolousDisputeRate =
@@ -221,8 +221,8 @@ export interface ScreeningAgentProfile {
 }
 
 // Pre-computed profiles — scores verified against computeSellerScoreRaw formula:
-//   score = completionRate*40 + (1-disputeRate)*25 + (1-refundRate)*15 + fairness*10 + volumeBonus*10
-//   volumeBonus = min(10, log10(amount) * 3.33)
+//   score = completionRate*40 + (1-disputeRate)*25 + (1-refundRate)*15 + fairness*10 + volumeBonus
+//   volumeBonus = min(10, log10(amount) * 3.33)  [already 0-10 scaled]
 //
 // Alice:  0 escrows  → score 0,  confidence "low"    → REJECTED (no history)
 // Bob:   12 escrows  → score 39, confidence "high"   → REJECTED (below threshold 50)
