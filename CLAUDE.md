@@ -46,9 +46,10 @@ None → Active → DeliveryConfirmed → Completed      (buyer releases)
 ```
 
 - **Active**: escrow created, USDC locked. Buyer can release anytime, seller can confirm delivery or refund.
-- **DeliveryConfirmed**: seller confirmed delivery, dispute window (3 days) starts. Buyer can release or dispute.
+- **DeliveryConfirmed**: seller confirmed delivery, dispute window starts. Buyer can release or dispute.
 - **AutoRelease timing**: From Active state, requires `releaseWindow + disputeWindow`. From DeliveryConfirmed, requires `releaseWindow` from creation AND `disputeWindow` from delivery confirmation.
 - **Dispute timing**: From DeliveryConfirmed, within `disputeWindow` of confirmation. From Active, between `releaseWindow - disputeWindow` and `releaseWindow + disputeWindow` from creation.
+- **disputeWindow**: Owner-settable global default (default: 3 days, bounds: 1 hour–30 days). Set via `EscrowVault.setDisputeWindow()`. Stored per-escrow at creation — existing escrows keep their original value.
 - **Resolved**: arbiter splits funds by buyer percentage (0-100). Fee goes to feeRecipient, split applies to `amount - fee`.
 - **Refunded**: buyer gets full deposit back including fee — facilitator absorbs cost.
 
@@ -92,6 +93,23 @@ The facilitator pays all gas fees for on-chain transactions (createEscrowWithAut
 - Stats track gross `amount` (not net) — reputation scoring uses transaction volume
 
 **Config:** `FEE_BPS`, `FEE_FLAT_USDC`, and `FEE_RECIPIENT` env vars (see `.env.example`). Defaults: 0 (no fee).
+
+### Post-Deployment Configuration
+
+All owner-callable setters. Ownership uses `Ownable2Step` — transfer requires a 2-step confirmation (e.g. `transferOwnership(gnosisSafeAddress)` then `acceptOwnership()` from new owner).
+
+| Config | Contract | Setter | Default | Bounds |
+|---|---|---|---|---|
+| Arbiter address | EscrowVault | `setArbiter(address)` | deployer | — |
+| Fee config | EscrowVault | `setFeeConfig(recipient, bps, flat)` | 0 | max 10% + 50 USDC |
+| Dispute window | EscrowVault | `setDisputeWindow(uint256)` | 3 days | 1 hour – 30 days |
+| Pause / unpause | EscrowVault, SessionEscrow | `pause()` / `unpause()` | unpaused | — |
+| Facilitator address | SessionEscrow | `setFacilitator(address)` | — | — |
+| Chainlink forwarder | AutoReleaseKeeper | `setForwarder(address)` | — | — |
+| Max batch size | AutoReleaseKeeper | `setMaxBatchSize(uint256)` | 20 | 1 – 100 |
+
+**Design note — why `releaseWindow` is per-escrow but `disputeWindow` is a global default:**
+`releaseWindow` is a business timing parameter that must vary by service type (1h for agent-service, 7d for marketplace). It is computed by the server per-escrow from service types + reputation and stored in the escrow struct. `disputeWindow` is a consumer protection parameter — a uniform "cooling off period" — set globally by the owner so it cannot be manipulated by the facilitator on a per-escrow basis.
 
 ### Service Types
 
@@ -169,6 +187,7 @@ demo-web/
 - **`@types/express` v5**: `req.params` values are `string | string[]`, cast to `string` when needed
 - **Foundry tests**: default `block.timestamp` is 1 (not 0); use explicit absolute timestamps with `vm.warp()` rather than relative offsets from captured `block.timestamp` (via_ir can change evaluation order)
 - **ABI source of truth**: Foundry artifacts in `contracts/out/` → run `sync-abi` to regenerate `src/shared/abi.ts`
+- **`disputeWindow` vs `releaseWindow`**: `releaseWindow` is per-escrow (set at creation from service type config). `disputeWindow` is a global owner-set default (applies to all new escrows, stored in each escrow struct at creation). Changing it post-deployment does not affect existing escrows.
 - **AutomationCompatibleInterface**: defined locally in `contracts/src/interfaces/` (Chainlink repo too large to install)
 - **Workspaces**: root `package.json` has `"workspaces": ["demo-web"]`; run `bun install` from root to link
 

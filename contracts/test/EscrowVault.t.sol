@@ -1043,4 +1043,61 @@ contract EscrowVaultTest is Test {
         bigFeeVault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW);
         vm.stopPrank();
     }
+
+    // ──────────── Test: setDisputeWindow ────────────
+
+    function test_setDisputeWindow() public {
+        uint256 newWindow = 1 days;
+        vm.expectEmit(false, false, false, true);
+        emit EscrowVault.DisputeWindowUpdated(3 days, newWindow);
+        vault.setDisputeWindow(newWindow);
+        assertEq(vault.disputeWindow(), newWindow);
+
+        // New escrows use the updated window
+        vm.startPrank(buyer);
+        usdc.approve(address(vault), AMOUNT);
+        uint256 escrowId = vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", 1 days);
+        vm.stopPrank();
+        EscrowVault.Escrow memory e = vault.getEscrow(escrowId);
+        assertEq(e.disputeWindow, newWindow);
+    }
+
+    function test_setDisputeWindow_onlyOwner() public {
+        address nonOwner = makeAddr("nonOwner");
+        vm.prank(nonOwner);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonOwner));
+        vault.setDisputeWindow(1 days);
+    }
+
+    function test_setDisputeWindow_bounds() public {
+        // Below MIN_DISPUTE_WINDOW (1 hours)
+        vm.expectRevert(EscrowVault.InvalidDisputeWindow.selector);
+        vault.setDisputeWindow(1 hours - 1);
+
+        // Exactly MIN_DISPUTE_WINDOW — allowed
+        vault.setDisputeWindow(1 hours);
+        assertEq(vault.disputeWindow(), 1 hours);
+
+        // Above MAX_DISPUTE_WINDOW (30 days)
+        vm.expectRevert(EscrowVault.InvalidDisputeWindow.selector);
+        vault.setDisputeWindow(30 days + 1);
+
+        // Exactly MAX_DISPUTE_WINDOW — allowed
+        vault.setDisputeWindow(30 days);
+        assertEq(vault.disputeWindow(), 30 days);
+    }
+
+    function test_setDisputeWindow_existingEscrowsUnaffected() public {
+        // Create escrow with default 3-day dispute window
+        uint256 escrowId = _createStandardEscrow();
+        EscrowVault.Escrow memory eBefore = vault.getEscrow(escrowId);
+        assertEq(eBefore.disputeWindow, 3 days);
+
+        // Owner changes the global dispute window
+        vault.setDisputeWindow(1 hours);
+
+        // Existing escrow still has its original window
+        EscrowVault.Escrow memory eAfter = vault.getEscrow(escrowId);
+        assertEq(eAfter.disputeWindow, 3 days);
+    }
 }

@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {EscrowVault} from "../src/EscrowVault.sol";
 import {AutoReleaseKeeper} from "../src/AutoReleaseKeeper.sol";
 import {MockUSDC} from "./mocks/MockUSDC.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract AutoReleaseKeeperTest is Test {
     EscrowVault public vault;
@@ -19,7 +20,7 @@ contract AutoReleaseKeeperTest is Test {
 
     function setUp() public {
         usdc = new MockUSDC();
-        vault = new EscrowVault(address(usdc), arbiter);
+        vault = new EscrowVault(address(usdc), arbiter, address(0), 0, 0);
         keeper = new AutoReleaseKeeper(address(vault), 10);
 
         usdc.mint(buyer, 100_000_000);
@@ -146,5 +147,52 @@ contract AutoReleaseKeeperTest is Test {
 
         EscrowVault.Escrow memory e = vault.getEscrow(1);
         assertEq(uint256(e.state), uint256(EscrowVault.EscrowState.AutoReleased));
+    }
+
+    // ──────────── Test: setMaxBatchSize ────────────
+
+    function test_setMaxBatchSize() public {
+        vm.expectEmit(false, false, false, true);
+        emit AutoReleaseKeeper.MaxBatchSizeUpdated(10, 50);
+        keeper.setMaxBatchSize(50);
+        assertEq(keeper.maxBatchSize(), 50);
+
+        // Verify it actually caps batch output at new size
+        vm.warp(1000);
+        for (uint256 i = 0; i < 60; i++) {
+            usdc.mint(buyer, 5_000_000);
+            _createEscrow(bytes32(i), 1 hours);
+        }
+        vm.warp(1000 + 1 hours + DISPUTE_WINDOW + 1);
+
+        bytes memory checkData = abi.encode(uint256(1), uint256(60));
+        (, bytes memory performData) = keeper.checkUpkeep(checkData);
+        uint256[] memory ids = abi.decode(performData, (uint256[]));
+        assertEq(ids.length, 50);
+    }
+
+    function test_setMaxBatchSize_onlyOwner() public {
+        address nonOwner = makeAddr("nonOwner");
+        vm.prank(nonOwner);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonOwner));
+        keeper.setMaxBatchSize(50);
+    }
+
+    function test_setMaxBatchSize_bounds() public {
+        // Zero is invalid
+        vm.expectRevert(AutoReleaseKeeper.InvalidBatchSize.selector);
+        keeper.setMaxBatchSize(0);
+
+        // Above MAX_BATCH_SIZE_LIMIT (100) is invalid
+        vm.expectRevert(AutoReleaseKeeper.InvalidBatchSize.selector);
+        keeper.setMaxBatchSize(101);
+
+        // Exactly MAX_BATCH_SIZE_LIMIT — allowed
+        keeper.setMaxBatchSize(100);
+        assertEq(keeper.maxBatchSize(), 100);
+
+        // Minimum (1) — allowed
+        keeper.setMaxBatchSize(1);
+        assertEq(keeper.maxBatchSize(), 1);
     }
 }

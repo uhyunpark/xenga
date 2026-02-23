@@ -61,7 +61,9 @@ contract EscrowVault is Ownable2Step, Pausable {
     uint256 public nextEscrowId = 1;
     mapping(uint256 => Escrow) public escrows;
 
-    uint256 public constant DEFAULT_DISPUTE_WINDOW = 3 days;
+    uint256 public disputeWindow = 3 days; // owner-settable global default for new escrows
+    uint256 public constant MIN_DISPUTE_WINDOW = 1 hours;
+    uint256 public constant MAX_DISPUTE_WINDOW = 30 days;
 
     struct Stats {
         uint256 totalEscrows;
@@ -98,6 +100,7 @@ contract EscrowVault is Ownable2Step, Pausable {
     event EscrowRefunded(uint256 indexed escrowId, uint256 buyerAmount);
     event ArbiterChanged(address indexed oldArbiter, address indexed newArbiter);
     event FeeConfigUpdated(address indexed feeRecipient, uint256 feeBps, uint256 flatFee);
+    event DisputeWindowUpdated(uint256 oldWindow, uint256 newWindow);
 
     // ──────────────────────────── Errors ───────────────────────────
 
@@ -116,6 +119,7 @@ contract EscrowVault is Ownable2Step, Pausable {
     error ReleaseWindowTooShort();
     error InvalidFee();
     error InvalidFeeRecipient();
+    error InvalidDisputeWindow();
 
     // ──────────────────────────── Constructor ──────────────────────
 
@@ -212,7 +216,7 @@ contract EscrowVault is Ownable2Step, Pausable {
         uint256 releaseWindow
     ) internal returns (uint256 escrowId) {
         if (buyer == seller) revert InvalidAddress();
-        if (releaseWindow < DEFAULT_DISPUTE_WINDOW) revert ReleaseWindowTooShort();
+        if (releaseWindow < disputeWindow) revert ReleaseWindowTooShort();
 
         uint256 fee = (amount * feeBps) / 10000 + flatFee;
         if (fee >= amount) revert InvalidFee();
@@ -228,7 +232,7 @@ contract EscrowVault is Ownable2Step, Pausable {
             createdAt: block.timestamp,
             releaseWindow: releaseWindow,
             deliveryConfirmedAt: 0,
-            disputeWindow: DEFAULT_DISPUTE_WINDOW,
+            disputeWindow: disputeWindow,
             facilitatorFee: fee
         });
 
@@ -482,6 +486,12 @@ contract EscrowVault is Ownable2Step, Pausable {
         address oldArbiter = arbiter;
         arbiter = _arbiter;
         emit ArbiterChanged(oldArbiter, _arbiter);
+    }
+
+    function setDisputeWindow(uint256 newWindow) external onlyOwner {
+        if (newWindow < MIN_DISPUTE_WINDOW || newWindow > MAX_DISPUTE_WINDOW) revert InvalidDisputeWindow();
+        emit DisputeWindowUpdated(disputeWindow, newWindow);
+        disputeWindow = newWindow;
     }
 
     function setFeeConfig(address _feeRecipient, uint256 _feeBps, uint256 _flatFee) external onlyOwner {
