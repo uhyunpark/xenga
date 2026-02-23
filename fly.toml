@@ -1,0 +1,57 @@
+# fly.toml — Xenga Facilitator
+# Deploy: fly launch --no-deploy, then fly secrets set ..., then fly deploy
+# Docs: https://fly.io/docs/reference/configuration/
+
+app = "xenga-facilitator"
+primary_region = "sjc"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  # SQLite file lives on the persistent volume mounted at /data
+  DATABASE_PATH = "/data/x402-escrow.db"
+  # Set to your frontend origin in production, e.g. "https://xenga.vercel.app"
+  CORS_ORIGIN = "*"
+
+# Secrets (set via `fly secrets set`, never commit values):
+#   fly secrets set PRIVATE_KEY="0x..."
+#   fly secrets set ESCROW_VAULT_ADDRESS="0x..."
+#   fly secrets set BASE_SEPOLIA_RPC="https://..."   # optional
+#   fly secrets set FEE_RECIPIENT="0x..."             # if using fees
+#   fly secrets set API_KEYS="sk_live_..."            # if using API auth
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Keep at least one machine running — the event listener and wallet monitor
+  # must not stop between requests.
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 200
+    soft_limit = 150
+
+  [[http_service.checks]]
+    grace_period = "15s"
+    interval = "30s"
+    method = "GET"
+    path = "/health"
+    timeout = "5s"
+
+[[vm]]
+  # shared-cpu-1x: 1 shared vCPU, configurable RAM
+  # Upgrade to performance-1x if you need dedicated CPU for high throughput.
+  size = "shared-cpu-1x"
+  memory = "512mb"
+
+# Persistent volume for SQLite — survives deploys and machine restarts.
+# Create before first deploy: fly volumes create xenga_data --region sjc --size 1
+[[mounts]]
+  source = "xenga_data"
+  destination = "/data"
+  initial_size = "1gb"
