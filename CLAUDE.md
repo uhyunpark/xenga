@@ -5,14 +5,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Run Commands
 
 ```bash
-# Server (Express + SQLite)
-bun run dev                    # Dev mode with watch
+# Facilitator (Express + SQLite) — handles all chain interaction
+bun run dev                    # Dev mode with watch (port 3000)
 bun run start                  # Production start
 
-# Demo Web (Next.js 15)
-cd demo-web && bun run dev     # Dev mode on port 3000 (includes API + UI)
-cd demo-web && bun run build   # Production build
-cd demo-web && bun run start   # Production start
+# Web (Next.js 15) — pure frontend, calls facilitator API
+cd web && bun run dev          # Dev mode (port 3001)
+cd web && bun run build        # Production build
+cd web && bun run start        # Production start
+
+# Local development (two terminals):
+# Terminal 1: bun run dev
+# Terminal 2: cd web && NEXT_PUBLIC_FACILITATOR_URL=http://localhost:3000 bun run dev
 
 # Contracts (Foundry)
 bun run build:contracts        # forge build (from contracts/)
@@ -22,19 +26,37 @@ cd contracts && forge test -vvvv  # Verbose output with traces
 
 # ABI sync (run after contract changes)
 bun run build:contracts && bun run sync-abi
+
+# Docker (facilitator only)
+docker build -t xenga-facilitator .
+docker run -p 8080:8080 --env-file .env xenga-facilitator
 ```
 
 ## Architecture
 
 On-chain escrow and reputation system on Base Sepolia using USDC (ERC-3009 gasless transfers). The x402 protocol provides the HTTP integration layer.
 
-**Four layers:**
-- **`contracts/`** — Foundry project: EscrowVault (escrow state machine + stats), SessionEscrow (session micropayments), AutoReleaseKeeper (Chainlink automation), MockUSDC (test token)
-- **`src/server/`** — Facilitator server: settles escrows on-chain, computes reputation scores, serves API. Includes x402 payment middleware for HTTP-triggered escrow creation.
-- **`src/client/`** — Client SDK: EIP-712 signing, reputation lookup (`getReputation()`), and x402 payment flow (`escrowFetch` with optional `onSellerReputation` callback)
-- **`demo-web/`** — Next.js 15 App Router demo: interactive escrow lifecycle with Protocol Inspector
+**Split deployment:**
+- **`web/`** — Next.js 15 frontend deployed on **Vercel**. Pure client-side: pages, wallet management, EIP-712 signing, Protocol Inspector. Calls the facilitator API via `NEXT_PUBLIC_FACILITATOR_URL`.
+- **`src/server/`** — Express facilitator deployed on **GCP Cloud Run**. Handles all chain interaction: settlement, event listening, reputation, order management, SQLite DB. Runs with `PRIVATE_KEY` for gas.
 
-**Shared code** (`src/shared/`): types, constants, EIP-712 domain/types, and auto-generated ABIs (`abi.ts` — never edit manually, use `sync-abi`). Note: `getBuyerStats`/`buyerStats` ABI entries were manually added pending a `sync-abi` run after contract redeployment.
+```
+Vercel (web/)                    GCP Cloud Run (src/server/)
+┌──────────────────┐             ┌──────────────────────────┐
+│ Next.js Frontend │   fetch     │ Express Facilitator      │
+│ Pages + Signing  │────────────>│ REST API + Chain + SQLite│
+└──────────────────┘   CORS      └──────────────────────────┘
+        │                                   │
+        │ signTypedData                     │ PRIVATE_KEY (gas)
+        ▼                                   ▼
+   User's Browser                  EscrowVault (Base Sepolia)
+```
+
+**Other layers:**
+- **`contracts/`** — Foundry project: EscrowVault (escrow state machine + stats), SessionEscrow (session micropayments), AutoReleaseKeeper (Chainlink automation), MockUSDC (test token)
+- **`src/client/`** — Client SDK: EIP-712 signing, reputation lookup (`getReputation()`), and x402 payment flow (`escrowFetch` with optional `onSellerReputation` callback)
+
+**Shared code** (`src/shared/`): types, constants, EIP-712 domain/types, and auto-generated ABIs (`abi.ts` — never edit manually, use `sync-abi`). The web app imports `@shared/` via webpack alias for types and EIP-712 signing functions (client-safe, no server deps).
 
 ### Escrow Lifecycle (On-Chain)
 
@@ -110,27 +132,18 @@ HTTP transport for triggering escrow creation. The contracts can also be called 
 5. Server verifies signature off-chain (`facilitator/verifier.ts`), submits `createEscrowWithAuth` on-chain (`facilitator/settler.ts`)
 6. Returns **200** with `X-PAYMENT-RESPONSE` header
 
-## Demo Web (`demo-web/`)
+## Web (`web/`)
 
-Next.js 15 App Router app that replaces the Express server for demo purposes. Imports existing server logic directly via webpack aliases — no code duplication. See `demo-web/CLAUDE.md` for full context on the chain adapter, wallet system, protocol inspector, and payment flow internals.
+Next.js 15 App Router frontend. Deployed on Vercel. Calls the Express facilitator API for all backend operations — no server-side code, no SQLite, no chain interaction.
 
 ### Structure
 
 ```
-demo-web/
+web/
   app/
     page.tsx                 # Landing page
     marketplace/page.tsx     # Interactive marketplace demo
     agent/page.tsx           # Auto-advancing agent service demo
-    api/                     # Route Handlers (replace Express routes)
-      health/                # GET — server status
-      orders/                # GET/POST orders
-      orders/[id]/pay/       # POST — core x402 payment flow
-      orders/[id]/confirm-delivery/  # POST — demo delivery confirmation
-      disputes/              # POST dispute, POST resolve
-      escrows/[escrowId]/    # GET on-chain state
-      reputation/[address]/  # GET reputation score + GET history
-      demo/fund/             # POST — faucet for demo wallets
   components/
     landing/                 # Hero, ProtocolFlow, DemoCards, HowItWorks, Footer
     marketplace/             # PaymentFlow, ProductGrid, StepTracker, SellerPanel
@@ -139,27 +152,28 @@ demo-web/
     ui/                      # Badge, AddressDisplay, TxLink, UsdcAmount, JsonViewer, WalletSelector, ReputationBadge
     layout/                  # Navbar
   lib/
+    api/client.ts                 # facilitatorFetch() + facilitatorUrl() — all API calls go through here
+    api/payment-flow.ts           # Decomposed x402 client flow with inspector hooks
     wallet/WalletProvider.tsx     # Demo wallet (sessionStorage) + browser wallet (MetaMask)
     protocol-inspector/context.tsx # Inspector event bus + auto-tab-switching
-    api/payment-flow.ts           # Decomposed x402 client flow with inspector hooks
+    env/isMockChainClient.ts      # Client-side mock chain detection
     utils.ts                      # cn(), shortenAddress(), formatUsdc()
-  instrumentation.ts         # Registers service types, inits DB, starts event listener on server boot
 ```
 
 ### Key Configuration
 
-- **`next.config.ts`**: webpack aliases (`@server/` → `../src/server/`, `@shared/` → `../src/shared/`), `extensionAlias` (`.js` → `.ts` for existing server code), `serverExternalPackages: ['better-sqlite3']`, viem deduplication
-- **`tsconfig.json`**: path aliases matching webpack, `moduleResolution: bundler`
-- **`instrumentation.ts`**: runs once on server start — registers service types, initializes SQLite, starts event listener
-- **Environment**: same vars as root `.env.example` plus `DEMO_MODE=true`
+- **`next.config.ts`**: webpack alias (`@shared/` → `../src/shared/`), `extensionAlias` (`.js` → `.ts` for shared code), TS loader for `../src/shared`
+- **`tsconfig.json`**: path alias `@shared/*` → `../src/shared/*`, `moduleResolution: bundler`
+- **Environment**: `NEXT_PUBLIC_FACILITATOR_URL` (required for production, empty for same-origin dev)
 
-### Demo Web Technical Notes
+### Web Technical Notes
 
-- **Imports from parent `src/`**: Route handlers import `@server/services/orderService`, `@server/facilitator/verifier`, etc. directly. Existing server code uses `.js` extensions (Node ESM), resolved by webpack `extensionAlias` config.
+- **API client**: All `fetch()` calls go through `lib/api/client.ts` which prepends `NEXT_PUBLIC_FACILITATOR_URL`. When empty (local dev), paths are relative.
+- **`@shared/` imports**: Frontend imports types (`ReputationScore`) and pure functions (`buildReceiveAuthSigningParams`) from `src/shared/` via webpack alias. These have no server dependencies.
 - **Wallet**: `WalletProvider` manages ephemeral demo wallets (`generatePrivateKey()` stored in `sessionStorage`) and browser wallets (`window.ethereum`). Both expose viem `WalletClient`.
 - **Protocol Inspector**: React context + 4-tab panel showing HTTP traffic, EIP-712 signatures, on-chain transactions, and escrow state machine. Events emitted by `payment-flow.ts` during the x402 flow.
-- **No CORS needed**: API routes and pages are same-origin in Next.js.
-- **Demo funding**: `POST /api/demo/fund` sends 10 USDC + 0.005 ETH from operator wallet. Rate-limited to 100 USDC/hr per IP+address. Requires `DEMO_MODE=true`.
+- **CORS**: Required since frontend and facilitator are on different origins. Express facilitator has `CORS_ORIGIN` env var (defaults to `*`).
+- **Demo funding**: `POST /api/demo/fund` on the facilitator sends 10 USDC + 0.005 ETH from operator wallet. Rate-limited to 100 USDC/hr per IP+address. Requires `DEMO_MODE=true`.
 
 ## Key Technical Notes
 
@@ -168,13 +182,21 @@ demo-web/
 - **Foundry tests**: default `block.timestamp` is 1 (not 0); use explicit absolute timestamps with `vm.warp()` rather than relative offsets from captured `block.timestamp` (via_ir can change evaluation order)
 - **ABI source of truth**: Foundry artifacts in `contracts/out/` → run `sync-abi` to regenerate `src/shared/abi.ts`
 - **AutomationCompatibleInterface**: defined locally in `contracts/src/interfaces/` (Chainlink repo too large to install)
-- **Workspaces**: root `package.json` has `"workspaces": ["demo-web"]`; run `bun install` from root to link
+- **Workspaces**: root `package.json` has `"workspaces": ["packages/*", "web"]`; run `bun install` from root to link
 
 ## Environment
 
-Requires `.env` (see `.env.example`): `PRIVATE_KEY`, `ESCROW_VAULT_ADDRESS`, optionally `BASE_SEPOLIA_RPC` and `PORT`.
+### Facilitator (`src/server/`)
+Requires `.env` (see `.env.example`): `PRIVATE_KEY`, `ESCROW_VAULT_ADDRESS`, optionally `BASE_SEPOLIA_RPC`, `PORT`, `CORS_ORIGIN`, `DEMO_MODE`.
 
-For `demo-web/`, copy these same vars into `demo-web/.env` and add `DEMO_MODE=true`.
+### Web (`web/`)
+Requires `NEXT_PUBLIC_FACILITATOR_URL` pointing to the facilitator. For local dev, set to `http://localhost:3000` or leave empty if running on same origin.
+
+### Docker
+```bash
+docker build -t xenga-facilitator .
+docker run -p 8080:8080 --env-file .env xenga-facilitator
+```
 
 ## Constants
 

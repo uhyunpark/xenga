@@ -3,11 +3,14 @@ import {
   createWalletClient,
   decodeEventLog,
   http,
+  parseEther,
+  parseUnits,
+  type Address,
   type Hash,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { escrowVaultAbi } from "../../shared/abi.js";
-import { CHAIN } from "../../shared/constants.js";
+import { CHAIN, USDC_DECIMALS } from "../../shared/constants.js";
 import type { EscrowPaymentPayload } from "../../shared/types.js";
 import { config } from "../config.js";
 
@@ -122,4 +125,53 @@ export async function getEscrowOnChain(escrowId: number) {
     functionName: "getEscrow",
     args: [BigInt(escrowId)],
   });
+}
+
+export async function confirmDeliveryOnChain(escrowId: number): Promise<Hash> {
+  const txHash = await getWalletClient().writeContract({
+    address: config.escrowVaultAddress,
+    abi: escrowVaultAbi,
+    functionName: "confirmDelivery",
+    args: [BigInt(escrowId)],
+  });
+  await getPublicClient().waitForTransactionReceipt({ hash: txHash });
+  return txHash;
+}
+
+const erc20TransferAbi = [
+  {
+    type: "function",
+    name: "transfer",
+    inputs: [
+      { name: "to", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+    stateMutability: "nonpayable",
+  },
+] as const;
+
+export async function fundWallet(
+  address: Address
+): Promise<{ usdcTx: Hash; ethTx: Hash }> {
+  const fundAmount = parseUnits("10", USDC_DECIMALS);
+
+  const usdcTx = await getWalletClient().writeContract({
+    address: config.usdcAddress,
+    abi: erc20TransferAbi,
+    functionName: "transfer",
+    args: [address, fundAmount],
+  });
+
+  const ethTx = await getWalletClient().sendTransaction({
+    to: address,
+    value: parseEther("0.005"),
+  });
+
+  await Promise.all([
+    getPublicClient().waitForTransactionReceipt({ hash: usdcTx }),
+    getPublicClient().waitForTransactionReceipt({ hash: ethTx }),
+  ]);
+
+  return { usdcTx, ethTx };
 }

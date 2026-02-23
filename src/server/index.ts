@@ -16,6 +16,7 @@ import metricsRouter from "./routes/metrics.js";
 import facilitatorRouter from "./routes/facilitator.js";
 import reputationRouter from "./routes/reputation.js";
 import webhooksRouter from "./routes/webhooks.js";
+import demoRouter from "./routes/demo.js";
 import { startEventListener } from "./services/eventListener.js";
 import { rateLimit } from "./middleware/rateLimit.js";
 import { logger } from "./services/logger.js";
@@ -43,7 +44,7 @@ app.use(express.json());
 app.use((_req, res, next) => {
   const origin = process.env.CORS_ORIGIN || "*";
   res.setHeader("Access-Control-Allow-Origin", origin);
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, PAYMENT-SIGNATURE, X-PAYMENT, X-WALLET-ADDRESS, X-WALLET-SIGNATURE, X-WALLET-TIMESTAMP, X-API-KEY");
   res.setHeader("Access-Control-Expose-Headers", "PAYMENT-REQUIRED, X-PAYMENT-REQUIRED, PAYMENT-RESPONSE, X-PAYMENT-RESPONSE");
   if (_req.method === "OPTIONS") {
@@ -61,7 +62,7 @@ const generalLimiter = rateLimit({ windowMs: 60_000, max: 60 });
 
 // ──────────── Routes ────────────
 
-app.get("/health", (_req, res) => {
+function healthHandler(_req: express.Request, res: express.Response) {
   const walletStatus = getLastWalletStatus();
   res.json({
     status: walletStatus?.isLow ? "degraded" : "ok",
@@ -81,7 +82,10 @@ app.get("/health", (_req, res) => {
       description: st.description,
     })),
   });
-});
+}
+
+app.get("/health", healthHandler);
+app.get("/api/health", healthHandler);
 
 app.use("/api/orders", paymentLimiter, ordersRouter);
 app.use("/api/disputes", disputeLimiter, disputesRouter);
@@ -90,6 +94,7 @@ app.use("/api/metrics", generalLimiter, metricsRouter);
 app.use("/facilitator", paymentLimiter, facilitatorRouter);
 app.use("/api/reputation", reputationLimiter, reputationRouter);
 app.use("/api/webhooks", generalLimiter, webhooksRouter);
+app.use("/api/demo", generalLimiter, demoRouter);
 
 // ──────────── Start ────────────
 
