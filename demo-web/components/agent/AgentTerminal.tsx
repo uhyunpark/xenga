@@ -49,7 +49,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
     screeningResults?: ScreeningAgentProfile[];
   } | null>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
-  const { walletClient, address, connectDemo, fundDemoWallet, usdcBalance, type: walletType } = useWallet();
+  const { walletClient, address, connectDemo, fundDemoWallet, usdcBalance, type: walletType, refreshBalances } = useWallet();
   const inspector = useInspector();
   const operatorAddress = useOperatorAddress();
 
@@ -463,13 +463,14 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
 
       setReputationData({ buyer: buyerRep, seller: updatedSellerRep, scenario });
 
+      await refreshBalances();
       setIsComplete(true);
     } catch (err: any) {
       addLine({ type: "error", text: `[error] ${err.message}`, delay: 0 });
     } finally {
       setIsRunning(false);
     }
-  }, [walletClient, address, operatorAddress, speed, inspector, addLine]);
+  }, [walletClient, address, operatorAddress, speed, inspector, addLine, refreshBalances]);
 
   // ── Trust Building (reputation simulation) ──
 
