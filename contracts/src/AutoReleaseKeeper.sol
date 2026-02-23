@@ -15,7 +15,12 @@ contract AutoReleaseKeeper is AutomationCompatibleInterface, Ownable {
     uint256 public maxBatchSize;
     address public forwarder;
 
+    uint256 public constant MAX_BATCH_SIZE_LIMIT = 100;
+
     error NotForwarder();
+    error InvalidBatchSize();
+
+    event MaxBatchSizeUpdated(uint256 oldSize, uint256 newSize);
 
     constructor(address _vault, uint256 _maxBatchSize) Ownable(msg.sender) {
         vault = EscrowVault(_vault);
@@ -74,5 +79,11 @@ contract AutoReleaseKeeper is AutomationCompatibleInterface, Ownable {
 
     function setForwarder(address _forwarder) external onlyOwner {
         forwarder = _forwarder;
+    }
+
+    function setMaxBatchSize(uint256 newSize) external onlyOwner {
+        if (newSize == 0 || newSize > MAX_BATCH_SIZE_LIMIT) revert InvalidBatchSize();
+        emit MaxBatchSizeUpdated(maxBatchSize, newSize);
+        maxBatchSize = newSize;
     }
 }
