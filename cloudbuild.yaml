@@ -1,0 +1,99 @@
+# cloudbuild.yaml — GCP Cloud Build CI/CD pipeline for xenga-facilitator
+#
+# Triggers on push to main branch. Builds the Docker image, pushes it to
+# Artifact Registry, and deploys to Cloud Run.
+#
+# Required Cloud Build substitution variables (set in trigger config):
+#   _GCP_REGION          Cloud Run region (e.g. us-central1)
+#   _CLOUD_RUN_SERVICE   Cloud Run service name (e.g. xenga-facilitator)
+#   _ARTIFACT_REGISTRY   Registry host (e.g. us-central1-docker.pkg.dev)
+#   _ARTIFACT_REPO       Artifact Registry repo name (e.g. xenga)
+#
+# Required Secret Manager secrets (add via Cloud Build trigger → "Secret variables"):
+#   PRIVATE_KEY             Operator wallet private key
+#   ESCROW_VAULT_ADDRESS    Deployed EscrowVault contract address
+#
+# Optional substitution variables:
+#   _MIN_INSTANCES       Minimum Cloud Run instances (default: 0)
+#   _MAX_INSTANCES       Maximum Cloud Run instances (default: 10)
+#   _MEMORY              Cloud Run memory (default: 512Mi)
+#   _CPU                 Cloud Run CPU count (default: 1)
+
+substitutions:
+  _GCP_REGION: us-central1
+  _CLOUD_RUN_SERVICE: xenga-facilitator
+  _ARTIFACT_REGISTRY: us-central1-docker.pkg.dev
+  _ARTIFACT_REPO: xenga
+  _MIN_INSTANCES: "0"
+  _MAX_INSTANCES: "10"
+  _MEMORY: 512Mi
+  _CPU: "1"
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+availableSecrets:
+  secretManager:
+    - versionName: projects/$PROJECT_ID/secrets/PRIVATE_KEY/versions/latest
+      env: PRIVATE_KEY
+    - versionName: projects/$PROJECT_ID/secrets/ESCROW_VAULT_ADDRESS/versions/latest
+      env: ESCROW_VAULT_ADDRESS
+
+steps:
+  # ── 1. Build Docker image ───────────────────────────────────────────────────
+  - name: gcr.io/cloud-builders/docker
+    id: build
+    args:
+      - build
+      - --platform
+      - linux/amd64
+      - --tag
+      - ${_ARTIFACT_REGISTRY}/$PROJECT_ID/${_ARTIFACT_REPO}/${_CLOUD_RUN_SERVICE}:$SHORT_SHA
+      - --tag
+      - ${_ARTIFACT_REGISTRY}/$PROJECT_ID/${_ARTIFACT_REPO}/${_CLOUD_RUN_SERVICE}:latest
+      - --file
+      - Dockerfile
+      - .
+
+  # ── 2. Push image to Artifact Registry ─────────────────────────────────────
+  - name: gcr.io/cloud-builders/docker
+    id: push
+    waitFor: [build]
+    args:
+      - push
+      - --all-tags
+      - ${_ARTIFACT_REGISTRY}/$PROJECT_ID/${_ARTIFACT_REPO}/${_CLOUD_RUN_SERVICE}
+
+  # ── 3. Deploy to Cloud Run ──────────────────────────────────────────────────
+  - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
+    id: deploy
+    waitFor: [push]
+    secretEnv: [PRIVATE_KEY, ESCROW_VAULT_ADDRESS]
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - ${_CLOUD_RUN_SERVICE}
+      - --image
+      - ${_ARTIFACT_REGISTRY}/$PROJECT_ID/${_ARTIFACT_REPO}/${_CLOUD_RUN_SERVICE}:$SHORT_SHA
+      - --platform
+      - managed
+      - --region
+      - ${_GCP_REGION}
+      - --port
+      - "8080"
+      - --memory
+      - ${_MEMORY}
+      - --cpu
+      - ${_CPU}
+      - --min-instances
+      - ${_MIN_INSTANCES}
+      - --max-instances
+      - ${_MAX_INSTANCES}
+      - --allow-unauthenticated
+      - --set-env-vars
+      - PRIVATE_KEY=$$PRIVATE_KEY,ESCROW_VAULT_ADDRESS=$$ESCROW_VAULT_ADDRESS
+
+images:
+  - ${_ARTIFACT_REGISTRY}/$PROJECT_ID/${_ARTIFACT_REPO}/${_CLOUD_RUN_SERVICE}:$SHORT_SHA
+  - ${_ARTIFACT_REGISTRY}/$PROJECT_ID/${_ARTIFACT_REPO}/${_CLOUD_RUN_SERVICE}:latest
