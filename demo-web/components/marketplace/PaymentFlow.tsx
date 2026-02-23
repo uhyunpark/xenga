@@ -126,7 +126,7 @@ const STEP_HINTS: Record<DemoStep, string> = {
 
 export function PaymentFlow() {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const { walletClient, address, type: walletType, connectDemo, fundDemoWallet, usdcBalance } = useWallet();
+  const { walletClient, address, type: walletType, connectDemo, fundDemoWallet, usdcBalance, refreshBalances } = useWallet();
   const inspector = useInspector();
   const operatorAddress = useOperatorAddress();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -413,12 +413,13 @@ export function PaymentFlow() {
         escrowId: result.payment.escrowId,
         txHash: result.payment.txHash,
       });
+      refreshBalances();
     } catch (err: any) {
       dispatch({ type: "SET_ERROR", error: err.message });
     } finally {
       dispatch({ type: "SET_LOADING", loading: false });
     }
-  }, [state.orderId, state.paymentPayload, inspector]);
+  }, [state.orderId, state.paymentPayload, inspector, refreshBalances]);
 
   const handleRelease = useCallback(async () => {
     if (!state.escrowId) return;
@@ -473,7 +474,8 @@ export function PaymentFlow() {
     sessionStorage.removeItem("x402-marketplace-state");
     inspector.clear();
     dispatch({ type: "RESET" });
-  }, [inspector]);
+    refreshBalances();
+  }, [inspector, refreshBalances]);
 
   const handleStepClick = useCallback((step: DemoStep) => {
     // Only allow navigating back to "select" from pre-payment steps
