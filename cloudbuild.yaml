@@ -1,28 +1,23 @@
 # cloudbuild.yaml — GCP Cloud Build CI/CD pipeline for xenga-facilitator
 #
-# Triggers on push to main branch. Builds the Docker image, pushes it to
-# Artifact Registry, and deploys to Cloud Run.
+# Triggers on push to main. Builds the Docker image, pushes to Artifact
+# Registry, and deploys to Cloud Run. Secrets are pulled from Secret Manager
+# (set up once via: ./deploy.sh setup).
 #
-# Required Cloud Build substitution variables (set in trigger config):
-#   _GCP_REGION          Cloud Run region (e.g. us-central1)
-#   _CLOUD_RUN_SERVICE   Cloud Run service name (e.g. xenga-facilitator)
-#   _ARTIFACT_REGISTRY   Registry host (e.g. us-central1-docker.pkg.dev)
-#   _ARTIFACT_REPO       Artifact Registry repo name (e.g. xenga)
+# Required substitutions (configure in Cloud Build trigger UI):
+#   _GCP_REGION        Cloud Run region       (default: us-central1)
+#   _CLOUD_RUN_SERVICE Cloud Run service name (default: xenga-facilitator)
+#   _ARTIFACT_REPO     Artifact Registry repo (default: xenga)
 #
-# Required Secret Manager secrets (add via Cloud Build trigger → "Secret variables"):
-#   PRIVATE_KEY             Operator wallet private key
-#   ESCROW_VAULT_ADDRESS    Deployed EscrowVault contract address
-#
-# Optional substitution variables:
-#   _MIN_INSTANCES       Minimum Cloud Run instances (default: 0)
-#   _MAX_INSTANCES       Maximum Cloud Run instances (default: 10)
-#   _MEMORY              Cloud Run memory (default: 512Mi)
-#   _CPU                 Cloud Run CPU count (default: 1)
+# Optional substitutions:
+#   _MIN_INSTANCES  Minimum Cloud Run instances (default: 0)
+#   _MAX_INSTANCES  Maximum Cloud Run instances (default: 10)
+#   _MEMORY         Cloud Run memory            (default: 512Mi)
+#   _CPU            Cloud Run CPU count         (default: 1)
 
 substitutions:
   _GCP_REGION: us-central1
   _CLOUD_RUN_SERVICE: xenga-facilitator
-  _ARTIFACT_REGISTRY: us-central1-docker.pkg.dev
   _ARTIFACT_REPO: xenga
   _MIN_INSTANCES: "0"
   _MAX_INSTANCES: "10"
@@ -40,7 +35,7 @@ availableSecrets:
       env: ESCROW_VAULT_ADDRESS
 
 steps:
-  # ── 1. Build Docker image ───────────────────────────────────────────────────
+  # 1. Build the Docker image
   - name: gcr.io/cloud-builders/docker
     id: build
     args:
@@ -48,23 +43,23 @@ steps:
       - --platform
       - linux/amd64
       - --tag
-      - ${_ARTIFACT_REGISTRY}/$PROJECT_ID/${_ARTIFACT_REPO}/${_CLOUD_RUN_SERVICE}:$SHORT_SHA
+      - ${_GCP_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REPO}/${_CLOUD_RUN_SERVICE}:$SHORT_SHA
       - --tag
-      - ${_ARTIFACT_REGISTRY}/$PROJECT_ID/${_ARTIFACT_REPO}/${_CLOUD_RUN_SERVICE}:latest
+      - ${_GCP_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REPO}/${_CLOUD_RUN_SERVICE}:latest
       - --file
       - Dockerfile
       - .
 
-  # ── 2. Push image to Artifact Registry ─────────────────────────────────────
+  # 2. Push both tags to Artifact Registry
   - name: gcr.io/cloud-builders/docker
     id: push
     waitFor: [build]
     args:
       - push
       - --all-tags
-      - ${_ARTIFACT_REGISTRY}/$PROJECT_ID/${_ARTIFACT_REPO}/${_CLOUD_RUN_SERVICE}
+      - ${_GCP_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REPO}/${_CLOUD_RUN_SERVICE}
 
-  # ── 3. Deploy to Cloud Run ──────────────────────────────────────────────────
+  # 3. Deploy to Cloud Run
   - name: gcr.io/google.com/cloudsdktool/cloud-sdk:slim
     id: deploy
     waitFor: [push]
@@ -75,7 +70,7 @@ steps:
       - deploy
       - ${_CLOUD_RUN_SERVICE}
       - --image
-      - ${_ARTIFACT_REGISTRY}/$PROJECT_ID/${_ARTIFACT_REPO}/${_CLOUD_RUN_SERVICE}:$SHORT_SHA
+      - ${_GCP_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REPO}/${_CLOUD_RUN_SERVICE}:$SHORT_SHA
       - --platform
       - managed
       - --region
@@ -95,5 +90,5 @@ steps:
       - PRIVATE_KEY=$$PRIVATE_KEY,ESCROW_VAULT_ADDRESS=$$ESCROW_VAULT_ADDRESS
 
 images:
-  - ${_ARTIFACT_REGISTRY}/$PROJECT_ID/${_ARTIFACT_REPO}/${_CLOUD_RUN_SERVICE}:$SHORT_SHA
-  - ${_ARTIFACT_REGISTRY}/$PROJECT_ID/${_ARTIFACT_REPO}/${_CLOUD_RUN_SERVICE}:latest
+  - ${_GCP_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REPO}/${_CLOUD_RUN_SERVICE}:$SHORT_SHA
+  - ${_GCP_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REPO}/${_CLOUD_RUN_SERVICE}:latest
