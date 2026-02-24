@@ -53,11 +53,6 @@ interface PayForOrderResponse {
   payment: EscrowPaymentResponse;
 }
 
-interface ReleaseResponse {
-  message: string;
-  order: OrderWithPrice;
-}
-
 interface DisputeResponse {
   message: string;
   disputeId: string;
@@ -139,21 +134,6 @@ export function createEscrowClient(config: EscrowClientConfig) {
       }
 
       return { order: body.order, payment: payment ?? body.payment };
-    },
-
-    /**
-     * Release escrowed funds (buyer confirms receipt)
-     */
-    async releaseEscrow(orderId: string): Promise<ReleaseResponse> {
-      const response = await apiFetch(`${baseUrl}/api/orders/${orderId}/release`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      const body = (await response.json()) as ReleaseResponse & ApiErrorBody;
-      if (!response.ok) {
-        throw new Error(body.error ?? response.statusText);
-      }
-      return { message: body.message, order: body.order };
     },
 
     /**

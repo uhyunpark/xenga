@@ -1,5 +1,4 @@
-import { createPublicClient, createWalletClient, http } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
+import { createPublicClient, http } from "viem";
 import type { Hash } from "viem";
 import { escrowVaultAbi } from "../../shared/abi.js";
 import type { OrderStatus } from "../../shared/types.js";
@@ -16,6 +15,7 @@ import { updateOrderStatus, getOrderByOrderId } from "./orderService.js";
 import { getServiceType } from "../service-types/index.js";
 import { logger } from "./logger.js";
 import { dispatchWebhookEvent, chainEventToWebhookType } from "./webhookService.js";
+import { confirmDeliveryOnChain } from "../facilitator/settler.js";
 
 let _publicClient: ReturnType<typeof createPublicClient> | undefined;
 const getPublicClient = () => {
@@ -249,19 +249,7 @@ function scheduleAutoVerify(escrowId: number, orderId: `0x${string}`) {
           }
         }
 
-        const account = privateKeyToAccount(config.privateKey);
-        const walletClient = createWalletClient({
-          chain: CHAIN,
-          transport: http(config.rpcUrl),
-          account,
-        });
-
-        const txHash = await walletClient.writeContract({
-          address: config.escrowVaultAddress,
-          abi: escrowVaultAbi,
-          functionName: "confirmDelivery",
-          args: [BigInt(escrowId)],
-        });
+        const txHash = await confirmDeliveryOnChain(escrowId);
         logger.info("events", `Auto-verified delivery for escrow ${escrowId}: ${txHash}`);
       } catch (err) {
         logger.error("events", `Auto-verify tx failed for escrow ${escrowId}: ${(err as Error).message}`);

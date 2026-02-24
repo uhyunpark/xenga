@@ -51,6 +51,9 @@ export const SCHEMA = `
   CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
   CREATE INDEX IF NOT EXISTS idx_orders_seller ON orders(seller_address);
   CREATE INDEX IF NOT EXISTS idx_orders_buyer ON orders(buyer_address);
+  CREATE INDEX IF NOT EXISTS idx_orders_escrow_id ON orders(escrow_id);
   CREATE INDEX IF NOT EXISTS idx_disputes_escrow ON disputes(escrow_id);
+  CREATE INDEX IF NOT EXISTS idx_disputes_order_id ON disputes(order_id);
   CREATE INDEX IF NOT EXISTS idx_events_escrow ON events(escrow_id);
+  CREATE INDEX IF NOT EXISTS idx_events_block_number ON events(block_number);
 `;

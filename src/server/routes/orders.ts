@@ -96,7 +96,7 @@ router.post("/", apiKeyAuth(), (req, res) => {
 });
 
 // ──────────── Confirm delivery (operator/seller) ────────────
-router.post("/:id/confirm-delivery", async (req, res) => {
+router.post("/:id/confirm-delivery", apiKeyAuth(), async (req, res) => {
   const order = getOrderById(req.params.id as string);
   if (!order) return res.status(404).json({ error: "Order not found" });
 

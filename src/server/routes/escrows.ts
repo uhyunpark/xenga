@@ -33,6 +33,7 @@ router.get("/:escrowId", async (req, res) => {
       releaseWindow: Number(escrow.releaseWindow),
       deliveryConfirmedAt: Number(escrow.deliveryConfirmedAt),
       disputeWindow: Number(escrow.disputeWindow),
+      facilitatorFee: escrow.facilitatorFee.toString(),
       isReleasable: releasable,
     });
   } catch (err) {

@@ -38,7 +38,7 @@ registerScheme(escrowScheme);
 getDb();
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: "1mb" }));
 
 // CORS (includes both standard and legacy x402 headers)
 app.use((_req, res, next) => {
@@ -114,9 +114,16 @@ startWalletMonitor();
 startOrderCleanup();
 
 // Graceful shutdown
-process.on("SIGINT", () => {
+function shutdown() {
   logger.info("server", "Shutting down...");
   server.close();
   closeDb();
   process.exit(0);
+}
+
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
+
+process.on("unhandledRejection", (err) => {
+  logger.error("process", `Unhandled rejection: ${err instanceof Error ? err.message : String(err)}`);
 });

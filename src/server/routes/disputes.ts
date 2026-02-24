@@ -45,9 +45,9 @@ function handleFileDispute(req: import("express").Request, res: import("express"
   });
 }
 
-router.post("/:orderId/dispute", handleFileDispute);
+router.post("/:orderId/dispute", apiKeyAuth(), handleFileDispute);
 // Alias: frontend calls POST /api/disputes/:orderId (without /dispute suffix)
-router.post("/:orderId", handleFileDispute);
+router.post("/:orderId", apiKeyAuth(), handleFileDispute);
 
 // ──────────── List disputes ────────────
 router.get("/", apiKeyAuth(), (_req, res) => {

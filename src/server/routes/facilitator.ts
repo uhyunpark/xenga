@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { getScheme } from "../../shared/schemes.js";
+import { apiKeyAuth } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -46,7 +47,7 @@ router.post("/verify", async (req, res) => {
  * POST /facilitator/settle
  * x402 standard facilitator settlement endpoint
  */
-router.post("/settle", async (req, res) => {
+router.post("/settle", apiKeyAuth(), async (req, res) => {
   const { payload, paymentRequirements } = req.body;
 
   if (!payload?.scheme) {

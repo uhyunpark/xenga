@@ -48,6 +48,9 @@ export async function signEscrowPayment(
   });
 
   // Parse signature into v, r, s
+  if (!signature || signature.length < 132) {
+    throw new Error("Invalid signature length");
+  }
   const r = `0x${signature.slice(2, 66)}` as Hash;
   const s = `0x${signature.slice(66, 130)}` as Hash;
   const v = parseInt(signature.slice(130, 132), 16);
