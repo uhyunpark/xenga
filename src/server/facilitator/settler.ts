@@ -138,6 +138,17 @@ export async function confirmDeliveryOnChain(escrowId: number): Promise<Hash> {
   return txHash;
 }
 
+export async function autoReleaseOnChain(escrowId: number): Promise<Hash> {
+  const txHash = await getWalletClient().writeContract({
+    address: config.escrowVaultAddress,
+    abi: escrowVaultAbi,
+    functionName: "autoRelease",
+    args: [BigInt(escrowId)],
+  });
+  await getPublicClient().waitForTransactionReceipt({ hash: txHash });
+  return txHash;
+}
+
 const erc20TransferAbi = [
   {
     type: "function",
@@ -154,7 +165,7 @@ const erc20TransferAbi = [
 export async function fundWallet(
   address: Address
 ): Promise<{ usdcTx: Hash; ethTx: Hash }> {
-  const fundAmount = parseUnits("10", USDC_DECIMALS);
+  const fundAmount = parseUnits("1", USDC_DECIMALS);
 
   const usdcTx = await getWalletClient().writeContract({
     address: config.usdcAddress,
@@ -165,7 +176,7 @@ export async function fundWallet(
 
   const ethTx = await getWalletClient().sendTransaction({
     to: address,
-    value: parseEther("0.005"),
+    value: parseEther("0.001"),
   });
 
   await Promise.all([

@@ -43,7 +43,7 @@ router.post("/fund", async (req, res) => {
   // Rate limit by IP + address
   const ip = (req.headers["x-forwarded-for"] as string) || req.ip || "unknown";
   const rateLimitKey = `${ip}:${address.toLowerCase()}`;
-  const fundAmount = parseUnits("10", USDC_DECIMALS);
+  const fundAmount = parseUnits("1", USDC_DECIMALS);
 
   if (!checkRateLimit(rateLimitKey, fundAmount)) {
     return res.status(429).json({
@@ -55,7 +55,7 @@ router.post("/fund", async (req, res) => {
     const { usdcTx, ethTx } = await fundWallet(address);
 
     res.json({
-      message: "Funded successfully: 10 USDC + 0.005 ETH",
+      message: "Funded successfully: 1 USDC + 0.001 ETH",
       usdcTx,
       ethTx,
     });

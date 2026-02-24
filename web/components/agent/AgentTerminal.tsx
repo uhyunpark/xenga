@@ -90,7 +90,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
       await wait(1000);
       addLine({ type: "info", text: "[discover] Found service: Weather API Premium", delay: 0 });
       await wait(500);
-      addLine({ type: "info", text: "[discover] Price: 2.50 USDC | Type: agent-service | Auto-release: 1 hour", delay: 0 });
+      addLine({ type: "info", text: "[discover] Price: 0.02 USDC | Type: agent-service | Auto-release: 1 hour", delay: 0 });
       await wait(800);
 
       // Step 1.5: Check seller reputation
@@ -150,7 +150,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
         body: JSON.stringify({
           title: "Weather API Premium Access",
           description: "1-hour premium API access",
-          price: 2.5,
+          price: 0.02,
           serviceType: "agent-service",
           sellerAddress: operatorAddress,
         }),
@@ -393,9 +393,9 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
         addLine({ type: "dim", text: "", delay: 0 });
         addLine({ type: "success", text: "[resolve] Dispute resolved", delay: 0 });
         await wait(400);
-        addLine({ type: "success", text: "[resolve] Buyer receives: 1.75 USDC (70%)", delay: 0 });
+        addLine({ type: "success", text: "[resolve] Buyer receives: 0.014 USDC (70%)", delay: 0 });
         await wait(400);
-        addLine({ type: "success", text: "[resolve] Seller receives: 0.75 USDC (30%)", delay: 0 });
+        addLine({ type: "success", text: "[resolve] Seller receives: 0.006 USDC (30%)", delay: 0 });
         await wait(400);
         addLine({ type: "info", text: "[complete] Dispute resolved. Funds distributed per arbiter ruling.", delay: 0 });
       }
@@ -734,7 +734,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
   }, [speed, inspector, addLine]);
 
   const needsWallet = !address;
-  const needsFunding = walletType === "demo" && usdcBalance !== null && parseFloat(usdcBalance) < 1;
+  const needsFunding = walletType === "demo" && usdcBalance !== null && parseFloat(usdcBalance) < 0.01;
   const terminalStatus = isRunning
     ? `Running`
     : isComplete

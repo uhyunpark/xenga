@@ -11,7 +11,7 @@ import {
 import { getServiceType } from "../service-types/index.js";
 import { escrowPaymentMiddleware, type EscrowPaymentRequest } from "../middleware/escrowPayment.js";
 import { apiKeyAuth } from "../middleware/auth.js";
-import { confirmDeliveryOnChain } from "../facilitator/settler.js";
+import { confirmDeliveryOnChain, autoReleaseOnChain } from "../facilitator/settler.js";
 
 const router = Router();
 
@@ -115,6 +115,31 @@ router.post("/:id/confirm-delivery", apiKeyAuth(), async (req, res) => {
   } catch (err) {
     res.status(500).json({
       error: "Failed to confirm delivery on-chain",
+      details: err instanceof Error ? err.message : String(err),
+    });
+  }
+});
+
+// ──────────── Release escrow (auto-release after timeout) ────────────
+router.post("/:id/release", apiKeyAuth(), async (req, res) => {
+  const order = getOrderById(req.params.id as string);
+  if (!order) return res.status(404).json({ error: "Order not found" });
+
+  if (!["delivery_confirmed", "escrowed"].includes(order.status) || order.escrowId === undefined) {
+    return res.status(400).json({ error: "Order is not in a releasable state" });
+  }
+
+  try {
+    const txHash = await autoReleaseOnChain(order.escrowId);
+    updateOrderStatus(order.id, { status: "completed" });
+
+    res.json({
+      message: "Escrow auto-released on-chain",
+      txHash,
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: "Failed to release escrow (release window may not have passed)",
       details: err instanceof Error ? err.message : String(err),
     });
   }
