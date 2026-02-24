@@ -1,7 +1,7 @@
 /**
  * Database Adapter Interface
  *
- * Abstracts over SQLite (better-sqlite3) and PostgreSQL (pg) so the
+ * Abstracts over SQLite (bun:sqlite) and PostgreSQL (pg) so the
  * application code can use either backend depending on config.
  *
  * Current implementation: SQLite only.
@@ -61,7 +61,7 @@ let _sqliteAdapter: DbAdapter | undefined;
 function getSqliteAdapter(): DbAdapter {
   if (_sqliteAdapter) return _sqliteAdapter;
 
-  // Re-use the existing better-sqlite3 instance
+  // Re-use the existing bun:sqlite instance
   const { getDb, closeDb } = require("../db/index.js");
   const db = getDb();
 

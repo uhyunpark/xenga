@@ -4,10 +4,10 @@ WORKDIR /app
 
 # Copy package files and strip workspace config
 # (server doesn't need web/ or packages/ workspaces)
-COPY package.json bun.lock ./
+COPY package.json ./
 RUN sed -i '/"workspaces"/d' package.json
 
-# Install server dependencies
+# Install server dependencies (no lockfile — workspace line was stripped)
 RUN bun install --production
 
 # Copy source code + compiled contract ABIs
