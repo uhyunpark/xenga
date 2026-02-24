@@ -20,12 +20,15 @@ import type {
   Stats,
 } from "../shared/types.js";
 import { NetworkError } from "../shared/errors.js";
+import { isRetryableError, withRetry, type RetryOptions } from "../shared/retry.js";
 import { escrowVaultAbi } from "../shared/abi.js";
 import { escrowFetch } from "./escrowFetch.js";
 
 export { signEscrowPayment } from "./escrowScheme.js";
 export { escrowFetch } from "./escrowFetch.js";
 export type { EscrowFetchOptions } from "./escrowFetch.js";
+export { withRetry, isRetryableError } from "../shared/retry.js";
+export type { RetryOptions } from "../shared/retry.js";
 
 export interface EscrowClientConfig {
   /** Private key for signing transactions. Provide this OR walletClient. */
@@ -39,6 +42,8 @@ export interface EscrowClientConfig {
   escrowVaultAddress?: Address;
   /** Chain ID (default: 84532 for Base Sepolia). Use 8453 for Base Mainnet. */
   chainId?: number;
+  /** Retry options for on-chain write operations (default: 3 retries with exponential backoff) */
+  retryOptions?: RetryOptions;
 }
 
 // ──────────────────────── API Response Types ────────────────────────
@@ -183,58 +188,71 @@ export function createEscrowClient(config: EscrowClientConfig) {
 
     /**
      * Release funds on-chain directly (buyer calls releaseFunds).
-     * Pre-checks ETH balance before submitting.
+     * Pre-checks ETH balance. Retries on transient failures.
+     * @param waitForReceipt If true (default), waits for on-chain confirmation before returning.
      */
-    async releaseOnChain(escrowId: number): Promise<Hash> {
-      await ensureBalance();
-      return walletClient.writeContract({
-        address: config.escrowVaultAddress!,
-        abi: escrowVaultAbi,
-        functionName: "releaseFunds",
-        args: [BigInt(escrowId)],
-      });
+    async releaseOnChain(escrowId: number, waitForReceipt = true): Promise<Hash> {
+      return writeWithRetry("releaseFunds", [BigInt(escrowId)], waitForReceipt);
     },
 
     /**
      * Dispute on-chain directly (buyer calls dispute).
-     * Pre-checks ETH balance before submitting.
+     * Pre-checks ETH balance. Retries on transient failures.
      */
-    async disputeOnChain(escrowId: number): Promise<Hash> {
-      await ensureBalance();
-      return walletClient.writeContract({
-        address: config.escrowVaultAddress!,
-        abi: escrowVaultAbi,
-        functionName: "dispute",
-        args: [BigInt(escrowId)],
-      });
+    async disputeOnChain(escrowId: number, waitForReceipt = true): Promise<Hash> {
+      return writeWithRetry("dispute", [BigInt(escrowId)], waitForReceipt);
     },
 
     /**
      * Confirm delivery on-chain directly (seller calls confirmDelivery).
-     * Pre-checks ETH balance before submitting.
+     * Pre-checks ETH balance. Retries on transient failures.
      */
-    async confirmDeliveryOnChain(escrowId: number): Promise<Hash> {
-      await ensureBalance();
-      return walletClient.writeContract({
-        address: config.escrowVaultAddress!,
-        abi: escrowVaultAbi,
-        functionName: "confirmDelivery",
-        args: [BigInt(escrowId)],
-      });
+    async confirmDeliveryOnChain(escrowId: number, waitForReceipt = true): Promise<Hash> {
+      return writeWithRetry("confirmDelivery", [BigInt(escrowId)], waitForReceipt);
     },
 
     /**
      * Refund an escrow on-chain (seller or arbiter).
-     * Pre-checks ETH balance before submitting.
+     * Pre-checks ETH balance. Retries on transient failures.
      */
-    async refundOnChain(escrowId: number): Promise<Hash> {
-      await ensureBalance();
-      return walletClient.writeContract({
-        address: config.escrowVaultAddress!,
-        abi: escrowVaultAbi,
-        functionName: "refund",
-        args: [BigInt(escrowId)],
-      });
+    async refundOnChain(escrowId: number, waitForReceipt = true): Promise<Hash> {
+      return writeWithRetry("refund", [BigInt(escrowId)], waitForReceipt);
+    },
+
+    /**
+     * Poll for escrow state changes. Calls `callback` whenever state changes.
+     * Returns a stop function.
+     */
+    watchEscrow(
+      escrowId: number,
+      callback: (escrow: OnChainEscrow) => void,
+      pollIntervalMs = 5000
+    ): { stop: () => void } {
+      let lastState: number | undefined;
+      let stopped = false;
+
+      const poll = async () => {
+        while (!stopped) {
+          try {
+            const response = await apiFetch(`${baseUrl}/api/escrows/${escrowId}`);
+            if (response.ok) {
+              const escrow = (await response.json()) as OnChainEscrow;
+              if (lastState === undefined || escrow.state !== lastState) {
+                lastState = escrow.state;
+                callback(escrow);
+              }
+            }
+          } catch {
+            // Swallow polling errors, retry next interval
+          }
+          if (!stopped) {
+            await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+          }
+        }
+      };
+
+      poll();
+      return { stop: () => { stopped = true; } };
     },
 
     // ──────────── Read-only helpers ────────────
@@ -290,6 +308,8 @@ export function createEscrowClient(config: EscrowClientConfig) {
     },
   };
 
+  const retryOpts = config.retryOptions ?? {};
+
   /** Pre-check that the wallet has enough ETH for gas */
   async function ensureBalance(): Promise<void> {
     if (!config.escrowVaultAddress) {
@@ -303,5 +323,33 @@ export function createEscrowClient(config: EscrowClientConfig) {
         `Fund ${address} with at least 0.001 ETH to submit transactions.`
       );
     }
+  }
+
+  /** Write to contract with retry + optional receipt waiting */
+  async function writeWithRetry(
+    functionName: string,
+    args: unknown[],
+    waitForReceipt: boolean
+  ): Promise<Hash> {
+    await ensureBalance();
+    const txHash = await withRetry(
+      () =>
+        walletClient.writeContract({
+          chain,
+          account: walletClient.account!,
+          address: config.escrowVaultAddress!,
+          abi: escrowVaultAbi,
+          functionName,
+          args,
+        } as Parameters<typeof walletClient.writeContract>[0]),
+      retryOpts
+    );
+    if (waitForReceipt) {
+      await publicClient.waitForTransactionReceipt({
+        hash: txHash,
+        timeout: 60_000,
+      });
+    }
+    return txHash;
   }
 }

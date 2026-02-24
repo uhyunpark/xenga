@@ -54,6 +54,26 @@ export const SCHEMA = `
   CREATE INDEX IF NOT EXISTS idx_orders_escrow_id ON orders(escrow_id);
   CREATE INDEX IF NOT EXISTS idx_disputes_escrow ON disputes(escrow_id);
   CREATE INDEX IF NOT EXISTS idx_disputes_order_id ON disputes(order_id);
+  CREATE TABLE IF NOT EXISTS payment_intents (
+    id TEXT PRIMARY KEY,
+    order_id TEXT NOT NULL,
+    buyer_address TEXT,
+    return_url TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    expires_at INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY (order_id) REFERENCES orders(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS sellers (
+    address TEXT PRIMARY KEY,
+    name TEXT,
+    registered_at INTEGER NOT NULL
+  );
+
   CREATE INDEX IF NOT EXISTS idx_events_escrow ON events(escrow_id);
   CREATE INDEX IF NOT EXISTS idx_events_block_number ON events(block_number);
+  CREATE INDEX IF NOT EXISTS idx_payment_intents_order ON payment_intents(order_id);
+  CREATE INDEX IF NOT EXISTS idx_payment_intents_status ON payment_intents(status);
 `;

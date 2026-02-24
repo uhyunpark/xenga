@@ -8,6 +8,9 @@ import {
 import { registerScheme } from "../shared/schemes.js";
 import { marketplaceServiceType } from "./service-types/marketplace.js";
 import { agentServiceType } from "./service-types/agent-service.js";
+import { inferenceServiceType } from "./service-types/inference.js";
+import { dataPipelineServiceType } from "./service-types/data-pipeline.js";
+import { toolCallServiceType } from "./service-types/tool-call.js";
 import { escrowScheme } from "./schemes/escrow.js";
 import ordersRouter from "./routes/orders.js";
 import disputesRouter from "./routes/disputes.js";
@@ -17,6 +20,8 @@ import facilitatorRouter from "./routes/facilitator.js";
 import reputationRouter from "./routes/reputation.js";
 import webhooksRouter from "./routes/webhooks.js";
 import demoRouter from "./routes/demo.js";
+import paymentIntentsRouter from "./routes/paymentIntents.js";
+import sellersRouter from "./routes/sellers.js";
 import { startEventListener } from "./services/eventListener.js";
 import { rateLimit } from "./middleware/rateLimit.js";
 import { logger } from "./services/logger.js";
@@ -30,6 +35,9 @@ validateConfig();
 // Register service types
 registerServiceType(marketplaceServiceType);
 registerServiceType(agentServiceType);
+registerServiceType(inferenceServiceType);
+registerServiceType(dataPipelineServiceType);
+registerServiceType(toolCallServiceType);
 
 // Register payment schemes
 registerScheme(escrowScheme);
@@ -94,6 +102,8 @@ app.use("/api/metrics", generalLimiter, metricsRouter);
 app.use("/facilitator", paymentLimiter, facilitatorRouter);
 app.use("/api/reputation", reputationLimiter, reputationRouter);
 app.use("/api/webhooks", generalLimiter, webhooksRouter);
+app.use("/api/payment-intents", paymentLimiter, paymentIntentsRouter);
+app.use("/api/sellers", generalLimiter, sellersRouter);
 app.use("/api/demo", generalLimiter, demoRouter);
 
 // ──────────── Start ────────────

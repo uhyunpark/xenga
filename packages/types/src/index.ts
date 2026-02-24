@@ -7,3 +7,4 @@ export * from "../../../src/shared/eip712.js";
 export * from "../../../src/shared/errors.js";
 export * from "../../../src/shared/fees.js";
 export * from "../../../src/shared/schemes.js";
+export * from "../../../src/shared/retry.js";

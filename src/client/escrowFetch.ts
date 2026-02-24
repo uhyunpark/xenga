@@ -10,6 +10,7 @@ import {
   UnsupportedSchemeError,
   ReputationAbortError,
 } from "../shared/errors.js";
+import { withRetry, type RetryOptions } from "../shared/retry.js";
 import { signEscrowPayment } from "./escrowScheme.js";
 
 // Universal base64 helpers (works in Node.js, browsers, and Bun)
@@ -61,6 +62,8 @@ export interface EscrowFetchOptions {
   onSellerReputation?: (reputation: SellerReputationInfo) => boolean;
   /** Request timeout in milliseconds (default: 30000) */
   timeoutMs?: number;
+  /** Retry options for the payment submission step (default: 3 retries with backoff) */
+  retryOptions?: RetryOptions;
 }
 
 /**
@@ -186,30 +189,34 @@ export async function escrowFetch(
 
   console.log(`[x402] Signed receiveWithAuthorization from ${payload.from}`);
 
-  // Retry with payment (send both standard and legacy headers)
+  // Submit payment with retry (send both standard and legacy headers)
   const paymentHeader = encodeBase64(JSON.stringify(payload));
 
-  let retryResponse: Response;
-  try {
-    retryResponse = await fetchWithTimeout(
-      url,
-      {
-        ...init,
-        headers: {
-          ...((init?.headers as Record<string, string>) ?? {}),
-          "PAYMENT-SIGNATURE": paymentHeader,
-          "X-PAYMENT": paymentHeader,
-          "Content-Type": "application/json",
-        },
-      },
-      timeoutMs
-    );
-  } catch (err) {
-    throw new NetworkError(
-      `Failed to submit payment to ${url}: ${err instanceof Error ? err.message : String(err)}`,
-      err instanceof Error ? err : undefined
-    );
-  }
+  const retryResponse = await withRetry(
+    async () => {
+      try {
+        return await fetchWithTimeout(
+          url,
+          {
+            ...init,
+            headers: {
+              ...((init?.headers as Record<string, string>) ?? {}),
+              "PAYMENT-SIGNATURE": paymentHeader,
+              "X-PAYMENT": paymentHeader,
+              "Content-Type": "application/json",
+            },
+          },
+          timeoutMs
+        );
+      } catch (err) {
+        throw new NetworkError(
+          `Failed to submit payment to ${url}: ${err instanceof Error ? err.message : String(err)}`,
+          err instanceof Error ? err : undefined
+        );
+      }
+    },
+    options.retryOptions
+  );
 
   // Parse payment response (prefer standard, fallback to legacy)
   let payment: EscrowPaymentResponse | undefined;
