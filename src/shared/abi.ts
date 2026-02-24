@@ -24,13 +24,18 @@ export const escrowVaultAbi = [
         "name": "_feeBps",
         "type": "uint256",
         "internalType": "uint256"
+      },
+      {
+        "name": "_flatFee",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "stateMutability": "nonpayable"
   },
   {
     "type": "function",
-    "name": "DEFAULT_DISPUTE_WINDOW",
+    "name": "MAX_DISPUTE_WINDOW",
     "inputs": [],
     "outputs": [
       {
@@ -44,6 +49,32 @@ export const escrowVaultAbi = [
   {
     "type": "function",
     "name": "MAX_FEE_BPS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_FLAT_FEE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MIN_DISPUTE_WINDOW",
     "inputs": [],
     "outputs": [
       {
@@ -86,6 +117,65 @@ export const escrowVaultAbi = [
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "buyerStats",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "totalEscrows",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "totalAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "completedCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "completedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "disputedCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "disputedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "resolvedCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "refundedCount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "refundedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -228,6 +318,19 @@ export const escrowVaultAbi = [
   },
   {
     "type": "function",
+    "name": "disputeWindow",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "escrows",
     "inputs": [
       {
@@ -323,6 +426,85 @@ export const escrowVaultAbi = [
   },
   {
     "type": "function",
+    "name": "flatFee",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getBuyerStats",
+    "inputs": [
+      {
+        "name": "buyer",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct EscrowVault.Stats",
+        "components": [
+          {
+            "name": "totalEscrows",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "totalAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "completedCount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "completedAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "disputedCount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "disputedAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "resolvedCount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "refundedCount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "refundedAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getEscrow",
     "inputs": [
       {
@@ -399,123 +581,21 @@ export const escrowVaultAbi = [
   },
   {
     "type": "function",
-    "name": "getBuyerStats",
-    "inputs": [
-      {
-        "name": "buyer",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
+    "name": "getFeeConfig",
+    "inputs": [],
     "outputs": [
-      {
-        "name": "",
-        "type": "tuple",
-        "internalType": "struct EscrowVault.Stats",
-        "components": [
-          {
-            "name": "totalEscrows",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "totalAmount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "completedCount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "completedAmount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "disputedCount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "disputedAmount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "resolvedCount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "refundedCount",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "refundedAmount",
-            "type": "uint256",
-            "internalType": "uint256"
-          }
-        ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "buyerStats",
-    "inputs": [
       {
         "name": "",
         "type": "address",
         "internalType": "address"
-      }
-    ],
-    "outputs": [
+      },
       {
-        "name": "totalEscrows",
+        "name": "",
         "type": "uint256",
         "internalType": "uint256"
       },
       {
-        "name": "totalAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "completedCount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "completedAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "disputedCount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "disputedAmount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "resolvedCount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "refundedCount",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "refundedAmount",
+        "name": "",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -916,6 +996,19 @@ export const escrowVaultAbi = [
   },
   {
     "type": "function",
+    "name": "setDisputeWindow",
+    "inputs": [
+      {
+        "name": "newWindow",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "setFeeConfig",
     "inputs": [
       {
@@ -927,28 +1020,15 @@ export const escrowVaultAbi = [
         "name": "_feeBps",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "getFeeConfig",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "address",
-        "internalType": "address"
       },
       {
-        "name": "",
+        "name": "_flatFee",
         "type": "uint256",
         "internalType": "uint256"
       }
     ],
-    "stateMutability": "view"
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -1004,25 +1084,6 @@ export const escrowVaultAbi = [
   },
   {
     "type": "event",
-    "name": "FeeConfigUpdated",
-    "inputs": [
-      {
-        "name": "feeRecipient",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "feeBps",
-        "type": "uint256",
-        "indexed": false,
-        "internalType": "uint256"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
     "name": "DeliveryConfirmed",
     "inputs": [
       {
@@ -1058,6 +1119,25 @@ export const escrowVaultAbi = [
       },
       {
         "name": "feeAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "DisputeWindowUpdated",
+    "inputs": [
+      {
+        "name": "oldWindow",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "newWindow",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -1210,6 +1290,31 @@ export const escrowVaultAbi = [
   },
   {
     "type": "event",
+    "name": "FeeConfigUpdated",
+    "inputs": [
+      {
+        "name": "feeRecipient",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "feeBps",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "flatFee",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "OwnershipTransferStarted",
     "inputs": [
       {
@@ -1304,17 +1409,22 @@ export const escrowVaultAbi = [
   },
   {
     "type": "error",
+    "name": "InvalidAmount",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidDisputeWindow",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "InvalidFee",
     "inputs": []
   },
   {
     "type": "error",
     "name": "InvalidFeeRecipient",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "InvalidAmount",
     "inputs": []
   },
   {
@@ -1403,17 +1513,106 @@ export const escrowVaultAbi = [
   }
 ] as const;
 
-export const autoReleaseKeeperAbi = [
+export const sessionEscrowAbi = [
   {
     "type": "constructor",
     "inputs": [
       {
-        "name": "_vault",
+        "name": "_usdc",
         "type": "address",
         "internalType": "address"
       },
       {
-        "name": "_maxBatchSize",
+        "name": "_facilitator",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "acceptOwnership",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "captureSession",
+    "inputs": [
+      {
+        "name": "sessionId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "createSessionWithAuth",
+    "inputs": [
+      {
+        "name": "seller",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "duration",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "from",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "validAfter",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "validBefore",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "authNonce",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "v",
+        "type": "uint8",
+        "internalType": "uint8"
+      },
+      {
+        "name": "r",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "s",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "sessionId",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -1422,31 +1621,7 @@ export const autoReleaseKeeperAbi = [
   },
   {
     "type": "function",
-    "name": "checkUpkeep",
-    "inputs": [
-      {
-        "name": "checkData",
-        "type": "bytes",
-        "internalType": "bytes"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "upkeepNeeded",
-        "type": "bool",
-        "internalType": "bool"
-      },
-      {
-        "name": "performData",
-        "type": "bytes",
-        "internalType": "bytes"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "forwarder",
+    "name": "facilitator",
     "inputs": [],
     "outputs": [
       {
@@ -1459,7 +1634,82 @@ export const autoReleaseKeeperAbi = [
   },
   {
     "type": "function",
-    "name": "maxBatchSize",
+    "name": "getSession",
+    "inputs": [
+      {
+        "name": "sessionId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct SessionEscrow.Session",
+        "components": [
+          {
+            "name": "buyer",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "seller",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "depositAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "capturedAmount",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "createdAt",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "expiresAt",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "state",
+            "type": "uint8",
+            "internalType": "enum SessionEscrow.SessionState"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "isExpired",
+    "inputs": [
+      {
+        "name": "sessionId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "nextSessionId",
     "inputs": [],
     "outputs": [
       {
@@ -1485,16 +1735,68 @@ export const autoReleaseKeeperAbi = [
   },
   {
     "type": "function",
-    "name": "performUpkeep",
+    "name": "pause",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "paused",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "pendingOwner",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "reclaimExpired",
     "inputs": [
       {
-        "name": "performData",
-        "type": "bytes",
-        "internalType": "bytes"
+        "name": "sessionId",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "remainingBalance",
+    "inputs": [
+      {
+        "name": "sessionId",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -1505,12 +1807,79 @@ export const autoReleaseKeeperAbi = [
   },
   {
     "type": "function",
-    "name": "setForwarder",
+    "name": "sessions",
     "inputs": [
       {
-        "name": "_forwarder",
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "buyer",
         "type": "address",
         "internalType": "address"
+      },
+      {
+        "name": "seller",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "depositAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "capturedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "createdAt",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "expiresAt",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "state",
+        "type": "uint8",
+        "internalType": "enum SessionEscrow.SessionState"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "setFacilitator",
+    "inputs": [
+      {
+        "name": "_facilitator",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "settleSession",
+    "inputs": [
+      {
+        "name": "sessionId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "finalCaptureAmount",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [],
@@ -1531,16 +1900,61 @@ export const autoReleaseKeeperAbi = [
   },
   {
     "type": "function",
-    "name": "vault",
+    "name": "unpause",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "usdc",
     "inputs": [],
     "outputs": [
       {
         "name": "",
         "type": "address",
-        "internalType": "contract EscrowVault"
+        "internalType": "contract IERC20"
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "FacilitatorChanged",
+    "inputs": [
+      {
+        "name": "oldFacilitator",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "newFacilitator",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "OwnershipTransferStarted",
+    "inputs": [
+      {
+        "name": "previousOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "newOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
   },
   {
     "type": "event",
@@ -1562,8 +1976,191 @@ export const autoReleaseKeeperAbi = [
     "anonymous": false
   },
   {
+    "type": "event",
+    "name": "Paused",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SessionCaptured",
+    "inputs": [
+      {
+        "name": "sessionId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "captureAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "totalCaptured",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SessionCreated",
+    "inputs": [
+      {
+        "name": "sessionId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "buyer",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "seller",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "expiresAt",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SessionReclaimed",
+    "inputs": [
+      {
+        "name": "sessionId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "refundAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SessionSettled",
+    "inputs": [
+      {
+        "name": "sessionId",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      },
+      {
+        "name": "capturedTotal",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "refundAmount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "Unpaused",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
     "type": "error",
-    "name": "NotForwarder",
+    "name": "CaptureExceedsDeposit",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "EnforcedPause",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ExpectedPause",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidAddress",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidAmount",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidDuration",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidState",
+    "inputs": [
+      {
+        "name": "current",
+        "type": "uint8",
+        "internalType": "enum SessionEscrow.SessionState"
+      },
+      {
+        "name": "expected",
+        "type": "uint8",
+        "internalType": "enum SessionEscrow.SessionState"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "NotBuyer",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotFacilitator",
     "inputs": []
   },
   {
@@ -1587,5 +2184,21 @@ export const autoReleaseKeeperAbi = [
         "internalType": "address"
       }
     ]
+  },
+  {
+    "type": "error",
+    "name": "SafeERC20FailedOperation",
+    "inputs": [
+      {
+        "name": "token",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "SessionNotExpired",
+    "inputs": []
   }
 ] as const;

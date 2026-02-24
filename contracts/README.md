@@ -84,14 +84,6 @@ None ─→ Active ─→ Settled    (facilitator finalizes, refunds unused)
 - `settleSession()` finalizes: captures remaining usage + refunds unused balance
 - `reclaimExpired()` safety valve: buyer reclaims uncaptured funds after session expires
 
-## AutoReleaseKeeper
-
-Chainlink Automation compatible contract for batch auto-releasing timed-out escrows.
-
-- `checkUpkeep(startId, endId)` scans an escrow ID range, returns releasable IDs
-- `performUpkeep(escrowIds)` batch-calls `autoRelease` on each (skips failures gracefully)
-- Configurable `maxBatchSize` and optional `forwarder` restriction
-
 ## Build & Test
 
 ```bash
@@ -107,4 +99,4 @@ forge test -vvvv                            # verbose with traces
 
 - OpenZeppelin Contracts (ERC20, Ownable2Step, Pausable, SafeERC20)
 - Forge-std (testing)
-- `IERC3009` and `AutomationCompatibleInterface` defined locally in `src/interfaces/` (Chainlink repo too large to install as dependency)
+- `IERC3009` defined locally in `src/interfaces/`

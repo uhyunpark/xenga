@@ -47,14 +47,13 @@ On-chain credit scoring for wallets, computed from escrow transaction history.
 |---|---|
 | `EscrowVault` | Core escrow state machine with gasless deposits (ERC-3009), dispute resolution, auto-release, fee system, and per-address stats tracking |
 | `SessionEscrow` | Authorize-once, use-many session escrow for high-frequency micropayments. Deposit once, facilitator captures usage incrementally, settle/refund unused. |
-| `AutoReleaseKeeper` | Chainlink Automation compatible. Scans escrow ID ranges, batch auto-releases timed-out escrows. |
 
 See [`contracts/README.md`](contracts/README.md) for contract details.
 
 ## Architecture
 
 ```
-contracts/          Foundry — EscrowVault, SessionEscrow, AutoReleaseKeeper
+contracts/          Foundry — EscrowVault, SessionEscrow
 src/server/         Facilitator server — settles escrows, computes reputation, serves API
 src/client/         Client SDK — EIP-712 signing, reputation lookup, x402 payment flow
 demo-web/           Next.js 15 demo app with Protocol Inspector

@@ -13,7 +13,9 @@
     "build:packages": "bun run build:types && bun run build:client && bun run build:server",
     "build:contracts": "cd contracts && forge build",
     "test:contracts": "cd contracts && forge test",
-    "sync-abi": "bun scripts/sync-abi.ts"
+    "sync-abi": "bun scripts/sync-abi.ts",
+    "deploy": "bun scripts/deploy.ts",
+    "deploy:local": "bun scripts/deploy.ts --local"
   },
   "dependencies": {
     "express": "^4.21.0",
