@@ -8,13 +8,12 @@ import {
   PREVIEW_ORDER,
   PREVIEW_PAYMENT_REQUIRED,
   PREVIEW_SETTLEMENT,
-  type PreviewStep,
 } from "./previewData";
 
 export function PreviewFlow({ onExit }: { onExit: () => void }) {
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [running, setRunning] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const topRef = useRef<HTMLDivElement>(null);
 
   const startPreview = useCallback(() => {
     setCurrentIndex(0);
@@ -36,10 +35,10 @@ export function PreviewFlow({ onExit }: { onExit: () => void }) {
     return () => clearTimeout(timer);
   }, [currentIndex, running]);
 
-  // Auto-scroll to latest step
+  // Auto-scroll to latest step (now at top)
   useEffect(() => {
     if (currentIndex >= 0) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      topRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   }, [currentIndex]);
 
@@ -103,69 +102,62 @@ export function PreviewFlow({ onExit }: { onExit: () => void }) {
             ))}
           </div>
 
-          {/* Stacked step cards */}
+          {/* Stacked step cards — descending order (latest on top) */}
+          <div ref={topRef} />
           <div className="space-y-3">
             <AnimatePresence>
-              {PREVIEW_STEPS.slice(0, currentIndex + 1).map((step, i) => {
-                const isActive = i === currentIndex;
-                const isCompleted = i < currentIndex;
+              {PREVIEW_STEPS.slice(0, currentIndex + 1)
+                .map((step, originalIndex) => ({ step, originalIndex }))
+                .reverse()
+                .map(({ step, originalIndex }) => {
+                  const isActive = originalIndex === currentIndex;
+                  const isCompleted = originalIndex < currentIndex;
 
-                return (
-                  <motion.div
-                    key={step.id}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, ease: "easeOut" }}
-                    className={`panel-surface rounded-2xl transition-all ${
-                      isActive ? "p-6" : "p-4 opacity-70"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      {isCompleted ? (
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
-                          <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                            <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
+                  return (
+                    <motion.div
+                      key={step.id}
+                      initial={{ opacity: 0, y: -12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, ease: "easeOut" }}
+                      className={`panel-surface rounded-2xl p-6 transition-all ${
+                        isCompleted ? "opacity-75" : ""
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {isCompleted ? (
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
+                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                              <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
+                            Step {originalIndex + 1}
+                          </span>
+                        )}
+                        <span className={`text-sm font-semibold ${isCompleted ? "text-text-secondary" : "text-text-primary"}`}>
+                          {step.label}
                         </span>
-                      ) : (
-                        <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
-                          Step {i + 1}
-                        </span>
-                      )}
-                      <span className={`text-sm font-semibold ${isCompleted ? "text-text-secondary" : "text-text-primary"}`}>
-                        {step.label}
-                      </span>
-                      {isActive && running && (
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
-                      )}
-                    </div>
-
-                    {/* Active step: full description + detail */}
-                    {isActive && (
-                      <>
-                        <p className="mt-2 text-sm text-text-secondary">
-                          {step.description}
-                        </p>
-                        <div className="mt-4 rounded-xl border border-border-default bg-bg-primary/50 p-4">
-                          <StepDetail stepId={step.id} />
-                        </div>
-                      </>
-                    )}
-
-                    {/* Completed step: compact inline summary */}
-                    {isCompleted && (
-                      <div className="mt-1.5 pl-9 text-xs text-text-tertiary">
-                        <CompactSummary stepId={step.id} />
+                        {isActive && running && (
+                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+                        )}
                       </div>
-                    )}
-                  </motion.div>
-                );
-              })}
+
+                      <p className={`mt-2 text-sm ${isCompleted ? "text-text-tertiary" : "text-text-secondary"}`}>
+                        {step.description}
+                      </p>
+                      <div className={`mt-4 rounded-xl border p-4 ${
+                        isCompleted
+                          ? "border-border-default/50 bg-bg-primary/30"
+                          : "border-border-default bg-bg-primary/50"
+                      }`}>
+                        <StepDetail stepId={step.id} />
+                      </div>
+                    </motion.div>
+                  );
+                })}
             </AnimatePresence>
           </div>
-
-          {/* Scroll anchor */}
-          <div ref={bottomRef} />
 
           {/* Completed state */}
           {!running && currentIndex >= PREVIEW_STEPS.length - 1 && (
@@ -283,26 +275,3 @@ function StepDetail({ stepId }: { stepId: string }) {
   }
 }
 
-/** One-line summary for completed steps */
-function CompactSummary({ stepId }: { stepId: string }) {
-  switch (stepId) {
-    case "select":
-      return <span>{PREVIEW_PRODUCT.title} — {PREVIEW_PRODUCT.price} USDC</span>;
-    case "create_order":
-      return <span>Order {PREVIEW_ORDER.orderId.slice(0, 10)}... created</span>;
-    case "request_payment":
-      return <span>402 — escrow terms received (25 USDC, 7-day window)</span>;
-    case "sign":
-      return <span>EIP-712 ReceiveWithAuthorization signed</span>;
-    case "submit":
-      return <span>Escrow #{PREVIEW_SETTLEMENT.escrowId} created on-chain</span>;
-    case "escrowed":
-      return <span>25 USDC locked in EscrowVault</span>;
-    case "delivery":
-      return <span>Delivery confirmed, funds released</span>;
-    case "complete":
-      return <span>Seller: 24.925 USDC | Fee: 0.075 USDC</span>;
-    default:
-      return null;
-  }
-}
