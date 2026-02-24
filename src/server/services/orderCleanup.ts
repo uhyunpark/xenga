@@ -39,6 +39,6 @@ export function startOrderCleanup() {
 
   // Run once immediately on startup, then periodically
   run();
-  setInterval(run, CLEANUP_INTERVAL_MS);
+  setInterval(run, CLEANUP_INTERVAL_MS).unref();
   logger.info("cleanup", "Order cleanup started (every 5 min, 10 min threshold)");
 }

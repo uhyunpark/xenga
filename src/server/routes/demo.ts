@@ -2,6 +2,7 @@ import { Router } from "express";
 import { parseUnits, type Address } from "viem";
 import { USDC_DECIMALS } from "../../shared/constants.js";
 import { fundWallet } from "../facilitator/settler.js";
+import { logger } from "../services/logger.js";
 
 const router = Router();
 
@@ -59,7 +60,7 @@ router.post("/fund", async (req, res) => {
       ethTx,
     });
   } catch (err) {
-    console.error("[DemoFund] Failed:", err);
+    logger.error("demo", `Funding failed: ${err instanceof Error ? err.message : String(err)}`);
     res.status(500).json({
       error: "Funding failed",
       details: err instanceof Error ? err.message : String(err),

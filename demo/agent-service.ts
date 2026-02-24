@@ -35,6 +35,7 @@ async function main() {
     privateKey: AGENT_PRIVATE_KEY,
     serverUrl: SERVER_URL,
     usdcAddress: process.env.USDC_ADDRESS as Address | undefined,
+    escrowVaultAddress: process.env.ESCROW_VAULT_ADDRESS as Address | undefined,
   });
 
   console.log(`Agent address: ${agent.address}\n`);
@@ -77,8 +78,10 @@ async function main() {
 
   // Step 5: Release funds immediately (don't wait for 1hr auto-release)
   console.log("\n5. Releasing funds to service provider...");
-  const result = await agent.releaseEscrow(order.id);
-  console.log(`   ${result.message}`);
+  if (payment.escrowId) {
+    const txHash = await agent.releaseOnChain(payment.escrowId);
+    console.log(`   Released on-chain: ${txHash}`);
+  }
 
   // Step 6: Verify final state
   console.log("\n6. Final state check...");

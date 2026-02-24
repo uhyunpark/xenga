@@ -32,6 +32,7 @@ async function main() {
     privateKey: BUYER_PRIVATE_KEY,
     serverUrl: SERVER_URL,
     usdcAddress: process.env.USDC_ADDRESS as Address | undefined,
+    escrowVaultAddress: process.env.ESCROW_VAULT_ADDRESS as Address | undefined,
   });
 
   console.log(`Buyer address: ${client.address}\n`);
@@ -71,10 +72,12 @@ async function main() {
     }
   }
 
-  // Step 4: Release funds
+  // Step 4: Release funds on-chain
   console.log("\n4. Releasing funds to seller...");
-  const result = await client.releaseEscrow(ORDER_ID);
-  console.log(`   ${result.message}`);
+  if (payment.escrowId) {
+    const txHash = await client.releaseOnChain(payment.escrowId);
+    console.log(`   Released on-chain: ${txHash}`);
+  }
 
   console.log("\n=== Transaction Complete ===");
 }
