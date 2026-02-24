@@ -2,6 +2,7 @@ import type { PaymentScheme, PaymentRequirement, SettleResult } from "../../shar
 import type { EscrowPaymentPayload } from "../../shared/types.js";
 import { verifyEscrowPayment } from "../facilitator/verifier.js";
 import { settleEscrow } from "../facilitator/settler.js";
+import { config } from "../config.js";
 
 export const escrowScheme: PaymentScheme = {
   name: "escrow",
@@ -9,7 +10,7 @@ export const escrowScheme: PaymentScheme = {
   buildRequirement(params): PaymentRequirement {
     return {
       scheme: "escrow",
-      network: "base-sepolia",
+      network: config.chainConfig.network,
       escrowContract: params.escrowContract,
       asset: params.asset,
       amount: params.amount,
@@ -28,6 +29,6 @@ export const escrowScheme: PaymentScheme = {
     const { txHash, escrowId } = await settleEscrow(
       payload as unknown as EscrowPaymentPayload
     );
-    return { success: true, txHash, network: "base-sepolia", escrowId };
+    return { success: true, txHash, network: config.chainConfig.network, escrowId };
   },
 };

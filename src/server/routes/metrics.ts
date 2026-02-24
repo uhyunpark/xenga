@@ -5,6 +5,7 @@ import {
   getOnChainServiceStats,
   getTimeWindowedStats,
 } from "../services/metricsService.js";
+import { logger } from "../services/logger.js";
 
 const router = Router();
 
@@ -49,7 +50,7 @@ router.get("/disputes", async (req, res) => {
 
     res.json({ allTime, windowed });
   } catch (err: any) {
-    console.error("[metrics] Error:", err.message);
+    logger.error("metrics", `Error: ${err.message}`);
     res.status(500).json({ error: "Failed to fetch metrics" });
   }
 });

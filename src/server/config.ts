@@ -2,7 +2,7 @@ import "dotenv/config";
 import type { Address, Hex } from "viem";
 import { isAddress } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { DEFAULT_RPC, USDC_ADDRESS } from "../shared/constants.js";
+import { getChainConfig, type ChainConfig } from "../shared/constants.js";
 
 // Deterministic placeholder address for mock mode (no real chain interaction)
 const MOCK_ESCROW_VAULT_ADDRESS =
@@ -19,11 +19,15 @@ function resolveAddress(
 
 const isMock = process.env.MOCK_CHAIN === "true";
 
+// Resolve chain config from CHAIN_ID env var (defaults to Base Sepolia)
+const chainId = process.env.CHAIN_ID ? parseInt(process.env.CHAIN_ID, 10) : undefined;
+const chainConfig: ChainConfig = getChainConfig(chainId);
+
 export const config = {
   port: parseInt(process.env.PORT || "3000", 10),
   privateKey: process.env.PRIVATE_KEY as Hex,
-  rpcUrl: process.env.BASE_SEPOLIA_RPC || DEFAULT_RPC,
-  usdcAddress: resolveAddress(process.env.USDC_ADDRESS, USDC_ADDRESS as Address),
+  rpcUrl: process.env.BASE_SEPOLIA_RPC || chainConfig.defaultRpc,
+  usdcAddress: resolveAddress(process.env.USDC_ADDRESS, chainConfig.usdcAddress as Address),
   escrowVaultAddress: resolveAddress(
     process.env.ESCROW_VAULT_ADDRESS,
     isMock ? MOCK_ESCROW_VAULT_ADDRESS : undefined
@@ -32,6 +36,8 @@ export const config = {
   feeBps: parseInt(process.env.FEE_BPS || "0", 10),
   flatFee: BigInt(process.env.FEE_FLAT_USDC || "0"),
   feeRecipient: (process.env.FEE_RECIPIENT || undefined) as Address | undefined,
+  chainConfig,
+  apiKeys: (process.env.API_KEYS || "").split(",").map(k => k.trim()).filter(Boolean),
 };
 
 export function validateConfig() {

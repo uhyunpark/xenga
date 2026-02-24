@@ -102,7 +102,7 @@ export async function processEscrowPayment(
 
   const paymentRequired: EscrowPaymentRequired = {
     scheme: "escrow",
-    network: "base-sepolia",
+    network: deps.config.network ?? "base-sepolia",
     escrowContract: deps.config.escrowVaultAddress,
     asset: deps.config.usdcAddress,
     amount: payload.value,
@@ -243,7 +243,7 @@ async function buildPaymentRequiredResponse(
 
   const paymentRequired: EscrowPaymentRequired = {
     scheme: "escrow",
-    network: "base-sepolia",
+    network: deps.config.network ?? "base-sepolia",
     escrowContract: deps.config.escrowVaultAddress,
     asset: deps.config.usdcAddress,
     amount: order.price.toString(),

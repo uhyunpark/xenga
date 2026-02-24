@@ -1,0 +1,11 @@
+web/
+demo-web/
+node_modules/
+contracts/src/
+contracts/lib/
+contracts/test/
+contracts/script/
+.git/
+.env
+.env.*
+*.md

@@ -1,8 +1,29 @@
 import type { Request, Response, NextFunction } from "express";
 import { verifyMessage, type Address } from "viem";
+import { config } from "../config.js";
 
 export interface AuthenticatedRequest extends Request {
   callerAddress?: Address;
+}
+
+/**
+ * API key authentication middleware.
+ * Checks `X-API-KEY` header against configured API_KEYS.
+ * If no API_KEYS are configured, all requests pass through (open access).
+ */
+export function apiKeyAuth() {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (config.apiKeys.length === 0) return next();
+
+    const apiKey = req.headers["x-api-key"] as string | undefined;
+    if (!apiKey) {
+      return res.status(401).json({ error: "Missing X-API-KEY header" });
+    }
+    if (!config.apiKeys.includes(apiKey)) {
+      return res.status(403).json({ error: "Invalid API key" });
+    }
+    next();
+  };
 }
 
 export function walletAuth(getExpectedAddress?: (req: Request) => Address | undefined) {

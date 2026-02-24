@@ -4,14 +4,15 @@ import type { DisputeRequest, ResolveDisputeRequest } from "../../shared/types.j
 import { getDb } from "../db/index.js";
 import { getOrderById } from "../services/orderService.js";
 import { resolveDisputeOnChain } from "../facilitator/settler.js";
-import { walletAuth, type AuthenticatedRequest } from "../middleware/auth.js";
+import { walletAuth, apiKeyAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { getArbiterAddress } from "../config.js";
 
 const router = Router();
 
 // ──────────── File dispute ────────────
-router.post("/:orderId/dispute", (req, res) => {
-  const order = getOrderById(req.params.orderId);
+function handleFileDispute(req: import("express").Request, res: import("express").Response) {
+  const orderId = (req.params.orderId || req.params[0]) as string;
+  const order = getOrderById(orderId);
   if (!order) return res.status(404).json({ error: "Order not found" });
   if (order.status !== "delivery_confirmed" && order.status !== "escrowed") {
     return res.status(400).json({ error: "Order is not in disputable state" });
@@ -42,10 +43,14 @@ router.post("/:orderId/dispute", (req, res) => {
     message: "Dispute filed",
     disputeId: id,
   });
-});
+}
+
+router.post("/:orderId/dispute", apiKeyAuth(), handleFileDispute);
+// Alias: frontend calls POST /api/disputes/:orderId (without /dispute suffix)
+router.post("/:orderId", apiKeyAuth(), handleFileDispute);
 
 // ──────────── List disputes ────────────
-router.get("/", (_req, res) => {
+router.get("/", apiKeyAuth(), (_req, res) => {
   const db = getDb();
   const disputes = db.prepare("SELECT * FROM disputes ORDER BY created_at DESC").all();
   res.json(disputes);

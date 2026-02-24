@@ -5,7 +5,7 @@ let db: Database.Database;
 
 export function getDb(): Database.Database {
   if (!db) {
-    const dbPath = process.env.VERCEL ? "/tmp/x402-escrow.db" : "x402-escrow.db";
+    const dbPath = process.env.DATABASE_PATH ?? (process.env.VERCEL ? "/tmp/x402-escrow.db" : "x402-escrow.db");
     db = new Database(dbPath);
     db.pragma("journal_mode = WAL");
     db.pragma("foreign_keys = ON");

@@ -2,15 +2,15 @@ import type { Address } from "viem";
 import { USDC_ADDRESS, CHAIN_ID } from "./constants.js";
 
 /**
- * EIP-712 domain for USDC on Base Sepolia
- * Used for signing receiveWithAuthorization
+ * EIP-712 domain for USDC.
+ * Accepts optional chainId and usdcAddress overrides for multi-chain support.
  */
-export function getUsdcEip712Domain(usdcAddress: Address = USDC_ADDRESS) {
+export function getUsdcEip712Domain(usdcAddress?: Address, chainId?: number) {
   return {
     name: "USD Coin",
     version: "2",
-    chainId: BigInt(CHAIN_ID),
-    verifyingContract: usdcAddress,
+    chainId: BigInt(chainId ?? CHAIN_ID),
+    verifyingContract: usdcAddress ?? (USDC_ADDRESS as Address),
   } as const;
 }
 
@@ -61,13 +61,14 @@ export function buildReceiveAuthSigningParams(params: {
   validAfter?: bigint;
   validBefore?: bigint;
   usdcAddress?: Address;
+  chainId?: number;
 }) {
   const validAfter = params.validAfter ?? 0n;
   const validBefore =
     params.validBefore ?? BigInt(Math.floor(Date.now() / 1000) + 86400);
 
   return {
-    domain: getUsdcEip712Domain(params.usdcAddress),
+    domain: getUsdcEip712Domain(params.usdcAddress, params.chainId),
     types: receiveWithAuthorizationTypes,
     primaryType: "ReceiveWithAuthorization" as const,
     message: {

@@ -51,6 +51,7 @@ function buildExpressDeps(): PaymentDeps {
       usdcAddress: config.usdcAddress,
       feeBps: config.feeBps,
       flatFee: config.flatFee,
+      network: config.chainConfig.network,
     },
     logger,
   };
