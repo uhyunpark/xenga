@@ -24,7 +24,7 @@ import {SessionEscrow} from "../src/SessionEscrow.sol";
  *   bun run deploy
  *   # or directly:
  *   forge script script/Deploy.s.sol \
- *     --rpc-url $BASE_SEPOLIA_RPC \
+ *     --fork-url $BASE_SEPOLIA_RPC \
  *     --private-key $PRIVATE_KEY \
  *     --broadcast
  */
