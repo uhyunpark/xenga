@@ -13,15 +13,15 @@ import {MockUSDC} from "../test/mocks/MockUSDC.sol";
  * Deploys MockUSDC instead of real USDC, sets no fees, and uses the
  * deployer address for all roles. Mints 1,000,000 test USDC to the deployer.
  *
- * Required env vars:
+ * Optional env vars:
  *   PRIVATE_KEY   — deployer private key (hex, 0x-prefixed)
- *                   Anvil default: 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+ *                   Defaults to Anvil account #0: 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
  *
  * Usage:
  *   bun run deploy:local
  *   # or directly (with Anvil running on localhost:8545):
  *   forge script script/DeployLocal.s.sol \
- *     --rpc-url http://localhost:8545 \
+ *     --fork-url http://localhost:8545 \
  *     --private-key $PRIVATE_KEY \
  *     --broadcast
  */
@@ -29,7 +29,7 @@ contract DeployLocal is Script {
     uint256 constant INITIAL_MINT = 1_000_000 * 1e6; // 1,000,000 USDC
 
     function run() external {
-        uint256 deployerKey = vm.envUint("PRIVATE_KEY");
+        uint256 deployerKey = vm.envOr("PRIVATE_KEY", uint256(0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80));
         address deployer = vm.addr(deployerKey);
 
         console2.log("=== Deploy Local (Anvil) ===");
