@@ -3,7 +3,6 @@ pragma solidity ^0.8.24;
 
 import {Script, console2} from "forge-std/Script.sol";
 import {EscrowVault} from "../src/EscrowVault.sol";
-import {AutoReleaseKeeper} from "../src/AutoReleaseKeeper.sol";
 import {SessionEscrow} from "../src/SessionEscrow.sol";
 import {MockUSDC} from "../test/mocks/MockUSDC.sol";
 
@@ -48,9 +47,6 @@ contract DeployLocal is Script {
         // Deploy all contracts — no fees, deployer fills all roles
         EscrowVault vault = new EscrowVault(address(usdc), deployer, deployer, 0, 0);
         console2.log("EscrowVault:       ", address(vault));
-
-        AutoReleaseKeeper keeper = new AutoReleaseKeeper(address(vault), 20);
-        console2.log("AutoReleaseKeeper: ", address(keeper));
 
         SessionEscrow session = new SessionEscrow(address(usdc), deployer);
         console2.log("SessionEscrow:     ", address(session));

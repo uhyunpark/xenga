@@ -15,7 +15,7 @@ These are **complementary, not competing** protocols — they operate at differe
 | Dimension | ERC-8004 | Xenga |
 |-----------|----------|-------|
 | **Primary concern** | Agent discovery + trust signaling | Value custody + settlement |
-| **On-chain footprint** | 3 registries (Identity, Reputation, Validation) | EscrowVault + SessionEscrow + AutoReleaseKeeper |
+| **On-chain footprint** | 3 registries (Identity, Reputation, Validation) | EscrowVault + SessionEscrow |
 | **Payment handling** | Explicitly out of scope | Core function — full escrow lifecycle with USDC |
 | **Transport layer** | Not prescribed (complements A2A, MCP, x402) | x402 HTTP 402 flow built in |
 | **Target user** | Any agent framework / protocol | Buyers, sellers, and facilitators in commerce |
@@ -90,7 +90,7 @@ Xenga's core is `EscrowVault.sol` — implementing a complete escrow lifecycle:
 
 ```
 None → Active → DeliveryConfirmed → Completed      (buyer releases)
-         │             │              AutoReleased   (timeout, via Chainlink Keeper)
+         │             │              AutoReleased   (timeout, anyone triggers)
          │             └────────────→ Disputed ──→ Resolved (arbiter splits %)
          └───────────────────────────→ Refunded   (seller voluntary / arbiter)
 ```
@@ -133,7 +133,7 @@ Xenga identifies participants solely by Ethereum addresses. No registry, no meta
 - **Delivery confirmation**: seller calls `confirmDelivery()`, starting the dispute window
 - **Auto-verification**: the `agent-service` service type implements `verifyDelivery()` for machine-to-machine auto-verification
 - **Dispute resolution**: buyer can dispute within the dispute window; arbiter resolves with percentage split
-- **Auto-release**: `AutoReleaseKeeper.sol` uses Chainlink Automation to release funds after timeout
+- **Auto-release**: permissionless `autoRelease()` on EscrowVault releases funds after timeout
 
 ---
 
@@ -161,7 +161,7 @@ Xenga identifies participants solely by Ethereum addresses. No registry, no meta
 |------------|---------------------|
 | **Fund custody** | `EscrowVault.sol` locks USDC on-chain with state machine |
 | **Dispute resolution** | Arbiter resolves with buyer percentage split (0-100) |
-| **Auto-release** | `AutoReleaseKeeper.sol` with Chainlink Automation |
+| **Auto-release** | Permissionless `autoRelease()` on EscrowVault — facilitator server or anyone can trigger |
 | **Fee system** | `feeBps + flatFee`, MAX_FEE_BPS=1000 (10%), seller-pays model |
 | **Gasless transfers** | ERC-3009 `receiveWithAuthorization` |
 | **Micropayment sessions** | `SessionEscrow.sol` — sign once, multiple captures |

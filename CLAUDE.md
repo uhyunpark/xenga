@@ -29,7 +29,7 @@ bun run build:contracts && bun run sync-abi
 On-chain escrow and reputation system on Base Sepolia using USDC (ERC-3009 gasless transfers). The x402 protocol provides the HTTP integration layer.
 
 **Four layers:**
-- **`contracts/`** — Foundry project: EscrowVault (escrow state machine + stats), SessionEscrow (session micropayments), AutoReleaseKeeper (Chainlink automation), MockUSDC (test token)
+- **`contracts/`** — Foundry project: EscrowVault (escrow state machine + stats), SessionEscrow (session micropayments), MockUSDC (test token)
 - **`src/server/`** — Facilitator server: settles escrows on-chain, computes reputation scores, serves API. Includes x402 payment middleware for HTTP-triggered escrow creation.
 - **`src/client/`** — Client SDK: EIP-712 signing, reputation lookup (`getReputation()`), and x402 payment flow (`escrowFetch` with optional `onSellerReputation` callback)
 - **`demo-web/`** — Next.js 15 App Router demo: interactive escrow lifecycle with Protocol Inspector
@@ -105,8 +105,6 @@ All owner-callable setters. Ownership uses `Ownable2Step` — transfer requires 
 | Dispute window | EscrowVault | `setDisputeWindow(uint256)` | 3 days | 1 hour – 30 days |
 | Pause / unpause | EscrowVault, SessionEscrow | `pause()` / `unpause()` | unpaused | — |
 | Facilitator address | SessionEscrow | `setFacilitator(address)` | — | — |
-| Chainlink forwarder | AutoReleaseKeeper | `setForwarder(address)` | — | — |
-| Max batch size | AutoReleaseKeeper | `setMaxBatchSize(uint256)` | 20 | 1 – 100 |
 
 **Design note — why `releaseWindow` is per-escrow but `disputeWindow` is a global default:**
 `releaseWindow` is a business timing parameter that must vary by service type (1h for agent-service, 7d for marketplace). It is computed by the server per-escrow from service types + reputation and stored in the escrow struct. `disputeWindow` is a consumer protection parameter — a uniform "cooling off period" — set globally by the owner so it cannot be manipulated by the facilitator on a per-escrow basis.
@@ -188,7 +186,6 @@ demo-web/
 - **Foundry tests**: default `block.timestamp` is 1 (not 0); use explicit absolute timestamps with `vm.warp()` rather than relative offsets from captured `block.timestamp` (via_ir can change evaluation order)
 - **ABI source of truth**: Foundry artifacts in `contracts/out/` → run `sync-abi` to regenerate `src/shared/abi.ts`
 - **`disputeWindow` vs `releaseWindow`**: `releaseWindow` is per-escrow (set at creation from service type config). `disputeWindow` is a global owner-set default (applies to all new escrows, stored in each escrow struct at creation). Changing it post-deployment does not affect existing escrows.
-- **AutomationCompatibleInterface**: defined locally in `contracts/src/interfaces/` (Chainlink repo too large to install)
 - **Workspaces**: root `package.json` has `"workspaces": ["demo-web"]`; run `bun install` from root to link
 
 ## Environment
