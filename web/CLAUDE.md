@@ -22,6 +22,8 @@ bun run start
 | Variable | Required | Description |
 |---|---|---|
 | `NEXT_PUBLIC_FACILITATOR_URL` | Yes (production) | URL of the Express facilitator (e.g. `https://facilitator.your-domain.com`). Empty for same-origin dev. |
+| `NEXT_PUBLIC_MOCK_CHAIN` | No | Set to `"true"` to enable mock mode: hardcoded balances (1.0 ETH, 1000 USDC), no RPC calls, "simulated settlement" in UI. Defaults to `false`. |
+| `NEXT_PUBLIC_BASE_URL` | No | Base URL for metadata/OpenGraph. Defaults to `https://xenga.xyz`. |
 
 ## How It Works
 
@@ -60,15 +62,59 @@ Three composable functions, each accepting an optional `emit` callback for the P
 
 React context providing two wallet modes:
 
-**Demo Wallet**: `generatePrivateKey()` stored in `sessionStorage`. Fund via facilitator's `/api/demo/fund` endpoint.
+**Demo Wallet**: `generatePrivateKey()` stored in `sessionStorage` (key: `x402-demo-pk`). Fund via facilitator's `/api/demo/fund` endpoint. Balance refresh reads USDC contract directly via `publicClient.readContract()` with inline ABI.
 
-**Browser Wallet (MetaMask)**: Requests `eth_requestAccounts`, auto-switches to Base Sepolia.
+**Browser Wallet (MetaMask)**: Requests `eth_requestAccounts`, auto-switches to Base Sepolia (adds chain if missing via `wallet_addEthereumChain`). Uses `window.ethereum` custom transport.
 
 Both expose: `address`, `walletClient`, `publicClient`, `refreshBalances()`, `usdcBalance`, `ethBalance`.
 
 ## Protocol Inspector (`lib/protocol-inspector/context.tsx`)
 
-React context + `useReducer` event bus that visualizes the x402 flow in real time. 4 tabs: HTTP, Signatures, On-Chain, State. Auto-switches tabs based on event type.
+React context + `useReducer` event bus that visualizes the x402 flow in real time. 4 tabs: HTTP, Signatures, On-Chain, State. Auto-switches tabs based on event type (HTTP event → "http" tab, signature → "signatures" tab, etc.). Event IDs generated via `crypto.randomUUID()`.
+
+## Styling
+
+**Tailwind CSS 4** with `@tailwindcss/postcss`.
+
+**Custom theme variables** defined in `globals.css` via `@theme` block:
+- Colors: `--color-bg-primary`, `--color-border-default`, `--color-accent`, `--color-success`, `--color-error`, `--color-warning`, `--color-violet`
+- Typography: `--font-sans` (Inter), `--font-mono` (IBM Plex Mono)
+- Custom animations: `pulse-glow`, `inspector-flash`
+
+**Reusable global classes:**
+- `.panel-surface` — panel styling (border, shadow, rounded)
+- `.code-block` — monospace display
+- `.gradient-text`, `.glow-blue`, `.glow-purple` — decorative effects
+- `.bg-grid` — background grid pattern
+
+**`class-variance-authority` (CVA)** for type-safe component variants (e.g., `Badge` with `success | warning | error | info | default` variants).
+
+Respects `prefers-reduced-motion` for accessibility. Custom scrollbar styling (webkit, 6px, subtle).
+
+## Custom Hooks (`lib/hooks/`)
+
+- **`useAutoScroll(ref, deps)`** — Auto-scrolls container to bottom when dependencies change. Suppresses when user manually scrolls up.
+- **`useOperatorAddress()`** — Fetches and caches operator address from `/api/health`. Uses module-level cache to avoid duplicate fetches across components.
+
+## State Management Patterns
+
+**`PaymentFlow`** uses `useReducer` with rich action types:
+- State includes: `step`, `product`, `orderId`, `escrowId`, `txHash`, `error`, `loading`, `paymentRequired`, `paymentPayload`, `completionReputation`, `disputeFiled`, `deliveryConfirmed`
+- Session storage persistence (key: `x402-marketplace-state`) — saved on state changes, restored on mount
+- Server-side order status is source of truth — client state syncs to server
+
+**Polling pattern:** 3-second interval for delivery confirmation detection, max 60 attempts (~3 min). Uses `useRef` for interval tracking and cleanup.
+
+**`AlreadyPaidError`** custom error class captures response data when order is already escrowed.
+
+## Animation
+
+**Framer Motion** for step transitions:
+- `AnimatePresence` with `mode="wait"` prevents overlapping animations
+- Common pattern: `initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}`
+- Completion screen: `initial={{ opacity: 0, scale: 0.95 }}`
+
+**CSS animations** in `globals.css`: `pulse-glow`, `inspector-flash` (600ms ease-out). Spinner: `animate-spin rounded-full border-2 border-white border-t-transparent`.
 
 ## Key Components
 
@@ -78,7 +124,24 @@ State machine: `select → create_order → request_payment → sign → submit 
 
 ### `AgentTerminal` (agent service)
 
-Scripted auto-advancing terminal UI that plays through the agent-service flow automatically.
+Scripted auto-advancing terminal UI that plays through the agent-service flow automatically. Multi-scenario support: `happy | dispute | reputation | screening`. Terminal output with delay-based animation.
+
+### UI Components (`components/ui/`)
+
+- **`Badge`** — CVA-based variant component (success/warning/error/info/default)
+- **`ReputationBadge`** — Async badge that fetches reputation via `facilitatorFetch`, displays score + confidence
+- **`AddressDisplay`** — Shortened Ethereum address display
+- **`TxLink`** — Block explorer link for transaction hashes
+- **`JsonViewer`** — Formatted JSON display
+- **`WalletSelector`** — Wallet connection UI (demo vs browser)
+- **`UsdcAmount`** — Formatted USDC amount display
+
+### Client-Side Reputation Scoring (`lib/reputation/client-scoring.ts`)
+
+Pure functions mirroring server reputation logic for demo/trust-building scenarios:
+- `computeSellerScoreRaw()`, `computeBuyerScoreRaw()`, `getConfidence()`, `simulateRounds()`
+- Pre-computed agent profiles in `SCREENING_AGENTS`
+- Trust-building rounds in `TRUST_BUILDING_ROUNDS`
 
 ## Facilitator API Routes (called from frontend)
 
@@ -95,11 +158,20 @@ Scripted auto-advancing terminal UI that plays through the agent-service flow au
 | `/api/reputation/:address` | GET | Reputation score |
 | `/api/demo/fund` | POST | Faucet (10 USDC + 0.005 ETH) |
 
+## Responsive Layout
+
+- Desktop: `grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]` for two-column (main + sidebar)
+- Step tracker sidebar: `hidden lg:block` (desktop only), mobile shows progress bar with `lg:hidden`
+- Breakpoint-aware component swaps at `lg` breakpoint
+
 ## Technical Notes
 
 - **No server-side code**: The web app is a pure client. No `instrumentation.ts`, no `@server/` imports, no `better-sqlite3`.
 - **`@shared/` is client-safe**: Only types and pure functions. Webpack alias + TS loader extension in `next.config.ts` make it work.
 - **CORS required**: Frontend and facilitator are on different origins. The Express server has `CORS_ORIGIN` env var.
-- **`isMockChainClient`**: `lib/env/isMockChainClient.ts` reads `NEXT_PUBLIC_MOCK_CHAIN` for UI branching (shows "Mock Chain" vs "Base Sepolia"). Defaults to `false` when unset.
-- **Session persistence**: Wallet private key and marketplace flow state survive page refreshes via `sessionStorage`.
+- **`isMockChainClient`**: `lib/env/isMockChainClient.ts` reads `NEXT_PUBLIC_MOCK_CHAIN` for UI branching (shows "Mock Chain" vs "Base Sepolia"). In mock mode: hardcoded balances, no RPC, simulated settlement, tx links disabled.
+- **Session persistence**: Wallet private key (`x402-demo-pk`) and marketplace flow state (`x402-marketplace-state`) survive page refreshes via `sessionStorage`.
 - **Workspaces**: `web` is a workspace in root `package.json`. Run `bun install` from root to link.
+- **No test suite**: No Jest/Vitest setup. Uses `next lint` (ESLint) only.
+- **`@vercel/analytics`**: Integrated in root layout for Vercel analytics.
+- **Error handling**: Per-component error display via motion divs. Network errors in background operations (reputation fetch, polling) are silently caught.
