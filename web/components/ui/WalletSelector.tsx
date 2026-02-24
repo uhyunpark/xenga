@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { shortenAddress } from "@/lib/utils";
 
@@ -9,54 +8,20 @@ export function WalletSelector() {
     type,
     address,
     usdcBalance,
-    isConnecting,
     isFunding,
     connectDemo,
-    connectBrowser,
     disconnect,
     fundDemoWallet,
   } = useWallet();
-  const [showMenu, setShowMenu] = useState(false);
 
   if (!address) {
     return (
-      <div className="relative">
-        <button
-          onClick={() => setShowMenu(!showMenu)}
-          className="rounded-lg border border-border-default bg-bg-secondary px-3 py-1.5 text-sm font-medium text-text-primary transition-colors hover:border-border-active hover:bg-bg-tertiary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
-        >
-          Connect Wallet
-        </button>
-        {showMenu && (
-          <div className="absolute right-0 top-full z-20 mt-2 w-56 rounded-lg border border-border-default bg-bg-secondary p-1 shadow-lg shadow-slate-200">
-            <button
-              onClick={() => {
-                connectDemo();
-                setShowMenu(false);
-              }}
-              className="w-full rounded-md px-3 py-2 text-left text-sm text-text-primary transition-colors hover:bg-bg-tertiary"
-            >
-              <div className="font-medium">Demo Wallet</div>
-              <div className="text-xs text-text-tertiary">
-                Instant, no extension needed
-              </div>
-            </button>
-            <button
-              onClick={async () => {
-                await connectBrowser();
-                setShowMenu(false);
-              }}
-              disabled={isConnecting}
-              className="w-full rounded-md px-3 py-2 text-left text-sm text-text-primary transition-colors hover:bg-bg-tertiary disabled:opacity-50"
-            >
-              <div className="font-medium">Browser Wallet</div>
-              <div className="text-xs text-text-tertiary">
-                MetaMask or injected
-              </div>
-            </button>
-          </div>
-        )}
-      </div>
+      <button
+        onClick={connectDemo}
+        className="rounded-lg border border-border-default bg-bg-secondary px-3 py-1.5 text-sm font-medium text-text-primary transition-colors hover:border-border-active hover:bg-bg-tertiary focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/35"
+      >
+        Create Demo Wallet
+      </button>
     );
   }
 
@@ -77,9 +42,7 @@ export function WalletSelector() {
         </span>
       )}
       <div className="flex items-center gap-1.5 rounded-lg border border-border-default bg-bg-secondary px-2.5 py-1.5">
-        <div
-          className={`h-2 w-2 rounded-full ${type === "demo" ? "bg-warning" : "bg-success"}`}
-        />
+        <div className="h-2 w-2 rounded-full bg-success" />
         <span className="font-mono text-xs text-text-primary">
           {shortenAddress(address)}
         </span>
