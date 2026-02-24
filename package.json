@@ -13,7 +13,9 @@
     "build:packages": "bun run build:types && bun run build:client && bun run build:server",
     "build:contracts": "cd contracts && forge build",
     "test:contracts": "cd contracts && forge test",
-    "sync-abi": "bun scripts/sync-abi.ts"
+    "sync-abi": "bun scripts/sync-abi.ts",
+    "deploy": "cd contracts && forge script script/Deploy.s.sol --rpc-url $BASE_SEPOLIA_RPC --private-key $PRIVATE_KEY --broadcast",
+    "deploy:local": "cd contracts && forge script script/DeployLocal.s.sol --rpc-url http://localhost:8545 --private-key $PRIVATE_KEY --broadcast"
   },
   "dependencies": {
     "express": "^4.21.0",
