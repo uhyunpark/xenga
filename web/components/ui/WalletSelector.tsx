@@ -62,7 +62,7 @@ export function WalletSelector() {
 
   return (
     <div className="flex items-center gap-2">
-      {type === "demo" && (usdcBalance === null || parseFloat(usdcBalance) === 0) && (
+      {type === "demo" && (usdcBalance === null || (usdcBalance !== null && parseFloat(usdcBalance) < 1)) && (
         <button
           onClick={fundDemoWallet}
           disabled={isFunding}
