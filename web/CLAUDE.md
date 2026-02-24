@@ -58,13 +58,13 @@ Three composable functions, each accepting an optional `emit` callback for the P
 
 ## Wallet System (`lib/wallet/WalletProvider.tsx`)
 
-React context providing two wallet modes:
+React context managing demo wallets. The UI exposes a single "Create Demo Wallet" button (no dropdown, no decision point).
 
-**Demo Wallet**: `generatePrivateKey()` stored in `sessionStorage`. Fund via facilitator's `/api/demo/fund` endpoint.
+**Demo Wallet**: `generatePrivateKey()` stored in `sessionStorage`. Auto-reconnects on refresh. Fund via facilitator's `/api/demo/fund` endpoint.
 
-**Browser Wallet (MetaMask)**: Requests `eth_requestAccounts`, auto-switches to Base Sepolia.
+Browser wallet support (`connectBrowser`) is retained in `WalletProvider` for future production use but not exposed in the demo UI.
 
-Both expose: `address`, `walletClient`, `publicClient`, `refreshBalances()`, `usdcBalance`, `ethBalance`.
+Exposes: `address`, `walletClient`, `publicClient`, `refreshBalances()`, `usdcBalance`, `ethBalance`.
 
 ## Protocol Inspector (`lib/protocol-inspector/context.tsx`)
 
