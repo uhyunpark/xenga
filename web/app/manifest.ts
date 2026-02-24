@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Zenga — On-Chain Escrow for Agents",
-    short_name: "Zenga",
+    name: "Xenga — On-Chain Escrow for Agents",
+    short_name: "Xenga",
     description:
       "On-chain escrow settlement for autonomous agents and marketplaces — reputation scoring, dispute resolution, and programmable release logic on Base.",
     start_url: "/",

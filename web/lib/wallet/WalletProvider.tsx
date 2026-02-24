@@ -196,6 +196,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     if (address) refreshBalances();
   }, [address, refreshBalances]);
 
+  // Auto-reconnect demo wallet on page load/refresh
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const pk = sessionStorage.getItem(DEMO_KEY_STORAGE);
+      if (pk) connectDemo();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <WalletContext.Provider
       value={{
