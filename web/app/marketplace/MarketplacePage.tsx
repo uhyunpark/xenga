@@ -4,14 +4,14 @@ import { useState } from "react";
 import { PaymentFlow } from "@/components/marketplace/PaymentFlow";
 import { PreviewFlow } from "@/components/marketplace/PreviewFlow";
 import { InspectorPanel } from "@/components/protocol-inspector/InspectorPanel";
-import { useWallet } from "@/lib/wallet/WalletProvider";
 import { isMockChainClient } from "@/lib/env/isMockChainClient";
 
 export default function MarketplacePage() {
-  const { address } = useWallet();
   const [forceInteractive, setForceInteractive] = useState(false);
 
-  const showPreview = !address && !forceInteractive;
+  // Always start in preview mode — user clicks "Try It Live" to switch.
+  // This prevents wallet state from the agent demo leaking into the marketplace.
+  const showPreview = !forceInteractive;
 
   return (
     <div className="flex min-h-[calc(100vh-3.5rem)]">
