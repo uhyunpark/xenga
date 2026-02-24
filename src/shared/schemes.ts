@@ -36,7 +36,7 @@ export interface PaymentScheme {
 // ──────────────────────── Registry ────────────────────────
 // Use globalThis with Symbol.for() so the registry survives webpack module duplication
 
-const REGISTRY_KEY = Symbol.for("x402.schemeRegistry");
+const REGISTRY_KEY = Symbol.for("xenga.schemeRegistry");
 
 function getRegistry(): Map<string, PaymentScheme> {
   const g = globalThis as Record<symbol, unknown>;

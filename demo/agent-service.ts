@@ -4,7 +4,7 @@
  * An AI agent autonomously:
  * 1. Discovers an API service
  * 2. Creates an order
- * 3. Pays via x402 escrow (gasless ERC-3009)
+ * 3. Pays via xenga escrow (gasless ERC-3009)
  * 4. Receives the service
  * 5. Auto-verifies delivery
  * 6. Releases funds (or waits for 1hr auto-release)
@@ -59,8 +59,8 @@ async function main() {
   console.log(`   Price: ${order.priceUsdc} USDC`);
   console.log(`   Release window: 1 hour (auto-release)`);
 
-  // Step 2: Pay via x402 escrow
-  console.log("\n2. Paying via x402 escrow...");
+  // Step 2: Pay via xenga escrow
+  console.log("\n2. Paying via xenga escrow...");
   const { order: paidOrder, payment } = await agent.payForOrder(order.id);
   console.log(`   TX: ${payment.txHash}`);
   console.log(`   Escrow ID: ${payment.escrowId}`);

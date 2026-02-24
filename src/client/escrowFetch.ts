@@ -67,14 +67,14 @@ export interface EscrowFetchOptions {
 }
 
 /**
- * Fetch wrapper that handles x402 escrow payment flow automatically
+ * Fetch wrapper that handles xenga escrow payment flow automatically
  *
  * 1. Sends request to the server
  * 2. If 402 response → signs ERC-3009 authorization
  * 3. Retries with PAYMENT-SIGNATURE header
  * 4. Returns final response with escrow details
  *
- * Supports both x402 standard headers and legacy X-PAYMENT headers.
+ * Supports both xenga standard headers and legacy X-PAYMENT headers.
  */
 export async function escrowFetch(
   url: string,
@@ -117,7 +117,7 @@ export async function escrowFetch(
         "Failed to decode PAYMENT-REQUIRED header: invalid base64 or JSON"
       );
     }
-    // Handle array format (x402 standard) or single object (legacy)
+    // Handle array format (xenga standard) or single object (legacy)
     const candidate = Array.isArray(decoded)
       ? decoded.find((r: { scheme?: string }) => r.scheme === "escrow")
       : decoded;
@@ -159,7 +159,7 @@ export async function escrowFetch(
   }
 
   console.log(
-    `[x402] Payment required: ${paymentRequired.amount} USDC to escrow ${paymentRequired.escrowContract}`
+    `[xenga] Payment required: ${paymentRequired.amount} USDC to escrow ${paymentRequired.escrowContract}`
   );
 
   // Check seller reputation if callback provided
@@ -187,7 +187,7 @@ export async function escrowFetch(
     options.usdcAddress
   );
 
-  console.log(`[x402] Signed receiveWithAuthorization from ${payload.from}`);
+  console.log(`[xenga] Signed receiveWithAuthorization from ${payload.from}`);
 
   // Submit payment with retry (send both standard and legacy headers)
   const paymentHeader = encodeBase64(JSON.stringify(payload));

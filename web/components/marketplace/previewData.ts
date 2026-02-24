@@ -1,6 +1,6 @@
 /**
  * Pre-recorded data for the no-wallet marketplace preview.
- * Shows the full x402 payment lifecycle with realistic payloads.
+ * Shows the full xenga payment lifecycle with realistic payloads.
  */
 
 export const PREVIEW_PRODUCT = {

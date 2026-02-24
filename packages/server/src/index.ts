@@ -1,4 +1,4 @@
-// @x402/server — Core server SDK (framework-agnostic)
+// @xenga/server — Core server SDK (framework-agnostic)
 // Exports: payment core logic, types, service type registry, facilitator dispatch
 
 // Payment core

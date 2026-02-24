@@ -3,7 +3,7 @@ import { CheckoutPage } from "./CheckoutPage";
 
 export const metadata: Metadata = {
   title: "Checkout — Xenga",
-  description: "Complete your escrow payment securely via x402 protocol.",
+  description: "Complete your escrow payment securely via Xenga protocol.",
 };
 
 export default function Page({

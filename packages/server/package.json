@@ -1,7 +1,7 @@
 {
-  "name": "@x402/server",
+  "name": "@xenga/server",
   "version": "0.1.0",
-  "description": "Server SDK for x402 escrow payments — middleware, service types, facilitator dispatch",
+  "description": "Server SDK for xenga escrow payments — middleware, service types, facilitator dispatch",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -25,7 +25,7 @@
     "dev": "tsup --watch"
   },
   "dependencies": {
-    "@x402/types": "workspace:*"
+    "@xenga/types": "workspace:*"
   },
   "peerDependencies": {
     "viem": "^2.21.0",

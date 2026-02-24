@@ -1,7 +1,7 @@
 {
-  "name": "@x402/types",
+  "name": "@xenga/types",
   "version": "0.1.0",
-  "description": "Shared types, constants, and ABIs for x402 escrow payment protocol",
+  "description": "Shared types, constants, and ABIs for xenga escrow payment protocol",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

@@ -81,7 +81,7 @@ async function apiFetch(url: string, init?: RequestInit): Promise<Response> {
 }
 
 /**
- * Create an x402 escrow client.
+ * Create a xenga escrow client.
  *
  * Supports both buyer and seller operations. Provide either `privateKey` or
  * a pre-configured `walletClient`. Set `chainId` to target different chains.
@@ -166,7 +166,7 @@ export function createEscrowClient(config: EscrowClientConfig) {
     walletClient,
 
     /**
-     * Pay for an order using x402 escrow flow
+     * Pay for an order using xenga escrow flow
      */
     async payForOrder(orderId: string): Promise<PayForOrderResponse> {
       const { response, payment } = await escrowFetch(

@@ -1,4 +1,4 @@
-// @x402/client — Re-exports the client SDK
+// @xenga/client — Re-exports the client SDK
 // Source of truth: src/client/ (to maintain compatibility with existing imports)
 
 export { escrowFetch } from "../../../src/client/escrowFetch.js";

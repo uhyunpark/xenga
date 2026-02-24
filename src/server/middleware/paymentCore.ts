@@ -18,7 +18,7 @@ const noopLogger = {
 /**
  * Framework-independent escrow payment processing.
  *
- * Handles the full x402 lifecycle:
+ * Handles the full xenga lifecycle:
  * 1. Idempotency check (already escrowed → return existing details)
  * 2. No payment header → 402 with PAYMENT-REQUIRED (includes reputation-based param adjustment)
  * 3. With payment header → verify → claim → settle → 200 with PAYMENT-RESPONSE

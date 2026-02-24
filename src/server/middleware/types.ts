@@ -102,7 +102,7 @@ export interface PaymentDeps {
     usdcAddress: Address;
     feeBps: number;
     flatFee: bigint;
-    /** Network identifier for x402 headers (e.g. "base-sepolia", "base") */
+    /** Network identifier for xenga headers (e.g. "base-sepolia", "base") */
     network?: string;
   };
 

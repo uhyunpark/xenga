@@ -1,5 +1,5 @@
 {
-  "name": "x402-escrow",
+  "name": "xenga",
   "version": "0.1.0",
   "private": true,
   "description": "An on-chain escrow and reputation system for secure, verifiable payments — for both humans and autonomous agents",

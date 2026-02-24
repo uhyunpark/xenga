@@ -68,7 +68,7 @@ export function CheckoutFlow({
     <div className="panel-surface rounded-2xl p-6">
       <div className="mb-6 text-center">
         <h1 className="text-xl font-bold">Checkout</h1>
-        <p className="mt-1 text-sm text-text-secondary">Secure escrow payment via x402</p>
+        <p className="mt-1 text-sm text-text-secondary">Secure escrow payment via Xenga</p>
       </div>
 
       {/* Order summary */}

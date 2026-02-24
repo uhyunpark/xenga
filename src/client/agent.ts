@@ -1,8 +1,8 @@
 /**
- * Agent-specific helpers for machine-to-machine x402 payments.
+ * Agent-specific helpers for machine-to-machine xenga payments.
  *
  * These utilities make it easy for autonomous agents (LLMs, bots, pipelines)
- * to discover, evaluate, and pay for services protected by x402 escrow.
+ * to discover, evaluate, and pay for services protected by xenga escrow.
  */
 
 import type { Address } from "viem";

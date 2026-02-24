@@ -6,5 +6,5 @@ export default defineConfig({
   dts: true,
   sourcemap: true,
   clean: true,
-  external: ["viem", "@x402/types"],
+  external: ["viem", "@xenga/types"],
 });

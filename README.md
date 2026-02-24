@@ -55,7 +55,7 @@ See [`contracts/README.md`](contracts/README.md) for contract details.
 ```
 contracts/          Foundry — EscrowVault, SessionEscrow
 src/server/         Facilitator server — settles escrows, computes reputation, serves API
-src/client/         Client SDK — EIP-712 signing, reputation lookup, x402 payment flow
+src/client/         Client SDK — EIP-712 signing, reputation lookup, xenga payment flow
 demo-web/           Next.js 15 demo app with Protocol Inspector
 src/shared/         Types, constants, EIP-712 domain/types, auto-generated ABIs
 ```
@@ -66,9 +66,9 @@ Service types (`src/server/service-types/`) define escrow parameters per use cas
 - **marketplace** — 7-day release window, manual delivery confirmation, reputation-adjusted (3-14 days)
 - **agent-service** — 1-hour release window, auto-verify delivery, reputation-adjusted (30min-4h)
 
-### x402 Integration Layer
+### Xenga Integration Layer
 
-The x402 protocol provides an HTTP transport layer for triggering escrow creation. When a client requests a payment-protected endpoint without credentials, the server returns HTTP 402 with escrow requirements. The client signs an ERC-3009 authorization, resubmits, and the server settles the escrow on-chain. This is one integration path — the contracts can also be called directly.
+The xenga protocol provides an HTTP transport layer for triggering escrow creation. When a client requests a payment-protected endpoint without credentials, the server returns HTTP 402 with escrow requirements. The client signs an ERC-3009 authorization, resubmits, and the server settles the escrow on-chain. This is one integration path — the contracts can also be called directly.
 
 ## Quick Start
 

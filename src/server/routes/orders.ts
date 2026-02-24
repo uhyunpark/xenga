@@ -125,7 +125,7 @@ router.post("/:id/confirm-delivery", apiKeyAuth(), async (req, res) => {
   }
 });
 
-// ──────────── Pay for order (x402 escrow flow) ────────────
+// ──────────── Pay for order (xenga escrow flow) ────────────
 router.post("/:id/pay", escrowPaymentMiddleware(), (req: EscrowPaymentRequest, res) => {
   const payment = req.escrowPayment;
   const order = req.order!;

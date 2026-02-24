@@ -58,7 +58,7 @@ function buildExpressDeps(): PaymentDeps {
 }
 
 /**
- * Express middleware adapter for x402 escrow payment.
+ * Express middleware adapter for xenga escrow payment.
  *
  * Delegates to the framework-independent `processEscrowPayment()` core,
  * then translates the result into Express `res` calls.

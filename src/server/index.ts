@@ -48,7 +48,7 @@ getDb();
 const app = express();
 app.use(express.json({ limit: "1mb" }));
 
-// CORS (includes both standard and legacy x402 headers)
+// CORS (includes both standard and legacy xenga headers)
 app.use((_req, res, next) => {
   const origin = process.env.CORS_ORIGIN || "*";
   res.setHeader("Access-Control-Allow-Origin", origin);
@@ -109,7 +109,7 @@ app.use("/api/demo", generalLimiter, demoRouter);
 // ──────────── Start ────────────
 
 const server = app.listen(config.port, () => {
-  logger.info("server", `x402 Escrow Server running on http://localhost:${config.port}`);
+  logger.info("server", `Xenga Escrow Server running on http://localhost:${config.port}`);
   logger.info("server", `Escrow Contract: ${config.escrowVaultAddress}`);
   logger.info("server", `USDC: ${config.usdcAddress} | Chain: ${config.chainConfig.network} (${config.chainConfig.chainId})`);
 });

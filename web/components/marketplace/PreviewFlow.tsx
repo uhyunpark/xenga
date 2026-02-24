@@ -48,7 +48,7 @@ export function PreviewFlow({ onExit }: { onExit: () => void }) {
       {/* Start / Replay button */}
       {currentIndex < 0 && (
         <div className="flex flex-col items-center gap-4 py-8">
-          <h2 className="text-xl font-bold">Watch the x402 Payment Flow</h2>
+          <h2 className="text-xl font-bold">Watch the Xenga Payment Flow</h2>
           <p className="max-w-md text-center text-sm text-text-secondary">
             See how escrow payments work end-to-end — from product selection
             to on-chain settlement and fund release. No wallet required.

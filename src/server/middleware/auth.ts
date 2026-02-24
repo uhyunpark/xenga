@@ -47,7 +47,7 @@ export function walletAuth(getExpectedAddress?: (req: Request) => Address | unde
     // Use route params when available; fall back to req.path for routes
     // that don't have :orderId/:disputeId (e.g. /api/sellers).
     const routeId = req.params.orderId || req.params.disputeId || req.path;
-    const message = `x402-auth:${routeId}:${timestamp}`;
+    const message = `xenga-auth:${routeId}:${timestamp}`;
 
     try {
       const valid = await verifyMessage({

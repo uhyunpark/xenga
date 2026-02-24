@@ -75,7 +75,7 @@ export async function requestPayment(
 
   if (res.status === 402 && rawHeader) {
     const decoded = JSON.parse(atob(rawHeader));
-    // Handle array format (x402 standard) or single object (legacy)
+    // Handle array format (xenga standard) or single object (legacy)
     const paymentRequired: PaymentRequired = Array.isArray(decoded)
       ? decoded.find((r: { scheme: string }) => r.scheme === "escrow")
       : decoded;

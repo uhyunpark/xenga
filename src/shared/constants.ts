@@ -8,7 +8,7 @@ export interface ChainConfig {
   chainId: number;
   usdcAddress: `0x${string}`;
   defaultRpc: string;
-  /** Network name used in x402 payment headers */
+  /** Network name used in xenga payment headers */
   network: string;
 }
 
@@ -40,7 +40,7 @@ export function getChainConfig(chainId?: number): ChainConfig {
 }
 
 /**
- * Resolve a network string (from x402 headers) to a chain ID.
+ * Resolve a network string (from xenga headers) to a chain ID.
  */
 export function networkToChainId(network: string): number {
   for (const config of Object.values(CHAIN_CONFIGS)) {

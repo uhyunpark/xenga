@@ -1,21 +1,21 @@
-# @x402/client
+# @xenga/client
 
-Client SDK for x402 escrow payments — handles the full x402 protocol flow, ERC-3009 signing, and on-chain escrow operations.
+Client SDK for xenga escrow payments — handles the full xenga protocol flow, ERC-3009 signing, and on-chain escrow operations.
 
 ## Install
 
 ```bash
-npm install @x402/client viem
+npm install @xenga/client viem
 ```
 
 ## Quick start
 
 ### Pay for a resource with `escrowFetch()`
 
-Drop-in replacement for `fetch()` that handles the x402 payment protocol automatically:
+Drop-in replacement for `fetch()` that handles the xenga payment protocol automatically:
 
 ```ts
-import { escrowFetch } from "@x402/client";
+import { escrowFetch } from "@xenga/client";
 import { createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { baseSepolia } from "viem/chains";
@@ -43,7 +43,7 @@ const data = await response.json();
 ### Full client with buyer/seller operations
 
 ```ts
-import { createEscrowClient } from "@x402/client";
+import { createEscrowClient } from "@xenga/client";
 
 const client = createEscrowClient({
   privateKey: "0x...",

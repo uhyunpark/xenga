@@ -2,7 +2,7 @@
  * Demo: P2P Marketplace — Buyer
  *
  * 1. Views listing
- * 2. Pays via x402 escrow flow (ERC-3009 gasless)
+ * 2. Pays via xenga escrow flow (ERC-3009 gasless)
  * 3. Waits for delivery confirmation
  * 4. Releases funds to seller
  *
@@ -50,8 +50,8 @@ async function main() {
     return;
   }
 
-  // Step 2: Pay with x402 escrow
-  console.log("\n2. Paying with x402 escrow...");
+  // Step 2: Pay with xenga escrow
+  console.log("\n2. Paying with xenga escrow...");
   const { order: paidOrder, payment } = await client.payForOrder(ORDER_ID);
   console.log(`   Payment successful!`);
   console.log(`   TX: ${payment.txHash}`);

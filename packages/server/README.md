@@ -1,11 +1,11 @@
-# @x402/server
+# @xenga/server
 
-Server SDK for x402 escrow payments — middleware, service type registry, and facilitator dispatch. Framework-agnostic core with Express and Next.js adapters.
+Server SDK for xenga escrow payments — middleware, service type registry, and facilitator dispatch. Framework-agnostic core with Express and Next.js adapters.
 
 ## Install
 
 ```bash
-npm install @x402/server viem
+npm install @xenga/server viem
 ```
 
 ## Quick start
@@ -14,11 +14,11 @@ npm install @x402/server viem
 
 ```ts
 import express from "express";
-import { escrowPaymentMiddleware } from "@x402/server/express";
+import { escrowPaymentMiddleware } from "@xenga/server/express";
 
 const app = express();
 
-// Protect any route with x402 escrow payments
+// Protect any route with xenga escrow payments
 app.post("/api/premium",
   escrowPaymentMiddleware({
     facilitatorUrl: "https://facilitator.example.com",
@@ -36,7 +36,7 @@ app.post("/api/premium",
 ### Next.js Route Handler
 
 ```ts
-import { handleEscrowPayment, toNextResponse } from "@x402/server/nextjs";
+import { handleEscrowPayment, toNextResponse } from "@xenga/server/nextjs";
 
 export async function POST(request: Request) {
   const result = await handleEscrowPayment(request, {
@@ -56,8 +56,8 @@ export async function POST(request: Request) {
 ### Framework-agnostic core
 
 ```ts
-import { processEscrowPayment } from "@x402/server";
-import type { PaymentContext, PaymentDeps } from "@x402/server";
+import { processEscrowPayment } from "@xenga/server";
+import type { PaymentContext, PaymentDeps } from "@xenga/server";
 
 const result = await processEscrowPayment(context, deps);
 // result.status: 200 | 402 | 400 | 500
@@ -74,7 +74,7 @@ import {
   registerServiceType,
   marketplaceServiceType,
   agentServiceType,
-} from "@x402/server";
+} from "@xenga/server";
 
 // Register built-ins
 registerServiceType(marketplaceServiceType);  // 7-day release window
@@ -99,9 +99,9 @@ registerServiceType({
 
 | Import path | Contents |
 |-------------|----------|
-| `@x402/server` | `processEscrowPayment`, service type registry, facilitator dispatch |
-| `@x402/server/express` | `escrowPaymentMiddleware` for Express |
-| `@x402/server/nextjs` | `handleEscrowPayment`, `toNextResponse` for Next.js |
+| `@xenga/server` | `processEscrowPayment`, service type registry, facilitator dispatch |
+| `@xenga/server/express` | `escrowPaymentMiddleware` for Express |
+| `@xenga/server/nextjs` | `handleEscrowPayment`, `toNextResponse` for Next.js |
 
 ## Peer dependencies
 

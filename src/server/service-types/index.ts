@@ -49,7 +49,7 @@ export interface ServiceType {
 // Use globalThis with Symbol.for() so the registry survives webpack module duplication
 // (e.g. instrumentation.ts importing without .js vs route handlers importing with .js)
 
-const REGISTRY_KEY = Symbol.for("x402.serviceTypeRegistry");
+const REGISTRY_KEY = Symbol.for("xenga.serviceTypeRegistry");
 
 function getRegistry(): Map<string, ServiceType> {
   const g = globalThis as Record<symbol, unknown>;
@@ -62,7 +62,7 @@ function getRegistry(): Map<string, ServiceType> {
 export function registerServiceType(serviceType: ServiceType) {
   const existing = getRegistry().get(serviceType.name);
   if (existing) {
-    console.warn(`[x402] Service type "${serviceType.name}" is being re-registered (previous registration overwritten)`);
+    console.warn(`[xenga] Service type "${serviceType.name}" is being re-registered (previous registration overwritten)`);
   }
   getRegistry().set(serviceType.name, serviceType);
 }
