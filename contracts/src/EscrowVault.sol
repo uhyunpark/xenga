@@ -9,7 +9,7 @@ import {IERC3009} from "./interfaces/IERC3009.sol";
 
 /**
  * @title EscrowVault
- * @notice x402-compatible escrow contract for USDC payments
+ * @notice Xenga escrow contract for USDC payments
  * @dev Supports gasless deposits via ERC-3009 receiveWithAuthorization
  *
  * State Machine:

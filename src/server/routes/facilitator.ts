@@ -6,7 +6,7 @@ const router = Router();
 
 /**
  * POST /facilitator/verify
- * x402 standard facilitator verification endpoint
+ * Xenga standard facilitator verification endpoint
  */
 router.post("/verify", async (req, res) => {
   const { payload, paymentRequirements } = req.body;
@@ -45,7 +45,7 @@ router.post("/verify", async (req, res) => {
 
 /**
  * POST /facilitator/settle
- * x402 standard facilitator settlement endpoint
+ * Xenga standard facilitator settlement endpoint
  */
 router.post("/settle", apiKeyAuth(), async (req, res) => {
   const { payload, paymentRequirements } = req.body;

@@ -34,7 +34,7 @@ docker run -p 8080:8080 --env-file .env xenga-facilitator
 
 ## Architecture
 
-On-chain escrow and reputation system on Base Sepolia using USDC (ERC-3009 gasless transfers). The x402 protocol provides the HTTP integration layer.
+On-chain escrow and reputation system on Base Sepolia using USDC (ERC-3009 gasless transfers). The Xenga protocol provides the HTTP integration layer.
 
 **Split deployment:**
 - **`web/`** — Next.js 15 frontend deployed on **Vercel**. Pure client-side: pages, wallet management, EIP-712 signing, Protocol Inspector. Calls the facilitator API via `NEXT_PUBLIC_FACILITATOR_URL`.
@@ -54,7 +54,7 @@ Vercel (web/)                    GCP Cloud Run (src/server/)
 
 **Other layers:**
 - **`contracts/`** — Foundry project: EscrowVault (escrow state machine + stats), SessionEscrow (session micropayments), AutoReleaseKeeper (Chainlink automation), MockUSDC (test token)
-- **`src/client/`** — Client SDK: EIP-712 signing, reputation lookup (`getReputation()`), and x402 payment flow (`escrowFetch` with optional `onSellerReputation` callback)
+- **`src/client/`** — Client SDK: EIP-712 signing, reputation lookup (`getReputation()`), and xenga payment flow (`escrowFetch` with optional `onSellerReputation` callback)
 
 **Shared code** (`src/shared/`): types, constants, EIP-712 domain/types, and auto-generated ABIs (`abi.ts` — never edit manually, use `sync-abi`). The web app imports `@shared/` via webpack alias for types and EIP-712 signing functions (client-safe, no server deps).
 
@@ -139,7 +139,7 @@ Service types (`src/server/service-types/`) define escrow parameters per use cas
 
 Each service type can implement `adjustParams(params, reputation)` to dynamically adjust escrow parameters (e.g. release window) based on counterparty reputation scores.
 
-### x402 Integration Layer
+### Xenga Integration Layer
 
 HTTP transport for triggering escrow creation. The contracts can also be called directly.
 
@@ -171,7 +171,7 @@ web/
     layout/                  # Navbar
   lib/
     api/client.ts                 # facilitatorFetch() + facilitatorUrl() — all API calls go through here
-    api/payment-flow.ts           # Decomposed x402 client flow with inspector hooks
+    api/payment-flow.ts           # Decomposed xenga client flow with inspector hooks
     wallet/WalletProvider.tsx     # Demo wallet (sessionStorage) + browser wallet (MetaMask)
     protocol-inspector/context.tsx # Inspector event bus + auto-tab-switching
     env/isMockChainClient.ts      # Client-side mock chain detection
@@ -189,7 +189,7 @@ web/
 - **API client**: All `fetch()` calls go through `lib/api/client.ts` which prepends `NEXT_PUBLIC_FACILITATOR_URL`. When empty (local dev), paths are relative.
 - **`@shared/` imports**: Frontend imports types (`ReputationScore`) and pure functions (`buildReceiveAuthSigningParams`) from `src/shared/` via webpack alias. These have no server dependencies.
 - **Wallet**: `WalletProvider` manages ephemeral demo wallets (`generatePrivateKey()` stored in `sessionStorage`) and browser wallets (`window.ethereum`). Both expose viem `WalletClient`.
-- **Protocol Inspector**: React context + 4-tab panel showing HTTP traffic, EIP-712 signatures, on-chain transactions, and escrow state machine. Events emitted by `payment-flow.ts` during the x402 flow.
+- **Protocol Inspector**: React context + 4-tab panel showing HTTP traffic, EIP-712 signatures, on-chain transactions, and escrow state machine. Events emitted by `payment-flow.ts` during the xenga flow.
 - **CORS**: Required since frontend and facilitator are on different origins. Express facilitator has `CORS_ORIGIN` env var (defaults to `*`).
 - **Demo funding**: `POST /api/demo/fund` on the facilitator sends 10 USDC + 0.005 ETH from operator wallet. Rate-limited to 100 USDC/hr per IP+address. Requires `DEMO_MODE=true`.
 

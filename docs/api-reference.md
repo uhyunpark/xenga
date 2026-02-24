@@ -75,14 +75,14 @@ Create a new order.
 }
 ```
 
-### `POST /api/orders/:id/pay` **Public (x402 flow)**
+### `POST /api/orders/:id/pay` **Public (xenga flow)**
 
-Pay for an order. This is the core x402 endpoint.
+Pay for an order. This is the core xenga endpoint.
 
 **Without payment header:** Returns `402` with payment requirements.
 
 **402 Response headers:**
-- `PAYMENT-REQUIRED` — base64 JSON array of payment requirements (x402 standard)
+- `PAYMENT-REQUIRED` — base64 JSON array of payment requirements (xenga standard)
 - `X-PAYMENT-REQUIRED` — base64 JSON single requirement (legacy)
 
 **402 Response body:**
@@ -288,7 +288,7 @@ All errors follow the format:
 |--------|---------|
 | 400 | Bad request (missing fields, invalid input) |
 | 401 | Missing authentication (API key or wallet headers) |
-| 402 | Payment required (x402 flow — not an error) |
+| 402 | Payment required (xenga flow — not an error) |
 | 403 | Invalid API key or unauthorized address |
 | 404 | Resource not found |
 | 409 | Payment already in progress or completed |
@@ -297,13 +297,13 @@ All errors follow the format:
 
 ---
 
-## x402 Header Reference
+## Xenga Header Reference
 
 | Header | Direction | Format | Description |
 |--------|-----------|--------|-------------|
-| `PAYMENT-REQUIRED` | Response (402) | base64 JSON array | Payment requirements (x402 standard) |
+| `PAYMENT-REQUIRED` | Response (402) | base64 JSON array | Payment requirements (xenga standard) |
 | `X-PAYMENT-REQUIRED` | Response (402) | base64 JSON | Payment requirement (legacy) |
-| `PAYMENT-SIGNATURE` | Request (retry) | base64 JSON | Signed ERC-3009 authorization (x402 standard) |
+| `PAYMENT-SIGNATURE` | Request (retry) | base64 JSON | Signed ERC-3009 authorization (xenga standard) |
 | `X-PAYMENT` | Request (retry) | base64 JSON | Signed authorization (legacy) |
-| `PAYMENT-RESPONSE` | Response (200) | base64 JSON | Settlement result (x402 standard) |
+| `PAYMENT-RESPONSE` | Response (200) | base64 JSON | Settlement result (xenga standard) |
 | `X-PAYMENT-RESPONSE` | Response (200) | base64 JSON | Settlement result (legacy) |

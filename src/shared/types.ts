@@ -86,7 +86,7 @@ export interface Dispute {
   resolvedAt?: number;
 }
 
-// ──────────────────────── x402 Payment Types ────────────────────────
+// ──────────────────────── Xenga Payment Types ────────────────────────
 
 // Re-export scheme registry base types for convenience
 export type {

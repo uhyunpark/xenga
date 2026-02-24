@@ -39,7 +39,7 @@ This registers the app with Fly.io using the existing `fly.toml`. The `--no-depl
 fly volumes create xenga_data --region sjc --size 1
 ```
 
-This creates a 1 GB volume for SQLite. The `fly.toml` mounts it at `/data`; the database file lives at `/data/x402-escrow.db` and persists across deploys and restarts.
+This creates a 1 GB volume for SQLite. The `fly.toml` mounts it at `/data`; the database file lives at `/data/xenga.db` and persists across deploys and restarts.
 
 ### 3. Set secrets
 
@@ -108,7 +108,7 @@ Redeploy the facilitator after this change: `fly deploy`.
 | Setting | Value | Reason |
 |---------|-------|--------|
 | `PORT` | 8080 | Internal container port |
-| `DATABASE_PATH` | `/data/x402-escrow.db` | SQLite on persistent volume |
+| `DATABASE_PATH` | `/data/xenga.db` | SQLite on persistent volume |
 | `auto_stop_machines` | off | Event listener and wallet monitor must run 24/7 |
 | `min_machines_running` | 1 | Always one machine alive |
 | Machine size | shared-cpu-1x, 512 MB | Sufficient for facilitator workload; upgrade to `performance-1x` for high traffic |

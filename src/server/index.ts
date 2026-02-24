@@ -8,6 +8,9 @@ import {
 import { registerScheme } from "../shared/schemes.js";
 import { marketplaceServiceType } from "./service-types/marketplace.js";
 import { agentServiceType } from "./service-types/agent-service.js";
+import { inferenceServiceType } from "./service-types/inference.js";
+import { dataPipelineServiceType } from "./service-types/data-pipeline.js";
+import { toolCallServiceType } from "./service-types/tool-call.js";
 import { escrowScheme } from "./schemes/escrow.js";
 import ordersRouter from "./routes/orders.js";
 import disputesRouter from "./routes/disputes.js";
@@ -17,6 +20,8 @@ import facilitatorRouter from "./routes/facilitator.js";
 import reputationRouter from "./routes/reputation.js";
 import webhooksRouter from "./routes/webhooks.js";
 import demoRouter from "./routes/demo.js";
+import paymentIntentsRouter from "./routes/paymentIntents.js";
+import sellersRouter from "./routes/sellers.js";
 import { startEventListener } from "./services/eventListener.js";
 import { rateLimit } from "./middleware/rateLimit.js";
 import { logger } from "./services/logger.js";
@@ -30,6 +35,9 @@ validateConfig();
 // Register service types
 registerServiceType(marketplaceServiceType);
 registerServiceType(agentServiceType);
+registerServiceType(inferenceServiceType);
+registerServiceType(dataPipelineServiceType);
+registerServiceType(toolCallServiceType);
 
 // Register payment schemes
 registerScheme(escrowScheme);
@@ -40,7 +48,7 @@ getDb();
 const app = express();
 app.use(express.json({ limit: "1mb" }));
 
-// CORS (includes both standard and legacy x402 headers)
+// CORS (includes both standard and legacy xenga headers)
 app.use((_req, res, next) => {
   const origin = process.env.CORS_ORIGIN || "*";
   res.setHeader("Access-Control-Allow-Origin", origin);
@@ -94,12 +102,14 @@ app.use("/api/metrics", generalLimiter, metricsRouter);
 app.use("/facilitator", paymentLimiter, facilitatorRouter);
 app.use("/api/reputation", reputationLimiter, reputationRouter);
 app.use("/api/webhooks", generalLimiter, webhooksRouter);
+app.use("/api/payment-intents", paymentLimiter, paymentIntentsRouter);
+app.use("/api/sellers", generalLimiter, sellersRouter);
 app.use("/api/demo", generalLimiter, demoRouter);
 
 // ──────────── Start ────────────
 
 const server = app.listen(config.port, () => {
-  logger.info("server", `x402 Escrow Server running on http://localhost:${config.port}`);
+  logger.info("server", `Xenga Escrow Server running on http://localhost:${config.port}`);
   logger.info("server", `Escrow Contract: ${config.escrowVaultAddress}`);
   logger.info("server", `USDC: ${config.usdcAddress} | Chain: ${config.chainConfig.network} (${config.chainConfig.chainId})`);
 });

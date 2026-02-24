@@ -46,7 +46,7 @@ The frontend imports types and pure functions from `src/shared/` via the `@share
 - `ReputationScore` type from `@shared/types`
 - `buildReceiveAuthSigningParams()` from `@shared/eip712.js` — builds EIP-712 typed data for signing
 
-### x402 Payment Flow (`lib/api/payment-flow.ts`)
+### Xenga Payment Flow (`lib/api/payment-flow.ts`)
 
 Three composable functions, each accepting an optional `emit` callback for the Protocol Inspector:
 
@@ -68,7 +68,7 @@ Both expose: `address`, `walletClient`, `publicClient`, `refreshBalances()`, `us
 
 ## Protocol Inspector (`lib/protocol-inspector/context.tsx`)
 
-React context + `useReducer` event bus that visualizes the x402 flow in real time. 4 tabs: HTTP, Signatures, On-Chain, State. Auto-switches tabs based on event type.
+React context + `useReducer` event bus that visualizes the xenga flow in real time. 4 tabs: HTTP, Signatures, On-Chain, State. Auto-switches tabs based on event type.
 
 ## Key Components
 
@@ -87,7 +87,7 @@ Scripted auto-advancing terminal UI that plays through the agent-service flow au
 | `/api/health` | GET | Server status + operator address |
 | `/api/orders` | GET | List orders (filterable by `?status=`) |
 | `/api/orders` | POST | Create order |
-| `/api/orders/:id/pay` | POST | x402 payment flow (402 or 200) |
+| `/api/orders/:id/pay` | POST | Xenga payment flow (402 or 200) |
 | `/api/orders/:id/confirm-delivery` | POST | Confirm delivery on-chain |
 | `/api/disputes/:orderId` | POST | File a dispute |
 | `/api/disputes/:id/resolve` | POST | Resolve dispute (arbiter) |

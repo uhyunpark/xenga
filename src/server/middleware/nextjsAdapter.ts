@@ -3,7 +3,7 @@ import type { PaymentDeps, PaymentResult } from "./types.js";
 import { USDC_DECIMALS } from "../../shared/constants.js";
 
 /**
- * Next.js Route Handler adapter for x402 escrow payment.
+ * Next.js Route Handler adapter for xenga escrow payment.
  *
  * Converts a Web `Request` + route params into a `PaymentContext`,
  * delegates to the framework-independent `processEscrowPayment()` core,
@@ -12,7 +12,7 @@ import { USDC_DECIMALS } from "../../shared/constants.js";
  * @example
  * ```ts
  * // app/api/orders/[id]/pay/route.ts
- * import { handleEscrowPayment, toNextResponse } from "@x402/server/nextjs";
+ * import { handleEscrowPayment, toNextResponse } from "@xenga/server/nextjs";
  *
  * export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
  *   const { id } = await params;

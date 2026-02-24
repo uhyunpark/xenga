@@ -1,21 +1,21 @@
 # Quickstart
 
-Get up and running with x402 escrow payments in 5 minutes.
+Get up and running with xenga escrow payments in 5 minutes.
 
 ## Install
 
 ```bash
-npm install @x402/client viem
+npm install @xenga/client viem
 # or
-bun add @x402/client viem
+bun add @xenga/client viem
 ```
 
 ## 1. Pay for an order with `escrowFetch`
 
-The simplest integration. `escrowFetch` wraps `fetch()` and handles the entire x402 payment flow automatically:
+The simplest integration. `escrowFetch` wraps `fetch()` and handles the entire xenga payment flow automatically:
 
 ```typescript
-import { escrowFetch } from "@x402/client";
+import { escrowFetch } from "@xenga/client";
 import { createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { baseSepolia } from "viem/chains";
@@ -50,7 +50,7 @@ console.log("TX Hash:", payment?.txHash);
 For more control, use `createEscrowClient`:
 
 ```typescript
-import { createEscrowClient } from "@x402/client";
+import { createEscrowClient } from "@xenga/client";
 
 const client = createEscrowClient({
   privateKey: "0xYOUR_PRIVATE_KEY",
@@ -59,7 +59,7 @@ const client = createEscrowClient({
   chainId: 84532, // Base Sepolia (default). Use 8453 for Base Mainnet.
 });
 
-// Pay for an order (handles full x402 flow)
+// Pay for an order (handles full xenga flow)
 const { order, payment } = await client.payForOrder("ORDER_ID");
 
 // Release funds (buyer confirms receipt)
@@ -111,7 +111,7 @@ const { response, payment } = await escrowFetch(
 ### Express
 
 ```typescript
-import { escrowPaymentMiddleware } from "@x402/server/express";
+import { escrowPaymentMiddleware } from "@xenga/server/express";
 
 router.post("/:id/pay", escrowPaymentMiddleware(), (req, res) => {
   // Only reaches here after successful payment
@@ -126,7 +126,7 @@ router.post("/:id/pay", escrowPaymentMiddleware(), (req, res) => {
 ### Next.js App Router
 
 ```typescript
-import { handleEscrowPayment, toNextResponse } from "@x402/server/nextjs";
+import { handleEscrowPayment, toNextResponse } from "@xenga/server/nextjs";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

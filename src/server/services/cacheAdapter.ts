@@ -74,7 +74,7 @@ export class InMemoryLruCache<T> implements CacheAdapter<T> {
 //   private redis: Redis;
 //   private prefix: string;
 //
-//   constructor(redisUrl: string, prefix: string = "x402:") {
+//   constructor(redisUrl: string, prefix: string = "xenga:") {
 //     this.redis = new Redis(redisUrl);
 //     this.prefix = prefix;
 //   }

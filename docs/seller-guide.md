@@ -1,6 +1,6 @@
 # Seller Integration Guide
 
-This guide covers everything a seller needs to integrate x402 escrow payments into an existing system.
+This guide covers everything a seller needs to integrate xenga escrow payments into an existing system.
 
 ## Architecture overview
 
@@ -25,7 +25,7 @@ Buyer                    Facilitator Server              Blockchain
 
 The **facilitator server** is the intermediary that:
 - Manages orders in a database
-- Handles the x402 HTTP flow (402 → verify → settle)
+- Handles the xenga HTTP flow (402 → verify → settle)
 - Pays gas for `createEscrowWithAuth` on behalf of buyers
 - Syncs on-chain events to local state
 - Dispatches webhooks on escrow lifecycle changes
@@ -109,7 +109,7 @@ The `sellerAddress` is where USDC will be sent when the escrow is released.
 Register your own service type:
 
 ```typescript
-import { registerServiceType } from "@x402/server";
+import { registerServiceType } from "@xenga/server";
 
 registerServiceType({
   name: "saas-subscription",
@@ -135,7 +135,7 @@ After a buyer pays and the escrow is active, the seller can:
 Signals that the service/goods have been delivered. Starts the dispute window countdown.
 
 ```typescript
-import { createEscrowClient } from "@x402/client";
+import { createEscrowClient } from "@xenga/client";
 
 const client = createEscrowClient({
   privateKey: "0xSELLER_PRIVATE_KEY",
@@ -175,7 +175,7 @@ curl -X POST https://your-server/api/webhooks \
   -H "Content-Type: application/json" \
   -H "X-API-KEY: sk_live_abc123" \
   -d '{
-    "url": "https://yourapp.com/webhooks/x402",
+    "url": "https://yourapp.com/webhooks/xenga",
     "secret": "whsec_your_secret_here_min16chars",
     "eventTypes": ["escrow.created", "escrow.released", "escrow.disputed", "escrow.refunded"]
   }'
@@ -184,7 +184,7 @@ curl -X POST https://your-server/api/webhooks \
 ### Handle
 
 ```typescript
-app.post("/webhooks/x402", (req, res) => {
+app.post("/webhooks/xenga", (req, res) => {
   // Verify signature
   const signature = req.headers["x-webhook-signature"];
   const expected = createHmac("sha256", WEBHOOK_SECRET)

@@ -136,7 +136,7 @@ export function PaymentFlow() {
 
   // Session storage for refresh recovery — use server order status as source of truth
   useEffect(() => {
-    const saved = sessionStorage.getItem("x402-marketplace-state");
+    const saved = sessionStorage.getItem("xenga-marketplace-state");
     if (!saved) return;
 
     try {
@@ -150,7 +150,7 @@ export function PaymentFlow() {
           const orderList = Array.isArray(data) ? data : data.orders ?? [];
           const found = orderList.find((o: any) => o.id === parsed.orderId);
           if (!found) {
-            sessionStorage.removeItem("x402-marketplace-state");
+            sessionStorage.removeItem("xenga-marketplace-state");
             return;
           }
 
@@ -200,13 +200,13 @@ export function PaymentFlow() {
 
             default:
               // resolved, refunded, or unknown — clear stale state
-              sessionStorage.removeItem("x402-marketplace-state");
+              sessionStorage.removeItem("xenga-marketplace-state");
               break;
           }
         })
         .catch(() => {
           // Server unreachable — clear stale state
-          sessionStorage.removeItem("x402-marketplace-state");
+          sessionStorage.removeItem("xenga-marketplace-state");
         });
     } catch {
       // ignore malformed JSON
@@ -215,7 +215,7 @@ export function PaymentFlow() {
 
   useEffect(() => {
     if (state.orderId) {
-      sessionStorage.setItem("x402-marketplace-state", JSON.stringify({
+      sessionStorage.setItem("xenga-marketplace-state", JSON.stringify({
         step: state.step,
         orderId: state.orderId,
         escrowId: state.escrowId,
@@ -491,7 +491,7 @@ export function PaymentFlow() {
   }, [state.orderId, inspector]);
 
   const handleReset = useCallback(() => {
-    sessionStorage.removeItem("x402-marketplace-state");
+    sessionStorage.removeItem("xenga-marketplace-state");
     inspector.clear();
     dispatch({ type: "RESET" });
     refreshBalances();

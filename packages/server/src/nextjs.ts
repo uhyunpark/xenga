@@ -1,4 +1,4 @@
-// @x402/server/nextjs — Next.js Route Handler adapter
+// @xenga/server/nextjs — Next.js Route Handler adapter
 
 export {
   handleEscrowPayment,

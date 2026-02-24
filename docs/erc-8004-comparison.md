@@ -17,7 +17,7 @@ These are **complementary, not competing** protocols — they operate at differe
 | **Primary concern** | Agent discovery + trust signaling | Value custody + settlement |
 | **On-chain footprint** | 3 registries (Identity, Reputation, Validation) | EscrowVault + SessionEscrow |
 | **Payment handling** | Explicitly out of scope | Core function — full escrow lifecycle with USDC |
-| **Transport layer** | Not prescribed (complements A2A, MCP, x402) | x402 HTTP 402 flow built in |
+| **Transport layer** | Not prescribed (complements A2A, MCP, Xenga) | Xenga HTTP 402 flow built in |
 | **Target user** | Any agent framework / protocol | Buyers, sellers, and facilitators in commerce |
 
 ---
@@ -165,7 +165,7 @@ Xenga identifies participants solely by Ethereum addresses. No registry, no meta
 | **Fee system** | `feeBps + flatFee`, MAX_FEE_BPS=1000 (10%), seller-pays model |
 | **Gasless transfers** | ERC-3009 `receiveWithAuthorization` |
 | **Micropayment sessions** | `SessionEscrow.sol` — sign once, multiple captures |
-| **x402 HTTP protocol** | Full client-server flow with on-chain settlement |
+| **Xenga HTTP protocol** | Full client-server flow with on-chain settlement |
 | **Service type parameterization** | Pluggable `ServiceType` interface with `adjustParams()` |
 | **Client SDK** | `escrowFetch()`, `signEscrowPayment()`, `createEscrowClient()` |
 | **Deterministic reputation formula** | Fixed weighted scoring with confidence bands |
@@ -198,7 +198,7 @@ Xenga identifies participants solely by Ethereum addresses. No registry, no meta
 ┌─────────────────────────────────────────────────────────┐
 │  Layer 4: Application (marketplace UI, agent framework) │
 ├─────────────────────────────────────────────────────────┤
-│  Layer 3: Transport (x402 HTTP, A2A, MCP)               │
+│  Layer 3: Transport (Xenga HTTP, A2A, MCP)               │
 ├─────────────────────────────────────────────────────────┤
 │  Layer 2: Settlement (Xenga — EscrowVault, SessionEscrow)│
 ├─────────────────────────────────────────────────────────┤
@@ -208,13 +208,13 @@ Xenga identifies participants solely by Ethereum addresses. No registry, no meta
 
 ### Integration Points
 
-1. **Agent Discovery → Escrow Creation**: Use ERC-8004's Identity Registry to discover agents (browse registered agents, read `agentURI` metadata, check service endpoints). When ready to transact, enter Xenga's x402 flow with the agent's `agentWallet` address as the seller.
+1. **Agent Discovery → Escrow Creation**: Use ERC-8004's Identity Registry to discover agents (browse registered agents, read `agentURI` metadata, check service endpoints). When ready to transact, enter Xenga's payment flow with the agent's `agentWallet` address as the seller.
 
 2. **Xenga Outcomes → ERC-8004 Feedback**: After escrow completion/dispute/refund, publish the outcome as ERC-8004 feedback via `giveFeedback()` with tags like `escrowCompleted`, `escrowDisputed`, or `escrowRefunded`. This bridges Xenga's objective outcomes into ERC-8004's feedback system.
 
 3. **ERC-8004 Reputation → Xenga `adjustParams()`**: Xenga's service types already support `adjustParams(params, reputation)`. This could incorporate ERC-8004 reputation signals — e.g., agents with high ERC-8004 validation scores from TEE attestation get shorter release windows even with limited Xenga escrow history.
 
-4. **x402 Support Flag**: ERC-8004's registration file includes `x402Support: true/false`. Clients can filter for agents that support Xenga's x402 flow.
+4. **x402 Support Flag**: ERC-8004's registration file includes `x402Support: true/false`. Clients can filter for agents that support Xenga's payment flow.
 
 5. **Proof of Payment**: ERC-8004's feedback file includes a `proofOfPayment` field (txHash, fromAddress, toAddress, chainId). Xenga's `EscrowCreated` event data serves as proof of payment, creating a verifiable link between the two systems.
 

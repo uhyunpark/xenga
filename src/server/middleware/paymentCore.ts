@@ -5,6 +5,7 @@ import type {
   SellerReputationInfo,
 } from "../../shared/types.js";
 import { computeFee } from "../../shared/fees.js";
+import { executeHooks, type HookContext } from "../hooks.js";
 import type { PaymentContext, PaymentDeps, PaymentResult } from "./types.js";
 
 const noopLogger = {
@@ -17,7 +18,7 @@ const noopLogger = {
 /**
  * Framework-independent escrow payment processing.
  *
- * Handles the full x402 lifecycle:
+ * Handles the full xenga lifecycle:
  * 1. Idempotency check (already escrowed → return existing details)
  * 2. No payment header → 402 with PAYMENT-REQUIRED (includes reputation-based param adjustment)
  * 3. With payment header → verify → claim → settle → 200 with PAYMENT-RESPONSE
@@ -74,6 +75,18 @@ export async function processEscrowPayment(
 
   // ── No payment header → 402 ──
   if (!paymentHeader) {
+    // Hook: beforePaymentRequired
+    const hookCtx: HookContext = {
+      hookPoint: "beforePaymentRequired",
+      order,
+      sellerAddress: order.sellerAddress as Address,
+      amount: order.price,
+      serviceType: order.serviceType,
+    };
+    const hookResult = await executeHooks("beforePaymentRequired", hookCtx, log);
+    if (!hookResult.ok) {
+      return { status: 403, body: { error: hookResult.error }, headers: {}, handled: true };
+    }
     return buildPaymentRequiredResponse(order, deps, log);
   }
 
@@ -125,6 +138,24 @@ export async function processEscrowPayment(
     };
   }
 
+  // Hook: beforeSettlement
+  {
+    const hookCtx: HookContext = {
+      hookPoint: "beforeSettlement",
+      order,
+      buyerAddress: payload.from as Address,
+      sellerAddress: order.sellerAddress as Address,
+      amount: order.price,
+      serviceType: order.serviceType,
+      payload,
+      requirement: paymentRequired,
+    };
+    const hookResult = await executeHooks("beforeSettlement", hookCtx, log);
+    if (!hookResult.ok) {
+      return { status: 403, body: { error: hookResult.error }, headers: {}, handled: true };
+    }
+  }
+
   // ── Claim order atomically ──
   const claimed = deps.claimOrder(order.id);
   if (!claimed) {
@@ -152,6 +183,23 @@ export async function processEscrowPayment(
     const paymentResponse = { success: true, txHash, escrowId };
     const encoded = toBase64(paymentResponse);
 
+    // Re-fetch updated order
+    const updatedOrder = deps.getOrderById(order.id);
+
+    // Hook: afterSettlement (non-blocking)
+    executeHooks("afterSettlement", {
+      hookPoint: "afterSettlement",
+      order: updatedOrder ?? order,
+      buyerAddress: payload.from as Address,
+      sellerAddress: order.sellerAddress as Address,
+      amount: order.price,
+      serviceType: order.serviceType,
+      payload,
+      requirement: paymentRequired,
+      escrowId,
+      txHash,
+    }, log).catch(() => {}); // fire and forget
+
     // Non-blocking buyer reputation logging
     if (deps.computeReputation) {
       deps.computeReputation(payload.from as Address)
@@ -167,9 +215,6 @@ export async function processEscrowPayment(
           log.debug("reputation", `Buyer reputation lookup failed: ${err instanceof Error ? err.message : String(err)}`);
         });
     }
-
-    // Re-fetch updated order
-    const updatedOrder = deps.getOrderById(order.id);
 
     return {
       status: 200,

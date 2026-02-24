@@ -1,4 +1,4 @@
-// @x402/server/express — Express middleware adapter
+// @xenga/server/express — Express middleware adapter
 
 export {
   escrowPaymentMiddleware,

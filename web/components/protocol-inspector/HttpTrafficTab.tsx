@@ -42,7 +42,7 @@ export function HttpTrafficTab() {
   if (pairs.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-text-tertiary text-sm">
-        No HTTP traffic yet. Make a purchase to see the x402 flow.
+        No HTTP traffic yet. Make a purchase to see the xenga flow.
       </div>
     );
   }

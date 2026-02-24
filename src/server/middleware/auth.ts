@@ -43,9 +43,11 @@ export function walletAuth(getExpectedAddress?: (req: Request) => Address | unde
       return res.status(401).json({ error: "Authentication timestamp expired or invalid" });
     }
 
-    // Reconstruct the message that was signed
-    const orderId = req.params.orderId || req.params.disputeId || "";
-    const message = `x402-auth:${orderId}:${timestamp}`;
+    // Reconstruct the message that was signed.
+    // Use route params when available; fall back to req.path for routes
+    // that don't have :orderId/:disputeId (e.g. /api/sellers).
+    const routeId = req.params.orderId || req.params.disputeId || req.path;
+    const message = `xenga-auth:${routeId}:${timestamp}`;
 
     try {
       const valid = await verifyMessage({

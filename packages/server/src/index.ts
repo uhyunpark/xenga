@@ -1,4 +1,4 @@
-// @x402/server — Core server SDK (framework-agnostic)
+// @xenga/server — Core server SDK (framework-agnostic)
 // Exports: payment core logic, types, service type registry, facilitator dispatch
 
 // Payment core
@@ -26,12 +26,28 @@ export type {
 // Built-in service types
 export { marketplaceServiceType } from "../../../src/server/service-types/marketplace.js";
 export { agentServiceType } from "../../../src/server/service-types/agent-service.js";
+export { inferenceServiceType } from "../../../src/server/service-types/inference.js";
+export { dataPipelineServiceType } from "../../../src/server/service-types/data-pipeline.js";
+export { toolCallServiceType } from "../../../src/server/service-types/tool-call.js";
 
 // Facilitator dispatch
 export {
   verifyViaFacilitator,
   settleViaFacilitator,
 } from "../../../src/server/facilitator/dispatch.js";
+
+// Lifecycle hooks
+export {
+  registerHook,
+  clearHooks,
+  executeHooks,
+  getRegisteredHooks,
+} from "../../../src/server/hooks.js";
+export type {
+  HookPoint,
+  HookContext,
+  HookFn,
+} from "../../../src/server/hooks.js";
 
 // Scheme registry
 export {

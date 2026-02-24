@@ -52,7 +52,7 @@ const publicClient = createPublicClient({
   transport: http(RPC_URL),
 });
 
-const DEMO_KEY_STORAGE = "x402-demo-pk";
+const DEMO_KEY_STORAGE = "xenga-demo-pk";
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [type, setType] = useState<WalletType>(null);

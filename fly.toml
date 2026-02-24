@@ -11,7 +11,7 @@ primary_region = "sjc"
 [env]
   PORT = "8080"
   # SQLite file lives on the persistent volume mounted at /data
-  DATABASE_PATH = "/data/x402-escrow.db"
+  DATABASE_PATH = "/data/xenga.db"
   # Set to your frontend origin in production, e.g. "https://xenga.vercel.app"
   CORS_ORIGIN = "*"
 
