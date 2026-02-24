@@ -4,6 +4,7 @@ import { getOrderById } from "../services/orderService.js";
 import {
   createPaymentIntent,
   getPaymentIntentById,
+  updatePaymentIntentStatus,
 } from "../services/paymentIntentService.js";
 import { apiKeyAuth } from "../middleware/auth.js";
 
@@ -60,7 +61,8 @@ router.post("/", apiKeyAuth(), (req, res) => {
   });
 
   // Build checkout URL — frontend hosted checkout page
-  const baseUrl = process.env.CHECKOUT_BASE_URL || process.env.CORS_ORIGIN || "";
+  const corsOrigin = process.env.CORS_ORIGIN;
+  const baseUrl = process.env.CHECKOUT_BASE_URL || (corsOrigin && corsOrigin !== "*" ? corsOrigin : "");
   const checkoutUrl = baseUrl
     ? `${baseUrl.replace(/\/$/, "")}/checkout/${intent.id}`
     : `/checkout/${intent.id}`;
@@ -89,9 +91,10 @@ router.get("/:id", (req, res) => {
   // Enrich with order status
   const order = getOrderById(intent.orderId);
 
-  // Sync status from order
+  // Sync status from order — persist to DB so expiry logic doesn't race
   if (intent.status === "pending" && order) {
     if (order.status === "escrowed" || order.status === "completed") {
+      updatePaymentIntentStatus(intent.id, "completed");
       intent.status = "completed";
     }
   }
@@ -101,6 +104,7 @@ router.get("/:id", (req, res) => {
     orderId: intent.orderId,
     status: intent.status,
     buyerAddress: intent.buyerAddress,
+    returnUrl: intent.returnUrl,
     expiresAt: intent.expiresAt,
     createdAt: intent.createdAt,
     order: order

@@ -2,6 +2,7 @@ import type { ServiceType, EscrowParams, CounterpartyReputation } from "./index.
 import {
   REPUTATION_HIGH_THRESHOLD,
   REPUTATION_LOW_THRESHOLD,
+  TOOL_CALL_RELEASE_WINDOW,
 } from "../../shared/constants.js";
 
 /**
@@ -12,7 +13,7 @@ import {
  */
 export const toolCallServiceType: ServiceType = {
   name: "tool-call",
-  releaseWindow: 60, // 1 minute
+  releaseWindow: TOOL_CALL_RELEASE_WINDOW,
   autoVerify: true,
   description: "Single tool/API invocation with 1-minute auto-release",
 

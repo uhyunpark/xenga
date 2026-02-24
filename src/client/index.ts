@@ -13,7 +13,6 @@ import { privateKeyToAccount } from "viem/accounts";
 import { getChainConfig } from "../shared/constants.js";
 import type {
   EscrowPaymentResponse,
-  EscrowState,
   OnChainEscrow,
   Order,
   ReputationScore,
@@ -118,6 +117,49 @@ export function createEscrowClient(config: EscrowClientConfig) {
   });
 
   const baseUrl = config.serverUrl.replace(/\/$/, "");
+  const retryOpts = config.retryOptions ?? {};
+
+  /** Pre-check that the wallet has enough ETH for gas */
+  async function ensureBalance(): Promise<void> {
+    if (!config.escrowVaultAddress) {
+      throw new Error("escrowVaultAddress is required for on-chain calls");
+    }
+    const balance = await publicClient.getBalance({ address });
+    if (balance < 1_000_000_000_000_000n) {
+      throw new Error(
+        `Insufficient ETH for gas. Balance: ${formatEther(balance)} ETH. ` +
+        `Fund ${address} with at least 0.001 ETH to submit transactions.`
+      );
+    }
+  }
+
+  /** Write to contract with retry + optional receipt waiting */
+  async function writeWithRetry(
+    functionName: string,
+    args: unknown[],
+    waitForReceipt: boolean
+  ): Promise<Hash> {
+    await ensureBalance();
+    const txHash = await withRetry(
+      () =>
+        walletClient.writeContract({
+          chain,
+          account: walletClient.account!,
+          address: config.escrowVaultAddress!,
+          abi: escrowVaultAbi,
+          functionName,
+          args,
+        } as Parameters<typeof walletClient.writeContract>[0]),
+      retryOpts
+    );
+    if (waitForReceipt) {
+      await publicClient.waitForTransactionReceipt({
+        hash: txHash,
+        timeout: 60_000,
+      });
+    }
+    return txHash;
+  }
 
   return {
     address,
@@ -307,49 +349,4 @@ export function createEscrowClient(config: EscrowClientConfig) {
       return { eth: formatEther(wei), wei };
     },
   };
-
-  const retryOpts = config.retryOptions ?? {};
-
-  /** Pre-check that the wallet has enough ETH for gas */
-  async function ensureBalance(): Promise<void> {
-    if (!config.escrowVaultAddress) {
-      throw new Error("escrowVaultAddress is required for on-chain calls");
-    }
-    const balance = await publicClient.getBalance({ address });
-    // Require at least 0.001 ETH for gas
-    if (balance < 1_000_000_000_000_000n) {
-      throw new Error(
-        `Insufficient ETH for gas. Balance: ${formatEther(balance)} ETH. ` +
-        `Fund ${address} with at least 0.001 ETH to submit transactions.`
-      );
-    }
-  }
-
-  /** Write to contract with retry + optional receipt waiting */
-  async function writeWithRetry(
-    functionName: string,
-    args: unknown[],
-    waitForReceipt: boolean
-  ): Promise<Hash> {
-    await ensureBalance();
-    const txHash = await withRetry(
-      () =>
-        walletClient.writeContract({
-          chain,
-          account: walletClient.account!,
-          address: config.escrowVaultAddress!,
-          abi: escrowVaultAbi,
-          functionName,
-          args,
-        } as Parameters<typeof walletClient.writeContract>[0]),
-      retryOpts
-    );
-    if (waitForReceipt) {
-      await publicClient.waitForTransactionReceipt({
-        hash: txHash,
-        timeout: 60_000,
-      });
-    }
-    return txHash;
-  }
 }

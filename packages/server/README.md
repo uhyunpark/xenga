@@ -83,12 +83,12 @@ registerServiceType(agentServiceType);        // 1-hour release window
 // Register custom service type
 registerServiceType({
   name: "saas-subscription",
-  defaultReleaseWindow: 86400,  // 1 day
+  releaseWindow: 86400,  // 1 day
   autoVerify: false,
   adjustParams(params, reputation) {
     // Shorten window for high-trust counterparties
-    if (reputation?.seller?.score > 80) {
-      params.releaseWindow = 43200; // 12 hours
+    if (reputation.sellerScore > 80) {
+      return { ...params, releaseWindow: 43200 }; // 12 hours
     }
     return params;
   },

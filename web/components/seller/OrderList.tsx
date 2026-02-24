@@ -2,18 +2,7 @@
 
 import { useState } from "react";
 import { facilitatorFetch } from "@/lib/api/client";
-
-interface OrderData {
-  id: string;
-  title: string;
-  price: string;
-  priceUsdc: number;
-  status: string;
-  buyerAddress?: string;
-  escrowId?: number;
-  txHash?: string;
-  createdAt: number;
-}
+import type { OrderData } from "./types";
 
 const STATUS_STYLES: Record<string, string> = {
   created: "bg-bg-tertiary text-text-secondary",

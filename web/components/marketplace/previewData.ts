@@ -38,58 +38,9 @@ export const PREVIEW_PAYMENT_REQUIRED = {
   flatFee: "0",
 };
 
-export const PREVIEW_SIGNATURE = {
-  scheme: "escrow",
-  network: "base-sepolia",
-  from: "0xBuyerAddress1234567890abcdef12345678901234",
-  to: "0x1234567890abcdef1234567890abcdef12345678",
-  value: "25000000",
-  validAfter: "0",
-  validBefore: "1740500000",
-  nonce: "0xabc123def456789012345678901234567890123456789012345678901234abcd",
-  signature: "0x1234...abcd",
-  orderId: PREVIEW_ORDER.orderId,
-  sellerAddress: PREVIEW_ORDER.sellerAddress,
-  releaseWindow: 604800,
-  serviceType: "marketplace",
-};
-
 export const PREVIEW_SETTLEMENT = {
   escrowId: 42,
   txHash: "0x9f8e7d6c5b4a3928171605f4e3d2c1b0a9f8e7d6c5b4a3928171605f4e3d2c1b",
-};
-
-export const PREVIEW_HTTP_402 = {
-  request: {
-    method: "POST",
-    url: "/api/orders/d4e5f6a7.../pay",
-    headers: { "Content-Type": "application/json" },
-  },
-  response: {
-    status: 402,
-    statusText: "Payment Required",
-    headers: {
-      "PAYMENT-REQUIRED": "[base64-encoded escrow terms]",
-    },
-  },
-};
-
-export const PREVIEW_HTTP_200 = {
-  request: {
-    method: "POST",
-    url: "/api/orders/d4e5f6a7.../pay",
-    headers: {
-      "Content-Type": "application/json",
-      "PAYMENT-SIGNATURE": "[base64-encoded signed authorization]",
-    },
-  },
-  response: {
-    status: 200,
-    statusText: "OK",
-    headers: {
-      "PAYMENT-RESPONSE": "[base64-encoded settlement confirmation]",
-    },
-  },
 };
 
 export interface PreviewStep {

@@ -2,6 +2,7 @@ import type { ServiceType, EscrowParams, CounterpartyReputation } from "./index.
 import {
   REPUTATION_HIGH_THRESHOLD,
   REPUTATION_LOW_THRESHOLD,
+  DATA_PIPELINE_RELEASE_WINDOW,
 } from "../../shared/constants.js";
 
 /**
@@ -12,7 +13,7 @@ import {
  */
 export const dataPipelineServiceType: ServiceType = {
   name: "data-pipeline",
-  releaseWindow: 60 * 60, // 1 hour
+  releaseWindow: DATA_PIPELINE_RELEASE_WINDOW,
   autoVerify: false,
   description: "Batch data processing with 1-hour release and manual verification",
 

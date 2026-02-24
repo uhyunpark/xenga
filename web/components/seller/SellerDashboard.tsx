@@ -6,18 +6,7 @@ import { WalletSelector } from "@/components/ui/WalletSelector";
 import { facilitatorFetch } from "@/lib/api/client";
 import { OrderList } from "./OrderList";
 import { EarningsCard } from "./EarningsCard";
-
-interface OrderData {
-  id: string;
-  title: string;
-  price: string;
-  priceUsdc: number;
-  status: string;
-  buyerAddress?: string;
-  escrowId?: number;
-  txHash?: string;
-  createdAt: number;
-}
+import type { OrderData } from "./types";
 
 interface ReputationData {
   overall: number;

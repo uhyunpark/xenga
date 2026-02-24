@@ -2,6 +2,7 @@ import type { ServiceType, EscrowParams, CounterpartyReputation } from "./index.
 import {
   REPUTATION_HIGH_THRESHOLD,
   REPUTATION_LOW_THRESHOLD,
+  INFERENCE_RELEASE_WINDOW,
 } from "../../shared/constants.js";
 
 /**
@@ -12,7 +13,7 @@ import {
  */
 export const inferenceServiceType: ServiceType = {
   name: "inference",
-  releaseWindow: 5 * 60, // 5 minutes
+  releaseWindow: INFERENCE_RELEASE_WINDOW,
   autoVerify: true,
   description: "LLM inference calls with 5-minute auto-release and auto-verification",
 

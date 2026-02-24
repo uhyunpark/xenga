@@ -36,9 +36,7 @@ export function isRetryableError(error: unknown): boolean {
     lower.includes("rate limit") ||
     lower.includes("429") ||
     lower.includes("nonce too low") ||
-    lower.includes("replacement underpriced") ||
-    lower.includes("already known") ||
-    lower.includes("intrinsic gas too low")
+    lower.includes("replacement underpriced")
   );
 }
 

@@ -8,6 +8,7 @@ interface PaymentIntentData {
   id: string;
   orderId: string;
   status: "pending" | "completed" | "expired" | "failed";
+  returnUrl?: string;
   expiresAt: number;
   order?: {
     id: string;
@@ -94,7 +95,7 @@ export function CheckoutPage({
             orderId={intent.order.id}
             title={intent.order.title}
             price={intent.order.price}
-            returnUrl={undefined}
+            returnUrl={intent.returnUrl}
           />
         )}
       </div>

@@ -5,7 +5,7 @@
  * to discover, evaluate, and pay for services protected by x402 escrow.
  */
 
-import type { WalletClient, Address } from "viem";
+import type { Address } from "viem";
 import type { ReputationScore } from "../shared/types.js";
 import { NetworkError } from "../shared/errors.js";
 import { escrowFetch, type EscrowFetchOptions } from "./escrowFetch.js";

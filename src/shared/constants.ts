@@ -75,11 +75,17 @@ export const DEFAULT_RPC = "https://sepolia.base.org";
 // Service type constants
 export const SERVICE_TYPE_MARKETPLACE = "marketplace";
 export const SERVICE_TYPE_AGENT = "agent-service";
+export const SERVICE_TYPE_INFERENCE = "inference";
+export const SERVICE_TYPE_DATA_PIPELINE = "data-pipeline";
+export const SERVICE_TYPE_TOOL_CALL = "tool-call";
 
 // Time constants (seconds)
 export const MARKETPLACE_RELEASE_WINDOW = 7 * 24 * 60 * 60; // 7 days
 export const MARKETPLACE_DISPUTE_WINDOW = 3 * 24 * 60 * 60; // 3 days
 export const AGENT_RELEASE_WINDOW = 60 * 60; // 1 hour
+export const INFERENCE_RELEASE_WINDOW = 5 * 60; // 5 minutes
+export const DATA_PIPELINE_RELEASE_WINDOW = 60 * 60; // 1 hour
+export const TOOL_CALL_RELEASE_WINDOW = 60; // 1 minute
 
 // ──────────────────────── Reputation Thresholds ────────────────────────
 

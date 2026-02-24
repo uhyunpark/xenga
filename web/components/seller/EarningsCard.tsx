@@ -1,11 +1,6 @@
 "use client";
 
-interface OrderData {
-  id: string;
-  price: string;
-  priceUsdc: number;
-  status: string;
-}
+import type { OrderData } from "./types";
 
 export function EarningsCard({ orders }: { orders: OrderData[] }) {
   const completedStatuses = ["completed", "delivery_confirmed"];

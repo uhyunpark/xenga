@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import type { Address } from "viem";
 import { getDb } from "../db/index.js";
+import { getOrderById } from "./orderService.js";
 
 export type PaymentIntentStatus = "pending" | "completed" | "expired" | "failed";
 
@@ -54,8 +55,13 @@ export function getPaymentIntentById(id: string): PaymentIntent | undefined {
   const row = db.prepare("SELECT * FROM payment_intents WHERE id = ?").get(id);
   if (!row) return undefined;
   const intent = toPaymentIntent(row);
-  // Auto-expire
+  // Auto-expire — but don't expire if the linked order was already paid
   if (intent.status === "pending" && intent.expiresAt < Math.floor(Date.now() / 1000)) {
+    const order = getOrderById(intent.orderId);
+    if (order && (order.status === "escrowed" || order.status === "completed")) {
+      updatePaymentIntentStatus(id, "completed");
+      return { ...intent, status: "completed" };
+    }
     updatePaymentIntentStatus(id, "expired");
     return { ...intent, status: "expired" };
   }

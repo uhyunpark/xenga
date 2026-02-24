@@ -18,7 +18,12 @@ const router = Router();
 const VALID_STATUSES: OrderStatus[] = ["created", "pending_payment", "escrowed", "delivery_confirmed", "completed", "disputed", "resolved", "refunded"];
 
 // ──────────── List orders ────────────
-router.get("/", apiKeyAuth(), (req, res) => {
+// When filtering by seller address, skip API key auth (read-only, filtered data).
+// Full unfiltered list still requires API key.
+router.get("/", (req, res, next) => {
+  if (req.query.seller) return next();
+  return apiKeyAuth()(req, res, next);
+}, (req, res) => {
   const filters: { status?: OrderStatus; sellerAddress?: Address; limit?: number; offset?: number } = {};
   if (req.query.status) {
     const status = req.query.status as string;
