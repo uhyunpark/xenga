@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { useWallet } from "@/lib/wallet/WalletProvider";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Overview", icon: "home" },
@@ -55,6 +56,7 @@ const ICONS: Record<string, React.ReactNode> = {
 export function DashboardSidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { address, disconnect } = useWallet();
 
   const isActive = (href: string) =>
     href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
@@ -98,7 +100,18 @@ export function DashboardSidebar() {
         ))}
       </nav>
 
-      <div className="border-t border-border-default px-2 py-3">
+      <div className="border-t border-border-default px-2 py-3 space-y-1">
+        {address && (
+          <button
+            onClick={disconnect}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3m4-9l4 4-4 4m4-4H6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <span className="truncate">{address.slice(0, 6)}...{address.slice(-4)}</span>
+          </button>
+        )}
         <Link
           href="/"
           className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
