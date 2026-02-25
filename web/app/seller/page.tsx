@@ -1,12 +1,5 @@
-import type { Metadata } from "next";
-import SellerPage from "./SellerPage";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Seller Dashboard — Xenga",
-  description:
-    "Manage your orders, confirm deliveries, view earnings, and monitor your on-chain reputation score.",
-};
-
-export default function Page() {
-  return <SellerPage />;
+export default function SellerPage() {
+  redirect("/dashboard");
 }

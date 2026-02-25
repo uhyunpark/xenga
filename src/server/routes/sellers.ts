@@ -22,36 +22,33 @@ function toSeller(row: any): Seller {
 /**
  * POST /api/sellers
  *
- * Register as a seller. Requires wallet signature authentication.
+ * Register or update seller profile. Requires wallet signature authentication.
+ * Uses upsert: first call creates, subsequent calls update name.
  * Body: { name? }
  */
 router.post(
   "/",
   walletAuth(),
   (req: AuthenticatedRequest, res) => {
-    const address = req.callerAddress!;
+    const address = req.callerAddress!.toLowerCase();
     const { name } = req.body as { name?: string };
 
-    if (name && name.length > 100) {
-      return res.status(400).json({ error: "Name must be 100 characters or fewer" });
+    if (name !== undefined && (typeof name !== "string" || name.length > 100)) {
+      return res.status(400).json({ error: "Name must be a string under 100 characters" });
     }
 
     const db = getDb();
-    const existing = db.prepare("SELECT * FROM sellers WHERE address = ?").get(address);
-    if (existing) {
-      return res.status(409).json({ error: "Seller already registered", seller: toSeller(existing) });
-    }
-
     const now = Math.floor(Date.now() / 1000);
-    db.prepare("INSERT INTO sellers (address, name, registered_at) VALUES (?, ?, ?)").run(
-      address,
-      name ?? null,
-      now
-    );
 
-    res.status(201).json({
-      seller: { address, name: name ?? null, registeredAt: now },
-    });
+    db.prepare(
+      `INSERT INTO sellers (address, name, registered_at)
+       VALUES (?, ?, ?)
+       ON CONFLICT(address) DO UPDATE SET name = excluded.name`
+    ).run(address, name?.trim() || null, now);
+
+    const seller = db.prepare("SELECT * FROM sellers WHERE address = ?").get(address);
+
+    res.json({ seller: toSeller(seller) });
   }
 );
 
@@ -72,7 +69,7 @@ router.get("/", (_req, res) => {
  * Get seller profile by address.
  */
 router.get("/:address", (req, res) => {
-  const addr = req.params.address as string;
+  const addr = (req.params.address as string).toLowerCase();
   if (!isAddress(addr)) {
     return res.status(400).json({ error: "Invalid address" });
   }

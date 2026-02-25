@@ -10,7 +10,8 @@ import {
 } from "../services/orderService.js";
 import { getServiceType } from "../service-types/index.js";
 import { escrowPaymentMiddleware, type EscrowPaymentRequest } from "../middleware/escrowPayment.js";
-import { apiKeyAuth } from "../middleware/auth.js";
+import { apiKeyAuth, apiKeyOrWalletAuth, walletAuth } from "../middleware/auth.js";
+import type { AuthenticatedRequest } from "../middleware/auth.js";
 import { confirmDeliveryOnChain } from "../facilitator/settler.js";
 
 const router = Router();
@@ -19,11 +20,26 @@ const VALID_STATUSES: OrderStatus[] = ["created", "pending_payment", "escrowed",
 
 // ──────────── List orders ────────────
 // When filtering by seller address, skip API key auth (read-only, filtered data).
+// If wallet headers present with ?seller=, verify the signer matches the seller param.
 // Full unfiltered list still requires API key.
 router.get("/", (req, res, next) => {
-  if (req.query.seller) return next();
+  const sellerFilter = req.query.seller as string | undefined;
+  if (sellerFilter && req.headers["x-wallet-address"]) {
+    // Use walletAuth to verify identity, then check address match
+    return walletAuth()(req as AuthenticatedRequest, res, next);
+  }
+  if (sellerFilter) return next(); // Open mode fallback (backward compat for demos)
   return apiKeyAuth()(req, res, next);
-}, (req, res) => {
+}, (req: AuthenticatedRequest, res) => {
+  const sellerFilter = req.query.seller as string | undefined;
+
+  // If wallet auth was used, verify identity matches seller filter
+  if (sellerFilter && req.callerAddress) {
+    if (req.callerAddress.toLowerCase() !== sellerFilter.toLowerCase()) {
+      return res.status(403).json({ error: "Wallet address does not match seller filter" });
+    }
+  }
+
   const filters: { status?: OrderStatus; sellerAddress?: Address; limit?: number; offset?: number } = {};
   if (req.query.status) {
     const status = req.query.status as string;
@@ -32,8 +48,8 @@ router.get("/", (req, res, next) => {
     }
     filters.status = status as OrderStatus;
   }
-  if (req.query.seller)
-    filters.sellerAddress = req.query.seller as Address;
+  if (sellerFilter)
+    filters.sellerAddress = sellerFilter as Address;
   if (req.query.limit)
     filters.limit = parseInt(req.query.limit as string, 10);
   if (req.query.offset)
@@ -101,9 +117,14 @@ router.post("/", apiKeyAuth(), (req, res) => {
 });
 
 // ──────────── Confirm delivery (operator/seller) ────────────
-router.post("/:id/confirm-delivery", apiKeyAuth(), async (req, res) => {
+router.post("/:id/confirm-delivery", apiKeyOrWalletAuth(), async (req: AuthenticatedRequest, res) => {
   const order = getOrderById(req.params.id as string);
   if (!order) return res.status(404).json({ error: "Order not found" });
+
+  // If wallet auth was used, verify signer is the seller
+  if (req.callerAddress && req.callerAddress.toLowerCase() !== order.sellerAddress.toLowerCase()) {
+    return res.status(403).json({ error: "Only the seller can confirm delivery" });
+  }
 
   if (order.status !== "escrowed" || order.escrowId === undefined) {
     return res.status(400).json({ error: "Order is not in escrowed state or missing escrowId" });

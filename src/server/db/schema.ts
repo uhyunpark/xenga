@@ -72,6 +72,18 @@ export const SCHEMA = `
     registered_at INTEGER NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS seller_api_keys (
+    id TEXT PRIMARY KEY,
+    seller_address TEXT NOT NULL,
+    key_hash TEXT NOT NULL,
+    key_prefix TEXT NOT NULL,
+    name TEXT,
+    created_at INTEGER NOT NULL,
+    last_used_at INTEGER,
+    revoked_at INTEGER
+  );
+  CREATE INDEX IF NOT EXISTS idx_seller_api_keys_address ON seller_api_keys(seller_address);
+
   CREATE INDEX IF NOT EXISTS idx_events_escrow ON events(escrow_id);
   CREATE INDEX IF NOT EXISTS idx_events_block_number ON events(block_number);
   CREATE INDEX IF NOT EXISTS idx_payment_intents_order ON payment_intents(order_id);

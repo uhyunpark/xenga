@@ -9,7 +9,7 @@ import { facilitatorFetch } from "@/lib/api/client";
 const NAV_ITEMS = [
   { href: "/agent", label: "Agent" },
   { href: "/marketplace", label: "Human Escrow" },
-  { href: "/seller", label: "Seller" },
+  { href: "/dashboard", label: "Dashboard" },
 ];
 
 export function Navbar() {
