@@ -3,12 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { WalletSelector } from "@/components/ui/WalletSelector";
 import { facilitatorFetch } from "@/lib/api/client";
 
 const NAV_ITEMS = [
-  { href: "/agent", label: "Agent" },
-  { href: "/marketplace", label: "Human Escrow" },
+  { href: "/playground", label: "Playground" },
   { href: "/dashboard", label: "Dashboard" },
 ];
 
@@ -72,9 +70,6 @@ export function Navbar() {
               {chainLabel}
             </span>
             <HealthDot status={healthOk} />
-            <div className="hidden md:block">
-              <WalletSelector />
-            </div>
             <button
               onClick={() => setMobileOpen((prev) => !prev)}
               className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border-default bg-bg-secondary text-text-secondary transition-colors hover:border-border-active hover:text-text-primary md:hidden"
@@ -128,9 +123,6 @@ export function Navbar() {
                   {item.label}
                 </NavLink>
               ))}
-            </div>
-            <div className="rounded-lg border border-border-default bg-bg-secondary p-2">
-              <WalletSelector />
             </div>
           </div>
         )}
