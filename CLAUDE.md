@@ -183,8 +183,12 @@ Next.js 15 App Router frontend. Deployed on Vercel. Calls the Express facilitato
 web/
   app/
     page.tsx                 # Landing page
-    marketplace/page.tsx     # Interactive marketplace demo
-    agent/page.tsx           # Auto-advancing agent service demo
+    playground/
+      page.tsx               # Playground hub (links to demos)
+      marketplace/page.tsx   # Interactive marketplace demo
+      agent/page.tsx         # Auto-advancing agent service demo
+    marketplace/page.tsx     # Redirect → /playground/marketplace
+    agent/page.tsx           # Redirect → /playground/agent
     dashboard/
       layout.tsx             # Sidebar + WalletGate wrapper
       page.tsx               # Overview (stats, activity feed)
@@ -198,7 +202,7 @@ web/
     agent/                   # AgentTerminal
     dashboard/               # WalletGate, DashboardSidebar, StatsRow, ActivityFeed, OrderTable, OrderActions, SellerProfile, ApiKeyManager
     protocol-inspector/      # InspectorPanel + 4 tab components
-    ui/                      # Badge, AddressDisplay, TxLink, UsdcAmount, JsonViewer, WalletSelector, ReputationBadge
+    ui/                      # Badge, AddressDisplay, TxLink, UsdcAmount, JsonViewer, ReputationBadge
     layout/                  # Navbar
   lib/
     api/client.ts                 # facilitatorFetch() + facilitatorUrl() — all API calls go through here
