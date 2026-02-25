@@ -27,9 +27,9 @@ export default function LandingPage() {
       <HeroSection />
       <ProtocolFlow />
       <DemoCards />
+      <ReputationSection />
       <HowItWorks />
       <AdaptabilitySection />
-      <ReputationSection />
       <Footer />
     </div>
   );

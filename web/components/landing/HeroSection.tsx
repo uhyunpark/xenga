@@ -28,18 +28,18 @@ export function HeroSection() {
           transition={{ duration: 0.45 }}
         >
           <span className="inline-flex rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-accent">
-            Escrow-Secured Checkout
+            Escrow + Reputation Protocol
           </span>
           <h1
             className="gradient-text mt-5 pb-1 text-4xl font-light tracking-tight md:text-5xl lg:text-6xl"
             style={{ textWrap: "balance" }}
           >
-            On-chain escrow for humans and autonomous agents
+            On-chain escrow and reputation for humans and autonomous agents
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-text-secondary md:text-xl">
             {isMockChainClient
-              ? "Explore the escrow lifecycle with simulated settlement, signed USDC authorization, and programmable release logic."
-              : "Explore the escrow lifecycle with on-chain settlement, signed USDC authorization, and programmable release logic."}
+              ? "Simulated escrow settlement and reputation scoring — every transaction builds a permissionless credit history that shapes future terms."
+              : "Escrow settlement and reputation scoring on-chain — every transaction builds a permissionless credit history that shapes future terms."}
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
@@ -74,7 +74,7 @@ export function HeroSection() {
           <CodeSnippet />
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <MiniStat label="Buyer Gas Cost" value="$0" />
-            <MiniStat label="Settlement" value={isMockChainClient ? "Simulated" : "Base Sepolia"} />
+            <MiniStat label="Reputation" value="On-Chain" />
             <MiniStat label="Escrow Visibility" value="Realtime" />
             <MiniStat label="Authorization" value="EIP-712" />
             <MiniStat label="Asset" value="USDC" />

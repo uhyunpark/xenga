@@ -11,6 +11,7 @@ const steps = [
   { label: "Escrow", icon: "5", desc: "Funds locked in smart contract" },
   { label: "Deliver", icon: "6", desc: "Seller confirms delivery" },
   { label: "Release", icon: "7", desc: "Funds released to seller" },
+  { label: "Reputation", icon: "★", desc: "On-chain reputation score updated" },
 ];
 
 export function ProtocolFlow() {
@@ -29,7 +30,7 @@ export function ProtocolFlow() {
         </motion.h2>
 
         <div className="panel-surface rounded-2xl p-4 md:p-5">
-          <div className="grid gap-3 pb-1 grid-cols-2 sm:grid-cols-4 lg:grid-cols-7">
+          <div className="grid gap-3 pb-1 grid-cols-2 sm:grid-cols-4 lg:grid-cols-8">
             {steps.map((step, i) => (
               <motion.div
                 key={step.label}
@@ -43,7 +44,9 @@ export function ProtocolFlow() {
                     className={`inline-flex w-fit rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
                       step.icon === "402"
                         ? "border-warning/30 bg-warning/10 text-warning"
-                        : "border-accent/30 bg-accent/10 text-accent"
+                        : step.icon === "★"
+                          ? "border-success/30 bg-success/10 text-success"
+                          : "border-accent/30 bg-accent/10 text-accent"
                     }`}
                   >
                     {step.icon}

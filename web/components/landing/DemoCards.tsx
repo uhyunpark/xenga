@@ -9,7 +9,7 @@ const demos = [
   {
     title: "Agent Service Demo",
     description:
-      "Autonomous machine-to-machine payments with simulated operator verification.",
+      "Autonomous machine-to-machine payments with reputation-gated escrow terms.",
     href: "/playground/agent",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -20,13 +20,13 @@ const demos = [
       </svg>
     ),
     badge: "Autonomous",
-    highlights: ["Auto-advancing run", "Signed authorization + on-chain settle"],
+    highlights: ["Auto-advancing run", "Signed authorization + on-chain settle", "Reputation updated on completion"],
     color: "accent-purple",
   },
   {
     title: "Human Escrow Demo",
     description:
-      "Buyer-driven escrow checkout with delivery confirmation and dispute controls.",
+      "Buyer-driven escrow checkout with delivery confirmation, disputes, and reputation tracking.",
     href: "/playground/marketplace",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -36,7 +36,7 @@ const demos = [
       </svg>
     ),
     badge: "Human-in-the-loop",
-    highlights: ["Manual release/dispute", "Step-by-step protocol view"],
+    highlights: ["Manual release/dispute", "Step-by-step protocol view", "On-chain reputation scoring"],
     color: "accent",
   },
 ];
