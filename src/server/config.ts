@@ -37,6 +37,7 @@ export const config = {
   flatFee: BigInt(process.env.FEE_FLAT_USDC || "0"),
   feeRecipient: (process.env.FEE_RECIPIENT || undefined) as Address | undefined,
   chainConfig,
+  isMock,
   apiKeys: (process.env.API_KEYS || "").split(",").map(k => k.trim()).filter(Boolean),
 };
 

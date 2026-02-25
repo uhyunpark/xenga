@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { parseUnits, type Address } from "viem";
 import { USDC_DECIMALS } from "../../shared/constants.js";
+import { config } from "../config.js";
 import { fundWallet } from "../facilitator/settler.js";
 import { logger } from "../services/logger.js";
 
@@ -30,8 +31,8 @@ function checkRateLimit(key: string, requestAmount: bigint): boolean {
 
 // ──────────── Demo faucet ────────────
 router.post("/fund", async (req, res) => {
-  if (process.env.DEMO_MODE !== "true") {
-    return res.status(403).json({ error: "Demo faucet is not enabled" });
+  if (!config.chainConfig.isTestnet || config.isMock) {
+    return res.status(403).json({ error: "Faucet is only available on testnets" });
   }
 
   const address = req.body?.address as Address;
