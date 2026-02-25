@@ -39,6 +39,7 @@ export const config = {
   chainConfig,
   isMock,
   apiKeys: (process.env.API_KEYS || "").split(",").map(k => k.trim()).filter(Boolean),
+  jwtSecret: process.env.JWT_SECRET || "dev-jwt-secret-change-in-production",
 };
 
 export function validateConfig() {

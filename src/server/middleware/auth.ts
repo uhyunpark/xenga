@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { verifyMessage, type Address } from "viem";
+import { jwtVerify } from "jose";
 import { config } from "../config.js";
 
 export interface AuthenticatedRequest extends Request {
@@ -26,27 +27,6 @@ export function apiKeyAuth() {
   };
 }
 
-/**
- * Combined middleware: accepts either API key or wallet auth.
- * Useful for routes that need to support both operator (API key) and seller (wallet) access.
- */
-export function apiKeyOrWalletAuth() {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    // If API key is present, use apiKeyAuth
-    if (req.headers["x-api-key"]) {
-      return apiKeyAuth()(req, res, next);
-    }
-    // If wallet headers are present, use walletAuth
-    if (req.headers["x-wallet-address"]) {
-      return walletAuth()(req, res, next);
-    }
-    // No auth provided
-    if (config.apiKeys.length === 0) {
-      return next(); // Open mode (no API keys configured)
-    }
-    res.status(401).json({ error: "Authentication required (API key or wallet signature)" });
-  };
-}
 
 export function walletAuth(getExpectedAddress?: (req: Request) => Address | undefined) {
   return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -97,5 +77,52 @@ export function walletAuth(getExpectedAddress?: (req: Request) => Address | unde
     } catch {
       return res.status(401).json({ error: "Signature verification failed" });
     }
+  };
+}
+
+/**
+ * Session-based authentication middleware (SIWE JWT).
+ * Reads `Authorization: Bearer <jwt>`, verifies it, sets req.callerAddress.
+ */
+export function sessionAuth() {
+  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Missing Authorization header" });
+    }
+
+    const token = authHeader.slice(7);
+    try {
+      const secret = new TextEncoder().encode(config.jwtSecret);
+      const { payload } = await jwtVerify(token, secret);
+
+      if (!payload.sub) {
+        return res.status(401).json({ error: "Invalid token: missing subject" });
+      }
+
+      req.callerAddress = payload.sub as Address;
+      next();
+    } catch {
+      return res.status(401).json({ error: "Invalid or expired session token" });
+    }
+  };
+}
+
+/**
+ * Combined middleware: accepts either API key or session token.
+ * Replaces apiKeyOrWalletAuth() for dashboard routes.
+ */
+export function apiKeyOrSessionAuth() {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    if (req.headers["x-api-key"]) {
+      return apiKeyAuth()(req, res, next);
+    }
+    if (req.headers.authorization?.startsWith("Bearer ")) {
+      return sessionAuth()(req, res, next);
+    }
+    if (config.apiKeys.length === 0) {
+      return next(); // Open mode
+    }
+    res.status(401).json({ error: "Authentication required (API key or session token)" });
   };
 }

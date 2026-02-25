@@ -18,10 +18,12 @@
     "deploy:local": "bun scripts/deploy.ts --local"
   },
   "dependencies": {
-    "express": "^4.21.0",
-    "viem": "^2.21.0",
     "dotenv": "^16.4.0",
-    "uuid": "^10.0.0"
+    "express": "^4.21.0",
+    "jose": "^6.1.3",
+    "siwe": "^3.0.0",
+    "uuid": "^10.0.0",
+    "viem": "^2.21.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",

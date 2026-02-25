@@ -1,12 +1,12 @@
 import { Router } from "express";
 import crypto from "crypto";
-import { walletAuth, type AuthenticatedRequest } from "../middleware/auth.js";
+import { sessionAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { getDb } from "../db/index.js";
 
 const router = Router();
 
 // Generate a new API key
-router.post("/", walletAuth(), (req: AuthenticatedRequest, res) => {
+router.post("/", sessionAuth(), (req: AuthenticatedRequest, res) => {
   const db = getDb();
   const sellerAddress = req.callerAddress!.toLowerCase();
   const name = req.body?.name || null;
@@ -27,7 +27,7 @@ router.post("/", walletAuth(), (req: AuthenticatedRequest, res) => {
 });
 
 // List API keys for the connected wallet
-router.get("/", walletAuth(), (req: AuthenticatedRequest, res) => {
+router.get("/", sessionAuth(), (req: AuthenticatedRequest, res) => {
   const db = getDb();
   const sellerAddress = req.callerAddress!.toLowerCase();
 
@@ -56,7 +56,7 @@ router.get("/", walletAuth(), (req: AuthenticatedRequest, res) => {
 });
 
 // Revoke an API key
-router.delete("/:id", walletAuth(), (req: AuthenticatedRequest, res) => {
+router.delete("/:id", sessionAuth(), (req: AuthenticatedRequest, res) => {
   const db = getDb();
   const sellerAddress = req.callerAddress!.toLowerCase();
   const keyId = req.params.id as string;

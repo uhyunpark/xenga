@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useWallet } from "@/lib/wallet/WalletProvider";
+import { useSessionToken } from "@/components/dashboard/WalletGate";
 import { authenticatedFetch } from "@/lib/api/wallet-auth";
 
 interface ApiKey {
@@ -13,7 +14,8 @@ interface ApiKey {
 }
 
 export function ApiKeyManager() {
-  const { address, walletClient } = useWallet();
+  const { address } = useWallet();
+  const token = useSessionToken();
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [newKeyName, setNewKeyName] = useState("");
   const [newKeyValue, setNewKeyValue] = useState<string | null>(null);
@@ -22,12 +24,11 @@ export function ApiKeyManager() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchKeys = useCallback(async () => {
-    if (!address || !walletClient) return;
+    if (!address) return;
     try {
       const res = await authenticatedFetch(
         "/api/seller-api-keys",
-        walletClient,
-        address
+        token
       );
       if (res.ok) {
         const data = await res.json();
@@ -36,14 +37,14 @@ export function ApiKeyManager() {
     } catch {
       // Silently handle
     }
-  }, [address, walletClient]);
+  }, [address, token]);
 
   useEffect(() => {
     fetchKeys();
   }, [fetchKeys]);
 
   const handleCreate = async () => {
-    if (!address || !walletClient) return;
+    if (!address) return;
     setCreating(true);
     setError(null);
     setNewKeyValue(null);
@@ -51,8 +52,7 @@ export function ApiKeyManager() {
     try {
       const res = await authenticatedFetch(
         "/api/seller-api-keys",
-        walletClient,
-        address,
+        token,
         {
           method: "POST",
           body: JSON.stringify({ name: newKeyName.trim() || undefined }),
@@ -76,15 +76,14 @@ export function ApiKeyManager() {
   };
 
   const handleRevoke = async (keyId: string) => {
-    if (!address || !walletClient) return;
+    if (!address) return;
     setRevoking(keyId);
     setError(null);
 
     try {
       const res = await authenticatedFetch(
         `/api/seller-api-keys/${keyId}`,
-        walletClient,
-        address,
+        token,
         { method: "DELETE" }
       );
 

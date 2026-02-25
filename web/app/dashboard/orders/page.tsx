@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useWallet } from "@/lib/wallet/WalletProvider";
+import { useSessionToken } from "@/components/dashboard/WalletGate";
 import { authenticatedFetch } from "@/lib/api/wallet-auth";
 import { OrderTable } from "@/components/dashboard/OrderTable";
 import { OrderActions } from "@/components/dashboard/OrderActions";
@@ -19,18 +20,18 @@ interface OrderData {
 }
 
 export default function OrdersPage() {
-  const { address, walletClient } = useWallet();
+  const { address } = useWallet();
+  const token = useSessionToken();
   const [orders, setOrders] = useState<OrderData[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchOrders = useCallback(async () => {
-    if (!address || !walletClient) return;
+    if (!address) return;
     setLoading(true);
     try {
       const res = await authenticatedFetch(
         `/api/orders?seller=${address}&limit=100`,
-        walletClient,
-        address
+        token
       );
       if (res.ok) {
         const data = await res.json();
@@ -41,7 +42,7 @@ export default function OrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [address, walletClient]);
+  }, [address, token]);
 
   useEffect(() => {
     fetchOrders();

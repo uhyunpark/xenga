@@ -23,6 +23,7 @@ import demoRouter from "./routes/demo.js";
 import paymentIntentsRouter from "./routes/paymentIntents.js";
 import sellersRouter from "./routes/sellers.js";
 import sellerApiKeysRouter from "./routes/sellerApiKeys.js";
+import authRouter from "./routes/auth.js";
 import { startEventListener } from "./services/eventListener.js";
 import { rateLimit } from "./middleware/rateLimit.js";
 import { logger } from "./services/logger.js";
@@ -54,7 +55,7 @@ app.use((_req, res, next) => {
   const origin = process.env.CORS_ORIGIN || "*";
   res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, PAYMENT-SIGNATURE, X-PAYMENT, X-WALLET-ADDRESS, X-WALLET-SIGNATURE, X-WALLET-TIMESTAMP, X-API-KEY");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, PAYMENT-SIGNATURE, X-PAYMENT, X-WALLET-ADDRESS, X-WALLET-SIGNATURE, X-WALLET-TIMESTAMP, X-API-KEY");
   res.setHeader("Access-Control-Expose-Headers", "PAYMENT-REQUIRED, X-PAYMENT-REQUIRED, PAYMENT-RESPONSE, X-PAYMENT-RESPONSE");
   if (_req.method === "OPTIONS") {
     return res.sendStatus(204);
@@ -107,6 +108,7 @@ app.use("/api/payment-intents", paymentLimiter, paymentIntentsRouter);
 app.use("/api/sellers", generalLimiter, sellersRouter);
 app.use("/api/seller-api-keys", generalLimiter, sellerApiKeysRouter);
 app.use("/api/demo", generalLimiter, demoRouter);
+app.use("/api/auth", generalLimiter, authRouter);
 
 // ──────────── Start ────────────
 

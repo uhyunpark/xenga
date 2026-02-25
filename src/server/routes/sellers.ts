@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { isAddress, type Address } from "viem";
-import { walletAuth, type AuthenticatedRequest } from "../middleware/auth.js";
+import { sessionAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { getDb } from "../db/index.js";
 
 const router = Router();
@@ -28,7 +28,7 @@ function toSeller(row: any): Seller {
  */
 router.post(
   "/",
-  walletAuth(),
+  sessionAuth(),
   (req: AuthenticatedRequest, res) => {
     const address = req.callerAddress!.toLowerCase();
     const { name } = req.body as { name?: string };

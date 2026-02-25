@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useWallet } from "@/lib/wallet/WalletProvider";
+import { useSessionToken } from "@/components/dashboard/WalletGate";
 import { authenticatedFetch } from "@/lib/api/wallet-auth";
 import { facilitatorFetch } from "@/lib/api/client";
 import { StatsRow } from "@/components/dashboard/StatsRow";
@@ -25,20 +26,20 @@ interface ReputationData {
 }
 
 export default function DashboardOverview() {
-  const { address, walletClient } = useWallet();
+  const { address } = useWallet();
+  const token = useSessionToken();
   const [orders, setOrders] = useState<OrderData[]>([]);
   const [reputation, setReputation] = useState<ReputationData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
-    if (!address || !walletClient) return;
+    if (!address) return;
     setLoading(true);
     try {
       const [ordersRes, repRes] = await Promise.all([
         authenticatedFetch(
           `/api/orders?seller=${address}&limit=50`,
-          walletClient,
-          address
+          token
         ),
         facilitatorFetch(`/api/reputation/${address}`),
       ]);
@@ -56,7 +57,7 @@ export default function DashboardOverview() {
     } finally {
       setLoading(false);
     }
-  }, [address, walletClient]);
+  }, [address, token]);
 
   useEffect(() => {
     fetchData();

@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useWallet } from "@/lib/wallet/WalletProvider";
+import { useSessionToken } from "@/components/dashboard/WalletGate";
 import { facilitatorFetch } from "@/lib/api/client";
 import { authenticatedFetch } from "@/lib/api/wallet-auth";
 
 export function SellerProfile() {
-  const { address, walletClient } = useWallet();
+  const { address } = useWallet();
+  const token = useSessionToken();
   const [name, setName] = useState("");
   const [savedName, setSavedName] = useState<string | null>(null);
   const [isRegistered, setIsRegistered] = useState(false);
@@ -31,13 +33,13 @@ export function SellerProfile() {
   }, [address]);
 
   const handleSave = async () => {
-    if (!address || !walletClient) return;
+    if (!address) return;
     setSaving(true);
     setError(null);
     setSuccess(false);
 
     try {
-      const res = await authenticatedFetch("/api/sellers", walletClient, address, {
+      const res = await authenticatedFetch("/api/sellers", token, {
         method: "POST",
         body: JSON.stringify({ name: name.trim() || undefined }),
       });

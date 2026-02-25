@@ -10,7 +10,7 @@ import {
 } from "../services/orderService.js";
 import { getServiceType } from "../service-types/index.js";
 import { escrowPaymentMiddleware, type EscrowPaymentRequest } from "../middleware/escrowPayment.js";
-import { apiKeyAuth, apiKeyOrWalletAuth, walletAuth } from "../middleware/auth.js";
+import { apiKeyAuth, apiKeyOrSessionAuth, sessionAuth } from "../middleware/auth.js";
 import type { AuthenticatedRequest } from "../middleware/auth.js";
 import { confirmDeliveryOnChain } from "../facilitator/settler.js";
 
@@ -24,9 +24,9 @@ const VALID_STATUSES: OrderStatus[] = ["created", "pending_payment", "escrowed",
 // Full unfiltered list still requires API key.
 router.get("/", (req, res, next) => {
   const sellerFilter = req.query.seller as string | undefined;
-  if (sellerFilter && req.headers["x-wallet-address"]) {
-    // Use walletAuth to verify identity, then check address match
-    return walletAuth()(req as AuthenticatedRequest, res, next);
+  if (sellerFilter && req.headers.authorization?.startsWith("Bearer ")) {
+    // Use sessionAuth to verify identity, then check address match
+    return sessionAuth()(req as AuthenticatedRequest, res, next);
   }
   if (sellerFilter) return next(); // Open mode fallback (backward compat for demos)
   return apiKeyAuth()(req, res, next);
@@ -117,7 +117,7 @@ router.post("/", apiKeyAuth(), (req, res) => {
 });
 
 // ──────────── Confirm delivery (operator/seller) ────────────
-router.post("/:id/confirm-delivery", apiKeyOrWalletAuth(), async (req: AuthenticatedRequest, res) => {
+router.post("/:id/confirm-delivery", apiKeyOrSessionAuth(), async (req: AuthenticatedRequest, res) => {
   const order = getOrderById(req.params.id as string);
   if (!order) return res.status(404).json({ error: "Order not found" });
 
