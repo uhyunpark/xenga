@@ -150,6 +150,29 @@ HTTP transport for triggering escrow creation. The contracts can also be called 
 5. Server verifies signature off-chain (`facilitator/verifier.ts`), submits `createEscrowWithAuth` on-chain (`facilitator/settler.ts`)
 6. Returns **200** with `X-PAYMENT-RESPONSE` header
 
+### Seller Dashboard
+
+Self-service dashboard at `/dashboard` for sellers to manage orders, profile, and API keys.
+
+**Backend:**
+- `src/server/routes/sellerApiKeys.ts` — CRUD for self-service API keys (POST create, GET list, DELETE revoke), all behind `walletAuth()`
+- `src/server/middleware/auth.ts` — `apiKeyOrWalletAuth()` combined middleware accepts either API key or wallet signature. `walletAuth()` uses `req.originalUrl` (not `req.path`) for routeId to match client signatures correctly on mounted routers
+- `src/server/db/schema.ts` — `seller_api_keys` table (id, seller_address, key_hash, key_prefix, name, timestamps)
+- `src/server/routes/sellers.ts` — POST uses upsert (`ON CONFLICT...DO UPDATE`) for register + profile update in one endpoint
+- `src/server/routes/orders.ts` — GET `?seller=` with wallet headers verifies signer matches seller param; confirm-delivery uses `apiKeyOrWalletAuth` with seller identity check
+
+**Frontend (`web/`):**
+- `/dashboard` — Overview: stats row (active, pending, revenue, reputation), activity feed, quick actions
+- `/dashboard/orders` — Order table with filter tabs (All/Active/Completed/Disputed), inline expand with escrow details, on-chain confirm delivery + refund via `walletClient.writeContract`
+- `/dashboard/settings` — Seller profile registration/update (name, payout address display)
+- `/dashboard/api-keys` — Create, list, revoke API keys with copy-once-on-create pattern
+- Layout: `DashboardSidebar` (responsive with mobile hamburger) + `WalletGate` (connect prompt when disconnected)
+- `web/lib/api/wallet-auth.ts` — `authenticatedFetch()` adds wallet auth headers (address, signature, timestamp) to facilitator API calls
+
+**Auth flow:** Client signs `xenga-auth:{path}:{timestamp}` via `walletClient.signMessage()`. Server verifies via `verifyMessage()` with 5-minute replay window. Addresses normalized to lowercase for storage/comparison.
+
+**Note:** Self-service API keys have CRUD management but no auth middleware to validate them yet — the existing `apiKeyAuth` middleware only checks `config.apiKeys` (env var). A future middleware will look up keys in the `seller_api_keys` table.
+
 ## Web (`web/`)
 
 Next.js 15 App Router frontend. Deployed on Vercel. Calls the Express facilitator API for all backend operations — no server-side code, no SQLite, no chain interaction.
@@ -162,15 +185,24 @@ web/
     page.tsx                 # Landing page
     marketplace/page.tsx     # Interactive marketplace demo
     agent/page.tsx           # Auto-advancing agent service demo
+    dashboard/
+      layout.tsx             # Sidebar + WalletGate wrapper
+      page.tsx               # Overview (stats, activity feed)
+      orders/page.tsx        # Order management with on-chain actions
+      settings/page.tsx      # Seller profile registration
+      api-keys/page.tsx      # API key self-service
+    seller/page.tsx          # Redirects to /dashboard
   components/
     landing/                 # Hero, ProtocolFlow, DemoCards, HowItWorks, Footer
     marketplace/             # PaymentFlow, ProductGrid, StepTracker, SellerPanel
     agent/                   # AgentTerminal
+    dashboard/               # WalletGate, DashboardSidebar, StatsRow, ActivityFeed, OrderTable, OrderActions, SellerProfile, ApiKeyManager
     protocol-inspector/      # InspectorPanel + 4 tab components
     ui/                      # Badge, AddressDisplay, TxLink, UsdcAmount, JsonViewer, WalletSelector, ReputationBadge
     layout/                  # Navbar
   lib/
     api/client.ts                 # facilitatorFetch() + facilitatorUrl() — all API calls go through here
+    api/wallet-auth.ts            # authenticatedFetch() — adds wallet auth headers for dashboard API calls
     api/payment-flow.ts           # Decomposed xenga client flow with inspector hooks
     wallet/WalletProvider.tsx     # Demo wallet (sessionStorage) + browser wallet (MetaMask)
     protocol-inspector/context.tsx # Inspector event bus + auto-tab-switching
