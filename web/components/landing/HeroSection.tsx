@@ -44,7 +44,7 @@ export function HeroSection() {
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <Link
-              href="/agent"
+              href="/playground/agent"
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent-purple px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-purple/90"
             >
               Launch Agent Demo
@@ -53,7 +53,7 @@ export function HeroSection() {
               </svg>
             </Link>
             <Link
-              href="/marketplace"
+              href="/playground/marketplace"
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-accent/90"
             >
               Launch Human Escrow Demo

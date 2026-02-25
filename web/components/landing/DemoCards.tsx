@@ -10,7 +10,7 @@ const demos = [
     title: "Agent Service Demo",
     description:
       "Autonomous machine-to-machine payments with simulated operator verification.",
-    href: "/agent",
+    href: "/playground/agent",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <rect x="4" y="4" width="16" height="16" rx="2" />
@@ -27,7 +27,7 @@ const demos = [
     title: "Human Escrow Demo",
     description:
       "Buyer-driven escrow checkout with delivery confirmation and dispute controls.",
-    href: "/marketplace",
+    href: "/playground/marketplace",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
