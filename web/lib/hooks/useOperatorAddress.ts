@@ -32,7 +32,7 @@ export function useOperatorAddress(): UseOperatorAddressResult {
     facilitatorFetch("/api/health", { signal: controller.signal })
       .then((r) => r.json())
       .then((data) => {
-        cached = data.operatorAddress ?? null;
+        cached = data.operator?.address ?? data.operatorAddress ?? null;
         setAddress(cached);
         setIsLoading(false);
         if (!cached) setError(true);
