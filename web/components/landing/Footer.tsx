@@ -1,8 +1,29 @@
 "use client";
 
-const USDC_ADDRESS = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
+import { useState, useEffect } from "react";
+import { facilitatorFetch } from "@/lib/api/client";
+
+let cachedEscrowAddress: string | null = null;
+
+function useEscrowVaultAddress(): string | null {
+  const [address, setAddress] = useState<string | null>(cachedEscrowAddress);
+
+  useEffect(() => {
+    if (cachedEscrowAddress) return;
+    facilitatorFetch("/api/health")
+      .then((r) => r.json())
+      .then((data) => {
+        cachedEscrowAddress = data.escrowContract ?? null;
+        setAddress(cachedEscrowAddress);
+      })
+      .catch(() => {});
+  }, []);
+
+  return address;
+}
 
 export function Footer() {
+  const escrowVaultAddress = useEscrowVaultAddress();
   const isMockChain = process.env.NEXT_PUBLIC_MOCK_CHAIN === "true";
   const envLabel = isMockChain ? "Mock Chain (Simulated)" : "Base Sepolia Testnet";
   const envBadgeClass = isMockChain
@@ -52,13 +73,14 @@ export function Footer() {
                 </>
               ) : (
                 <>
-                  <ContractLink
-                    label="USDC"
-                    address={USDC_ADDRESS}
-                  />
-                  <p className="text-xs text-text-tertiary">
-                    EscrowVault address shown in Health endpoint
-                  </p>
+                  {escrowVaultAddress ? (
+                    <ContractLink
+                      label="EscrowVault"
+                      address={escrowVaultAddress}
+                    />
+                  ) : (
+                    <p className="text-xs text-text-tertiary">Loading...</p>
+                  )}
                 </>
               )}
             </div>

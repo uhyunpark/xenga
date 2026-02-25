@@ -31,7 +31,7 @@ export function HeroSection() {
             Escrow-Secured Checkout
           </span>
           <h1
-            className="gradient-text mt-5 text-4xl font-light tracking-tight md:text-5xl lg:text-6xl"
+            className="gradient-text mt-5 pb-1 text-4xl font-light tracking-tight md:text-5xl lg:text-6xl"
             style={{ textWrap: "balance" }}
           >
             On-chain escrow for humans and autonomous agents
@@ -61,14 +61,6 @@ export function HeroSection() {
                 <path d="M3 8h10M9 4l4 4-4 4" />
               </svg>
             </Link>
-            {!isMockChainClient && (
-              <Link
-                href="/explorer"
-                className="inline-flex items-center justify-center rounded-lg border border-border-default bg-bg-secondary px-6 py-3 text-sm font-semibold text-text-primary transition-colors hover:bg-bg-tertiary"
-              >
-                Inspect Escrow State
-              </Link>
-            )}
           </div>
 
         </motion.div>

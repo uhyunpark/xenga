@@ -183,7 +183,7 @@ export function AdaptabilitySection() {
               initial={{ opacity: 0, y: 20 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.4, delay: 0.2 + i * 0.1 }}
-              className="panel-surface rounded-2xl p-5"
+              className="flex flex-col panel-surface rounded-2xl p-5"
             >
               <div className="mb-3 flex items-center gap-2">
                 <div className={`rounded-lg p-2 ${colorMap[card.color].iconBg}`}>
@@ -203,7 +203,7 @@ export function AdaptabilitySection() {
                   </div>
                 ))}
               </div>
-              <p className="mt-3 text-[11px] text-text-tertiary">
+              <p className="mt-auto pt-3 text-[11px] text-text-tertiary">
                 {card.footer}
               </p>
             </motion.div>
