@@ -47,7 +47,7 @@ export function PreviewFlow({ onExit }: { onExit: () => void }) {
       {/* Banner */}
       <div className="rounded-xl border border-accent/30 bg-accent/5 p-4 text-center">
         <p className="text-sm font-medium text-accent">
-          Preview Mode — Connect a wallet to try this live
+          Preview Mode — Watch the demo, then try it live
         </p>
       </div>
 
