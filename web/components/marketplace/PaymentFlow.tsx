@@ -48,6 +48,7 @@ interface FlowState {
   orderData: any | null;
   disputeFiled: boolean;
   deliveryConfirmed: boolean;
+  refunded: boolean;
   paymentRequired: PaymentRequired | null;
   paymentPayload: PaymentPayload | null;
   completionReputation: ReputationScore | null;
@@ -65,7 +66,8 @@ type FlowAction =
   | { type: "RESET" }
   | { type: "SET_PAYMENT_REQUIRED"; paymentRequired: PaymentRequired }
   | { type: "SET_PAYMENT_PAYLOAD"; paymentPayload: PaymentPayload }
-  | { type: "SET_COMPLETION_REPUTATION"; reputation: ReputationScore };
+  | { type: "SET_COMPLETION_REPUTATION"; reputation: ReputationScore }
+  | { type: "SET_REFUNDED" };
 
 function reducer(state: FlowState, action: FlowAction): FlowState {
   switch (action.type) {
@@ -93,6 +95,8 @@ function reducer(state: FlowState, action: FlowAction): FlowState {
       return { ...state, paymentPayload: action.paymentPayload, step: "submit", loading: false, error: null };
     case "SET_COMPLETION_REPUTATION":
       return { ...state, completionReputation: action.reputation };
+    case "SET_REFUNDED":
+      return { ...state, refunded: true, step: "complete" };
     default:
       return state;
   }
@@ -109,6 +113,7 @@ const initialState: FlowState = {
   orderData: null,
   disputeFiled: false,
   deliveryConfirmed: false,
+  refunded: false,
   paymentRequired: null,
   paymentPayload: null,
   completionReputation: null,
@@ -122,17 +127,24 @@ const STEP_HINTS: Record<DemoStep, string> = {
   submit: isMockChainClient
     ? "Submit the signed payload to settle escrow in simulation."
     : "Submit the signed payload to settle escrow on-chain.",
-  escrowed: "Escrow has been created and is waiting for delivery confirmation.",
-  delivery: "Decide whether to release funds or open a dispute.",
+  escrowed: "Escrow created. Seller can confirm delivery or refund.",
+  delivery: "Seller confirmed delivery. Buyer can release or dispute.",
   complete: "Payment flow completed and seller settlement finalized.",
 };
 
 export function PaymentFlow() {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const { walletClient, publicClient, address, type: walletType, connectDemo, fundDemoWallet, usdcBalance, refreshBalances } = useWallet();
+  const { walletClient, publicClient, address, type: walletType, connectDemo, fundDemoWallet, fundError, usdcBalance, refreshBalances } = useWallet();
   const inspector = useInspector();
   const operatorAddress = useOperatorAddress();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
 
   // Session storage for refresh recovery — use server order status as source of truth
   useEffect(() => {
@@ -235,59 +247,6 @@ export function PaymentFlow() {
     }, 2000);
     return () => clearTimeout(timeout);
   }, [state.step, state.orderId]);
-
-  // When in delivery step and not yet confirmed, trigger confirm-delivery + poll
-  // Keyed on deliveryOrderId which stays stable throughout the polling phase
-  // (unlike the old escrowedOrderId which flipped to null when step changed)
-  const deliveryOrderId = state.step === "delivery" && !state.deliveryConfirmed ? state.orderId : null;
-
-  useEffect(() => {
-    if (!deliveryOrderId) return;
-    let cancelled = false;
-
-    // Trigger server-side confirm-delivery (seller simulation) — may 400 if already confirmed
-    facilitatorFetch(`/api/orders/${deliveryOrderId}/confirm-delivery`, {
-      method: "POST",
-    }).catch((err) => {
-      console.warn("[PaymentFlow] confirm-delivery failed:", err);
-    });
-
-    // Poll until delivery is confirmed on-chain (max ~3 min)
-    let attempts = 0;
-    const maxAttempts = 60;
-    const interval = setInterval(async () => {
-      if (cancelled) return;
-      attempts++;
-      if (attempts > maxAttempts) {
-        clearInterval(interval);
-        dispatch({ type: "SET_ERROR", error: "Delivery confirmation timed out. Try refreshing." });
-        return;
-      }
-      try {
-        const res = await facilitatorFetch(`/api/orders?status=delivery_confirmed`);
-        const data = await res.json();
-        const orders = Array.isArray(data) ? data : data.orders ?? [];
-        if (orders.find((o: any) => o.id === deliveryOrderId)) {
-          clearInterval(interval);
-          dispatch({ type: "DELIVERY_CONFIRMED" });
-          inspector.addEvent({
-            type: "state_change",
-            label: "Delivery Confirmed",
-            data: { previousState: "Active", newState: "DeliveryConfirmed" },
-          });
-        }
-      } catch {
-        // Retry on next interval
-      }
-    }, 3000);
-
-    pollRef.current = interval;
-
-    return () => {
-      cancelled = true;
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, [deliveryOrderId, inspector]);
 
   // Fetch seller reputation when transaction completes
   useEffect(() => {
@@ -422,6 +381,88 @@ export function PaymentFlow() {
       dispatch({ type: "SET_LOADING", loading: false });
     }
   }, [state.orderId, state.paymentPayload, inspector, refreshBalances]);
+
+  // Seller action: confirm delivery (manual, replaces auto-simulation)
+  const handleConfirmDelivery = useCallback(async () => {
+    if (!state.orderId) return;
+    dispatch({ type: "SET_LOADING", loading: true });
+
+    try {
+      await facilitatorFetch(`/api/orders/${state.orderId}/confirm-delivery`, {
+        method: "POST",
+      });
+
+      // Poll until delivery is confirmed on-chain
+      let attempts = 0;
+      const maxAttempts = 60;
+      const interval = setInterval(async () => {
+        attempts++;
+        if (attempts > maxAttempts) {
+          clearInterval(interval);
+          dispatch({ type: "SET_ERROR", error: "Delivery confirmation timed out. Try refreshing." });
+          return;
+        }
+        try {
+          const res = await facilitatorFetch(`/api/orders?status=delivery_confirmed`);
+          const data = await res.json();
+          const orders = Array.isArray(data) ? data : data.orders ?? [];
+          if (orders.find((o: any) => o.id === state.orderId)) {
+            clearInterval(interval);
+            dispatch({ type: "DELIVERY_CONFIRMED" });
+            dispatch({ type: "SET_LOADING", loading: false });
+            inspector.addEvent({
+              type: "state_change",
+              label: "Delivery Confirmed",
+              data: { previousState: "Active", newState: "DeliveryConfirmed" },
+            });
+          }
+        } catch {
+          // Retry on next interval
+        }
+      }, 3000);
+
+      pollRef.current = interval;
+    } catch (err: any) {
+      dispatch({ type: "SET_ERROR", error: err.message });
+      dispatch({ type: "SET_LOADING", loading: false });
+    }
+  }, [state.orderId, inspector]);
+
+  // Seller action: voluntary refund
+  const handleRefund = useCallback(async () => {
+    if (!state.orderId) return;
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+    dispatch({ type: "SET_LOADING", loading: true });
+
+    try {
+      const res = await facilitatorFetch(`/api/orders/${state.orderId}/refund`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Refund failed");
+      }
+      const data = await res.json();
+      inspector.addEvent({
+        type: "state_change",
+        label: "Refunded",
+        data: {
+          previousState: state.deliveryConfirmed ? "DeliveryConfirmed" : "Active",
+          newState: "Refunded",
+          txHash: data.txHash,
+        },
+      });
+      dispatch({ type: "SET_REFUNDED" });
+      refreshBalances();
+    } catch (err: any) {
+      dispatch({ type: "SET_ERROR", error: err.message });
+    } finally {
+      dispatch({ type: "SET_LOADING", loading: false });
+    }
+  }, [state.orderId, state.deliveryConfirmed, inspector, refreshBalances]);
 
   const handleRelease = useCallback(async () => {
     if (!state.escrowId || !walletClient?.account || !state.paymentRequired) return;
@@ -624,6 +665,9 @@ export function PaymentFlow() {
                       >
                         Fund Wallet with Test USDC
                       </button>
+                      {fundError && (
+                        <p className="mt-2 text-xs text-error">{fundError}</p>
+                      )}
                     </div>
                   ) : (
                     <ProductGrid onSelect={handleSelectProduct} />
@@ -975,16 +1019,39 @@ export function PaymentFlow() {
                   key="complete"
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="rounded-xl border border-success/20 bg-success/5 p-6 text-center"
+                  className={`rounded-xl border p-6 text-center ${
+                    state.refunded
+                      ? "border-accent/20 bg-accent/5"
+                      : "border-success/20 bg-success/5"
+                  }`}
                 >
-                  <div className="mb-3 text-4xl">&#127881;</div>
-                  <h3 className="mb-1 text-lg font-bold text-success">
-                    Transaction Complete!
-                  </h3>
-                  <p className="mb-4 text-sm text-text-secondary">
-                    Funds have been released to the seller.
-                  </p>
-                  {state.completionReputation && (
+                  {state.refunded ? (
+                    <>
+                      <div className="mb-3 flex justify-center">
+                        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="currentColor" strokeWidth="2" className="text-accent">
+                          <circle cx="20" cy="20" r="16" />
+                          <path d="M24 16l-8 8M16 16l8 8" />
+                        </svg>
+                      </div>
+                      <h3 className="mb-1 text-lg font-bold text-accent">
+                        Order Refunded
+                      </h3>
+                      <p className="mb-4 text-sm text-text-secondary">
+                        Buyer received full deposit back. Facilitator absorbed the fee.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="mb-3 text-4xl">&#127881;</div>
+                      <h3 className="mb-1 text-lg font-bold text-success">
+                        Transaction Complete!
+                      </h3>
+                      <p className="mb-4 text-sm text-text-secondary">
+                        Funds have been released to the seller.
+                      </p>
+                    </>
+                  )}
+                  {!state.refunded && state.completionReputation && (
                     <div className="mx-auto mb-4 max-w-sm text-left">
                       <div className="rounded-lg border border-border-default bg-bg-secondary p-3 space-y-2">
                         <div className="flex items-center justify-between">
@@ -1050,6 +1117,9 @@ export function PaymentFlow() {
               step={state.step}
               productTitle={state.product?.title}
               deliveryConfirmed={state.deliveryConfirmed}
+              loading={state.loading}
+              onConfirmDelivery={handleConfirmDelivery}
+              onRefund={handleRefund}
             />
             <div className="panel-surface rounded-xl p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">

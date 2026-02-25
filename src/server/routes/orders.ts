@@ -11,7 +11,7 @@ import {
 import { getServiceType } from "../service-types/index.js";
 import { escrowPaymentMiddleware, type EscrowPaymentRequest } from "../middleware/escrowPayment.js";
 import { apiKeyAuth } from "../middleware/auth.js";
-import { confirmDeliveryOnChain } from "../facilitator/settler.js";
+import { confirmDeliveryOnChain, refundOnChain } from "../facilitator/settler.js";
 
 const router = Router();
 
@@ -120,6 +120,31 @@ router.post("/:id/confirm-delivery", apiKeyAuth(), async (req, res) => {
   } catch (err) {
     res.status(500).json({
       error: "Failed to confirm delivery on-chain",
+      details: err instanceof Error ? err.message : String(err),
+    });
+  }
+});
+
+// ──────────── Refund order (seller voluntary refund) ────────────
+router.post("/:id/refund", apiKeyAuth(), async (req, res) => {
+  const order = getOrderById(req.params.id as string);
+  if (!order) return res.status(404).json({ error: "Order not found" });
+
+  if ((order.status !== "escrowed" && order.status !== "delivery_confirmed") || order.escrowId === undefined) {
+    return res.status(400).json({ error: "Order is not in a refundable state" });
+  }
+
+  try {
+    const txHash = await refundOnChain(order.escrowId);
+    updateOrderStatus(order.id, { status: "refunded" });
+
+    res.json({
+      message: "Refund processed — buyer received full deposit back",
+      txHash,
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: "Failed to process refund on-chain",
       details: err instanceof Error ? err.message : String(err),
     });
   }

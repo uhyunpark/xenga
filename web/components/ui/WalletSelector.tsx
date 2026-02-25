@@ -9,6 +9,7 @@ export function WalletSelector() {
     address,
     usdcBalance,
     isFunding,
+    fundError,
     connectDemo,
     disconnect,
     fundDemoWallet,
@@ -28,13 +29,20 @@ export function WalletSelector() {
   return (
     <div className="flex items-center gap-2">
       {type === "demo" && (usdcBalance === null || (usdcBalance !== null && parseFloat(usdcBalance) < 1)) && (
-        <button
-          onClick={fundDemoWallet}
-          disabled={isFunding}
-          className="rounded-md border border-accent/30 bg-accent/10 px-2 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent/15 disabled:opacity-50"
-        >
-          {isFunding ? "Funding..." : "Fund"}
-        </button>
+        <div className="flex flex-col items-end gap-0.5">
+          <button
+            onClick={fundDemoWallet}
+            disabled={isFunding}
+            className="rounded-md border border-accent/30 bg-accent/10 px-2 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent/15 disabled:opacity-50"
+          >
+            {isFunding ? "Funding..." : "Fund"}
+          </button>
+          {fundError && (
+            <span className="max-w-[200px] truncate text-[10px] text-error" title={fundError}>
+              {fundError}
+            </span>
+          )}
+        </div>
       )}
       {usdcBalance !== null && (
         <span className="text-xs text-text-secondary">
