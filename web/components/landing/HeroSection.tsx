@@ -47,7 +47,7 @@ export function HeroSection() {
               href="/playground/agent"
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent-purple px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-purple/90"
             >
-              Launch Agent Demo
+              Try Agent Service
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M3 8h10M9 4l4 4-4 4" />
               </svg>
@@ -56,7 +56,7 @@ export function HeroSection() {
               href="/playground/marketplace"
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-accent/90"
             >
-              Launch Human Escrow Demo
+              Try Human Escrow
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M3 8h10M9 4l4 4-4 4" />
               </svg>
