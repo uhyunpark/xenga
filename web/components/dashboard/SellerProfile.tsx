@@ -21,8 +21,9 @@ export function SellerProfile() {
       .then(async (res) => {
         if (res.ok) {
           const data = await res.json();
-          setName(data.name || "");
-          setSavedName(data.name || null);
+          const seller = data.seller || data;
+          setName(seller.name || "");
+          setSavedName(seller.name || null);
           setIsRegistered(true);
         }
       })

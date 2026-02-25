@@ -48,7 +48,7 @@ export function StatsRow({
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
       <StatCard label="Active Escrows" value={activeEscrows} />
       <StatCard label="Pending Release" value={pendingRelease} />
-      <StatCard label="Net Earnings" value={`$${netEarnings}`} accent />
+      <StatCard label="Total Revenue" value={`$${netEarnings}`} accent />
       <StatCard
         label={`Reputation${confidence ? ` (${confidence})` : ""}`}
         value={repDisplay}

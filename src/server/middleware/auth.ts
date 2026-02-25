@@ -66,9 +66,10 @@ export function walletAuth(getExpectedAddress?: (req: Request) => Address | unde
     }
 
     // Reconstruct the message that was signed.
-    // Use route params when available; fall back to req.path for routes
-    // that don't have :orderId/:disputeId (e.g. /api/sellers).
-    const routeId = req.params.orderId || req.params.disputeId || req.path;
+    // Use route params when available; fall back to originalUrl (full path)
+    // for routes that don't have :orderId/:disputeId (e.g. /api/sellers).
+    // Note: req.path is relative to the mount point, but the client signs the full path.
+    const routeId = req.params.orderId || req.params.disputeId || req.originalUrl.split("?")[0];
     const message = `xenga-auth:${routeId}:${timestamp}`;
 
     try {

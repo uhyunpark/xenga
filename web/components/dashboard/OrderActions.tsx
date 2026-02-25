@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { escrowVaultAbi } from "@shared/abi.js";
+import { facilitatorFetch } from "@/lib/api/client";
 
 interface OrderData {
   id: string;
@@ -15,13 +16,30 @@ interface OrderActionsProps {
   onComplete: () => void;
 }
 
+// Module-level cache for escrow contract address (fetched once from /api/health)
+let cachedEscrowAddress: `0x${string}` | null = null;
+
 export function OrderActions({ order, onComplete }: OrderActionsProps) {
   const { walletClient, address, publicClient } = useWallet();
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<string | null>(null);
+  const [escrowVaultAddress, setEscrowVaultAddress] = useState<`0x${string}` | null>(cachedEscrowAddress);
 
-  const escrowVaultAddress = process.env.NEXT_PUBLIC_ESCROW_VAULT_ADDRESS as `0x${string}` | undefined;
+  useEffect(() => {
+    if (cachedEscrowAddress) return;
+    facilitatorFetch("/api/health")
+      .then(async (res) => {
+        if (res.ok) {
+          const data = await res.json();
+          if (data.escrowContract) {
+            cachedEscrowAddress = data.escrowContract as `0x${string}`;
+            setEscrowVaultAddress(cachedEscrowAddress);
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const canConfirmDelivery = order.status === "escrowed" && order.escrowId != null;
   const canRefund =
