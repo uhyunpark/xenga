@@ -7,7 +7,7 @@ import { config } from "../config.js";
 const router = Router();
 
 // Allowed SIWE domains (prevents cross-site replay attacks)
-const ALLOWED_DOMAINS = (process.env.ALLOWED_ORIGINS || "localhost:3001,localhost:3000,xenga.io")
+const ALLOWED_DOMAINS = (process.env.ALLOWED_ORIGINS || "localhost:3001,localhost:3000,xenga.io,www.xenga.xyz,xenga.xyz")
   .split(",")
   .map((d) => d.trim());
 
@@ -26,7 +26,7 @@ function cleanExpiredNonces() {
 // GET /api/auth/nonce — generate a one-time nonce
 router.get("/nonce", (_req, res) => {
   cleanExpiredNonces();
-  const nonce = crypto.randomBytes(16).toString("base64url");
+  const nonce = crypto.randomBytes(16).toString("hex");
   nonceStore.set(nonce, Date.now() + NONCE_TTL_MS);
   res.json({ nonce });
 });
@@ -75,7 +75,8 @@ router.post("/siwe", async (req, res) => {
 
     res.json({ token });
   } catch (err) {
-    return res.status(401).json({ error: "SIWE verification failed" });
+    const msg = err instanceof Error ? err.message : "SIWE verification failed";
+    return res.status(401).json({ error: msg });
   }
 });
 
