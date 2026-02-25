@@ -26,7 +26,7 @@ export function JsonViewer({ data, className, collapsed = false }: JsonViewerPro
       >
         {copied ? "Copied!" : "Copy"}
       </button>
-      <pre className="font-mono text-[12px] leading-relaxed text-text-secondary">
+      <pre className="font-mono text-[13px] leading-relaxed text-text-secondary">
         <JsonNode value={data} defaultCollapsed={collapsed} depth={0} />
       </pre>
     </div>

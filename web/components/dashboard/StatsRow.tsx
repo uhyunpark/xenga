@@ -14,7 +14,7 @@ function StatCard({ label, value, accent, warn }: StatCardProps) {
         {label}
       </p>
       <p
-        className={`mt-1 text-2xl font-bold ${
+        className={`mt-1 text-2xl font-light ${
           warn ? "text-warning" : accent ? "text-success" : "text-text-primary"
         }`}
       >

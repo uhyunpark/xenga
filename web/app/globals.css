@@ -1,5 +1,125 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Coinbase Sans";
+  src: url("/fonts/Coinbase_Sans-Extra_Light-web-1.32.woff2") format("woff2");
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Coinbase Sans";
+  src: url("/fonts/Coinbase_Sans-Extra_Light_Italic-web-1.32.woff2") format("woff2");
+  font-weight: 200;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Coinbase Sans";
+  src: url("/fonts/Coinbase_Sans-Light-web-1.32.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Coinbase Sans";
+  src: url("/fonts/Coinbase_Sans-Light_Italic-web-1.32.woff2") format("woff2");
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Coinbase Sans";
+  src: url("/fonts/Coinbase_Sans-Regular-web-1.32.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Coinbase Sans";
+  src: url("/fonts/Coinbase_Sans-Regular_Italic-web-1.32.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Coinbase Sans";
+  src: url("/fonts/Coinbase_Sans-Medium-web-1.32.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Coinbase Sans";
+  src: url("/fonts/Coinbase_Sans-Medium_Italic-web-1.32.woff2") format("woff2");
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Coinbase Sans";
+  src: url("/fonts/Coinbase_Sans-Bold-web-1.32.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Coinbase Sans";
+  src: url("/fonts/Coinbase_Sans-Bold_Italic-web-1.32.woff2") format("woff2");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Coinbase Mono";
+  src: url("/fonts/Coinbase_Mono-Extra_Light-web.woff2") format("woff2");
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Coinbase Mono";
+  src: url("/fonts/Coinbase_Mono-Light-web.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Coinbase Mono";
+  src: url("/fonts/Coinbase_Mono-Regular-web.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Coinbase Mono";
+  src: url("/fonts/Coinbase_Mono-Medium-web.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Coinbase Mono";
+  src: url("/fonts/Coinbase_Mono-Bold-web.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   --color-bg-primary: #F6F8FB;
   --color-bg-secondary: #FFFFFF;
@@ -16,8 +136,10 @@
   --color-error: #DC2626;
   --color-violet: #8B5CF6;
 
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --font-sans: "Coinbase Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Coinbase Mono", ui-monospace, monospace;
+
+  --font-weight-semibold: 500;
 }
 
 html {
