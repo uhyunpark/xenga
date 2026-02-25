@@ -52,7 +52,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const { walletClient, address, connectDemo, fundDemoWallet, isFunding, usdcBalance, type: walletType, refreshBalances } = useWallet();
   const inspector = useInspector();
-  const operatorAddress = useOperatorAddress();
+  const { address: operatorAddress, error: operatorError, isLoading: operatorLoading, retry: retryOperator } = useOperatorAddress();
 
   const scrollToBottom = useCallback(() => {
     if (terminalRef.current) {
@@ -832,27 +832,43 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
 
           {!isRunning && !isComplete && (
             <div className="w-full flex flex-wrap justify-center gap-2">
-              <button
-                onClick={() => runDemo("happy")}
-                disabled={!operatorAddress}
-                className="rounded-lg bg-accent-purple px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-accent-purple/90 disabled:opacity-50"
-              >
-                {operatorAddress ? "Successful Payment" : "Loading..."}
-              </button>
-              <button
-                onClick={() => runDemo("dispute")}
-                disabled={!operatorAddress}
-                className="rounded-lg border border-error/30 bg-error/10 px-5 py-2.5 text-sm font-semibold text-error transition-all hover:bg-error/20 disabled:opacity-50"
-              >
-                Dispute & Resolution
-              </button>
-              <button
-                onClick={runReputationDemo}
-                disabled={!operatorAddress}
-                className="rounded-lg border border-violet-400/30 bg-violet-400/10 px-5 py-2.5 text-sm font-semibold text-violet-400 transition-all hover:bg-violet-400/20 disabled:opacity-50"
-              >
-                Reputation Over Time
-              </button>
+              {operatorError ? (
+                <div className="w-full flex flex-col items-center gap-2 py-1">
+                  <span className="text-xs text-text-tertiary">Facilitator offline — on-chain demos unavailable</span>
+                  <button
+                    onClick={retryOperator}
+                    className="rounded-lg border border-border-default px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-bg-tertiary"
+                  >
+                    Retry Connection
+                  </button>
+                </div>
+              ) : operatorLoading ? (
+                <div className="w-full flex items-center justify-center gap-2 py-1">
+                  <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-accent-purple border-t-transparent" />
+                  <span className="text-xs text-text-tertiary">Connecting to facilitator...</span>
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={() => runDemo("happy")}
+                    className="rounded-lg bg-accent-purple px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-accent-purple/90"
+                  >
+                    Successful Payment
+                  </button>
+                  <button
+                    onClick={() => runDemo("dispute")}
+                    className="rounded-lg border border-error/30 bg-error/10 px-5 py-2.5 text-sm font-semibold text-error transition-all hover:bg-error/20"
+                  >
+                    Dispute & Resolution
+                  </button>
+                  <button
+                    onClick={runReputationDemo}
+                    className="rounded-lg border border-violet-400/30 bg-violet-400/10 px-5 py-2.5 text-sm font-semibold text-violet-400 transition-all hover:bg-violet-400/20"
+                  >
+                    Reputation Over Time
+                  </button>
+                </>
+              )}
               <button
                 onClick={runScreeningDemo}
                 className="rounded-lg border border-amber-400/30 bg-amber-400/10 px-5 py-2.5 text-sm font-semibold text-amber-400 transition-all hover:bg-amber-400/20"

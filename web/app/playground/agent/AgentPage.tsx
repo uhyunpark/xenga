@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AgentTerminal } from "@/components/agent/AgentTerminal";
 import { InspectorPanel } from "@/components/protocol-inspector/InspectorPanel";
+import { PlaygroundTabs } from "@/components/playground/PlaygroundTabs";
 import { isMockChainClient } from "@/lib/env/isMockChainClient";
 
 export default function AgentPage() {
@@ -12,6 +13,7 @@ export default function AgentPage() {
     <div className="flex min-h-[calc(100vh-3.5rem)]">
       <div className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="mx-auto max-w-4xl">
+          <PlaygroundTabs />
           <div className="panel-surface mb-6 rounded-2xl p-5">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full border border-accent-purple/35 bg-accent-purple/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-accent-purple">

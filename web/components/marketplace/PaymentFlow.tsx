@@ -131,7 +131,7 @@ export function PaymentFlow() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const { walletClient, publicClient, address, type: walletType, connectDemo, fundDemoWallet, isFunding, usdcBalance, refreshBalances } = useWallet();
   const inspector = useInspector();
-  const operatorAddress = useOperatorAddress();
+  const { address: operatorAddress } = useOperatorAddress();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Session storage for refresh recovery — use server order status as source of truth
