@@ -91,6 +91,14 @@ const res = await authenticatedFetch("/api/sellers", walletClient, address, {
 
 ## Key Components
 
+### Playground (`app/playground/`)
+
+Demo hub at `/playground` with cards linking to two demos. Old URLs (`/agent`, `/marketplace`) redirect here.
+- `/playground/agent` — Agent service demo (auto-advancing terminal)
+- `/playground/marketplace` — Human escrow demo (interactive step-by-step)
+
+Demo pages use demo wallets internally (no wallet UI in the header). Browser wallets are only used in the dashboard.
+
 ### `PaymentFlow` (marketplace)
 
 State machine: `select → create_order → request_payment → sign → submit → escrowed → delivery → complete`. Each payment sub-step is a separate user click. State persists to `sessionStorage` for mid-flow refresh recovery.

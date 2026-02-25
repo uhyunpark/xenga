@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useWallet } from "@/lib/wallet/WalletProvider";
-import { WalletSelector } from "@/components/ui/WalletSelector";
 import { requestPayment, signPayment, submitPayment } from "@/lib/api/payment-flow";
 
 type CheckoutStep = "connect" | "review" | "signing" | "submitting" | "done";
@@ -20,7 +19,7 @@ export function CheckoutFlow({
   price: string;
   returnUrl: string | undefined;
 }) {
-  const { walletClient, address } = useWallet();
+  const { walletClient, address, connectDemo, connectBrowser } = useWallet();
   const [step, setStep] = useState<CheckoutStep>("connect");
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
@@ -128,7 +127,20 @@ export function CheckoutFlow({
           <p className="text-center text-sm text-text-secondary">
             Connect your wallet to pay with USDC
           </p>
-          <WalletSelector />
+          <div className="flex flex-col items-center gap-2">
+            <button
+              onClick={connectBrowser}
+              className="w-full rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-bg-primary transition-colors hover:bg-accent/90"
+            >
+              Connect Wallet
+            </button>
+            <button
+              onClick={connectDemo}
+              className="rounded-lg border border-border-default bg-bg-secondary px-3 py-1.5 text-sm font-medium text-text-primary transition-colors hover:border-border-active hover:bg-bg-tertiary"
+            >
+              Create Demo Wallet
+            </button>
+          </div>
         </div>
       )}
 
