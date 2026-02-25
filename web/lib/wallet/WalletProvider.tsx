@@ -6,6 +6,7 @@ import {
   useState,
   useCallback,
   useEffect,
+  useRef,
   type ReactNode,
 } from "react";
 import {
@@ -13,9 +14,7 @@ import {
   createPublicClient,
   http,
   type WalletClient,
-  type PublicClient,
   type Address,
-  type Chain,
   custom,
 } from "viem";
 import { privateKeyToAccount, generatePrivateKey } from "viem/accounts";
@@ -36,6 +35,7 @@ interface WalletState {
   isFunding: boolean;
   usdcBalance: string | null;
   ethBalance: string | null;
+  error: string | null;
   connectDemo: () => void;
   connectBrowser: () => Promise<void>;
   disconnect: () => void;
@@ -53,6 +53,9 @@ const publicClient = createPublicClient({
 });
 
 const DEMO_KEY_STORAGE = "xenga-demo-pk";
+const DISCONNECT_KEY = "xenga-wallet-disconnected";
+const BASE_SEPOLIA_CHAIN_ID = 84532;
+const BASE_SEPOLIA_CHAIN_ID_HEX = "0x14A34";
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [type, setType] = useState<WalletType>(null);
@@ -62,6 +65,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [isFunding, setIsFunding] = useState(false);
   const [usdcBalance, setUsdcBalance] = useState<string | null>(null);
   const [ethBalance, setEthBalance] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const hasAutoConnectAttempted = useRef(false);
+  const prevAddressRef = useRef<Address | null>(null);
+
+  // Track previous address for change detection
+  useEffect(() => {
+    prevAddressRef.current = address;
+  }, [address]);
 
   const refreshBalances = useCallback(async () => {
     if (!address) return;
@@ -116,23 +128,56 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setType("demo");
     setAddress(account.address);
     setWalletClient(client);
+    setError(null);
+  }, []);
+
+  // Internal helper: set browser wallet state from an address
+  const setBrowserWallet = useCallback((addr: Address) => {
+    const client = createWalletClient({
+      chain: baseSepolia,
+      transport: custom(window.ethereum!),
+      account: addr,
+    });
+    setType("browser");
+    setAddress(addr);
+    setWalletClient(client);
+    setError(null);
   }, []);
 
   const connectBrowser = useCallback(async () => {
     if (typeof window === "undefined" || !window.ethereum) {
-      throw new Error("No wallet detected. Please install MetaMask.");
+      setError("No wallet detected. Please install MetaMask.");
+      return;
     }
     setIsConnecting(true);
+    setError(null);
+
     try {
-      const [addr] = (await window.ethereum.request({
-        method: "eth_requestAccounts",
-      })) as Address[];
+      // Clear explicit disconnect flag
+      sessionStorage.removeItem(DISCONNECT_KEY);
+
+      // Request permissions (EIP-2255) — always shows wallet popup
+      await window.ethereum.request({
+        method: "wallet_requestPermissions",
+        params: [{ eth_accounts: {} }],
+      });
+
+      // Get accounts after permission granted
+      const accounts = (await window.ethereum.request({
+        method: "eth_accounts",
+      })) as string[];
+
+      if (!accounts || accounts.length === 0) {
+        throw new Error("No accounts found after permission grant.");
+      }
+
+      const addr = accounts[0] as Address;
 
       // Try to switch to Base Sepolia
       try {
         await window.ethereum.request({
           method: "wallet_switchEthereumChain",
-          params: [{ chainId: "0x14A34" }],
+          params: [{ chainId: BASE_SEPOLIA_CHAIN_ID_HEX }],
         });
       } catch (switchError: any) {
         // Chain not added yet, add it
@@ -141,7 +186,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             method: "wallet_addEthereumChain",
             params: [
               {
-                chainId: "0x14A34",
+                chainId: BASE_SEPOLIA_CHAIN_ID_HEX,
                 chainName: "Base Sepolia",
                 nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
                 rpcUrls: ["https://sepolia.base.org"],
@@ -152,26 +197,45 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      const client = createWalletClient({
-        chain: baseSepolia,
-        transport: custom(window.ethereum),
-        account: addr,
-      });
-      setType("browser");
-      setAddress(addr);
-      setWalletClient(client);
+      setBrowserWallet(addr);
+    } catch (err: any) {
+      // User rejected (4001) — silent, they can click again
+      if (err?.code !== 4001) {
+        setError(err instanceof Error ? err.message : "Failed to connect wallet");
+      }
     } finally {
       setIsConnecting(false);
     }
-  }, []);
+  }, [setBrowserWallet]);
 
-  const disconnect = useCallback(() => {
+  // Internal: clear wallet state without setting disconnect flag
+  const resetWallet = useCallback(() => {
     setType(null);
     setAddress(null);
     setWalletClient(null);
     setUsdcBalance(null);
     setEthBalance(null);
   }, []);
+
+  // External: explicit user disconnect
+  const disconnect = useCallback(() => {
+    sessionStorage.setItem(DISCONNECT_KEY, "true");
+
+    // Revoke wallet permissions (EIP-2255)
+    try {
+      window.ethereum
+        ?.request({
+          method: "wallet_revokePermissions",
+          params: [{ eth_accounts: {} }],
+        })
+        .catch(() => {}); // Not all wallets support this
+    } catch {
+      // Silent fail
+    }
+
+    resetWallet();
+    setError(null);
+  }, [resetWallet]);
 
   const fundDemoWallet = useCallback(async () => {
     if (!address || type !== "demo") return;
@@ -204,6 +268,66 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Auto-connect browser wallet on mount (silent, no popup)
+  useEffect(() => {
+    if (hasAutoConnectAttempted.current) return;
+    hasAutoConnectAttempted.current = true;
+
+    if (typeof window === "undefined" || !window.ethereum) return;
+    if (sessionStorage.getItem(DISCONNECT_KEY) === "true") return;
+    if (sessionStorage.getItem(DEMO_KEY_STORAGE)) return; // Demo wallet takes priority
+
+    window.ethereum
+      .request({ method: "eth_accounts" })
+      .then((accounts: string[]) => {
+        if (accounts.length > 0) {
+          setBrowserWallet(accounts[0] as Address);
+        }
+      })
+      .catch(() => {
+        // Silent fail on auto-connect
+      });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Listen for account and chain changes
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.ethereum) return;
+
+    const handleAccountsChanged = (accounts: string[]) => {
+      if (accounts.length === 0) {
+        resetWallet();
+        return;
+      }
+
+      const newAddress = accounts[0].toLowerCase();
+      const prevAddress = prevAddressRef.current?.toLowerCase();
+
+      if (prevAddress && prevAddress !== newAddress) {
+        resetWallet();
+        setError("Wallet address changed. Please reconnect.");
+      }
+    };
+
+    const handleChainChanged = (chainIdHex: string) => {
+      const newChainId = parseInt(chainIdHex, 16);
+      if (type !== "browser") return;
+
+      if (newChainId !== BASE_SEPOLIA_CHAIN_ID) {
+        setError("Wrong network. Please switch to Base Sepolia.");
+      } else {
+        setError(null);
+      }
+    };
+
+    window.ethereum.on("accountsChanged", handleAccountsChanged);
+    window.ethereum.on("chainChanged", handleChainChanged);
+
+    return () => {
+      window.ethereum?.removeListener("accountsChanged", handleAccountsChanged);
+      window.ethereum?.removeListener("chainChanged", handleChainChanged);
+    };
+  }, [resetWallet, type]);
+
   return (
     <WalletContext.Provider
       value={{
@@ -215,6 +339,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         isFunding,
         usdcBalance,
         ethBalance,
+        error,
         connectDemo,
         connectBrowser,
         disconnect,

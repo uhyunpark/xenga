@@ -14,63 +14,108 @@ export function useSessionToken(): string {
 }
 
 export function WalletGate({ children }: { children: React.ReactNode }) {
-  const { address, type, walletClient, connectBrowser } = useWallet();
-  const { token, signing, error, signIn } = useSession(walletClient, address);
+  const {
+    address,
+    type,
+    walletClient,
+    connectBrowser,
+    disconnect,
+    isConnecting,
+    error: walletError,
+  } = useWallet();
+  const {
+    token,
+    signing,
+    error: sessionError,
+    signIn,
+  } = useSession(walletClient, address);
 
-  // Not connected or demo wallet
-  if (!address || type === "demo") {
+  // Authenticated — render dashboard
+  if (address && type === "browser" && token) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="panel-surface mx-auto max-w-md rounded-2xl p-8 text-center">
-          <h2 className="text-xl font-bold">Connect Your Wallet</h2>
-          <p className="mt-2 text-sm text-text-secondary">
-            {type === "demo"
-              ? "The dashboard requires a browser wallet (e.g. MetaMask). Demo wallets are not supported here."
-              : "Connect a browser wallet to access the seller dashboard."}
-          </p>
-          <div className="mt-6 flex justify-center">
-            <button
-              onClick={connectBrowser}
-              className="rounded-lg border border-border-default bg-bg-secondary px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-border-active hover:bg-bg-tertiary"
-            >
-              Connect Wallet
-            </button>
-          </div>
-        </div>
-      </div>
+      <SessionContext.Provider value={token}>
+        {children}
+      </SessionContext.Provider>
     );
   }
 
-  // Connected but no session — prompt SIWE sign-in
-  if (!token) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="panel-surface mx-auto max-w-md rounded-2xl p-8 text-center">
-          <h2 className="text-xl font-bold">Sign In</h2>
-          <p className="mt-2 text-sm text-text-secondary">
-            Sign a message to verify your identity. This does not cost gas.
-          </p>
-          {error && (
-            <p className="mt-3 text-xs text-error">{error}</p>
-          )}
-          <div className="mt-6 flex justify-center">
-            <button
-              onClick={signIn}
-              disabled={signing}
-              className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
-            >
-              {signing ? "Waiting for signature..." : "Sign In"}
-            </button>
-          </div>
-        </div>
-      </div>
+  // Determine display state
+  const isConnected = !!address && type === "browser";
+  const isSigningIn =
+    isConnected && !token && (signing || (!sessionError && !walletError));
+  const error = walletError || sessionError;
+
+  let title: string;
+  let description: string;
+
+  if (isConnecting) {
+    title = "Connecting...";
+    description = "Waiting for wallet approval...";
+  } else if (isSigningIn) {
+    title = "Signing In...";
+    description =
+      "Please sign the message in your wallet to verify your identity.";
+  } else if (isConnected && sessionError) {
+    title = "Sign-In Failed";
+    description = "Could not complete authentication. Please try again.";
+  } else if (isConnected && walletError) {
+    title = "Wallet Error";
+    description = walletError;
+  } else if (type === "demo") {
+    title = "Connect Your Wallet";
+    description =
+      "The dashboard requires a browser wallet (e.g. MetaMask). Demo wallets are not supported here.";
+  } else {
+    title = "Connect Your Wallet";
+    description = "Connect a browser wallet to access the seller dashboard.";
+  }
+
+  let actionButton: React.ReactNode;
+
+  if (isConnecting || isSigningIn) {
+    actionButton = (
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-border-default border-t-accent" />
+    );
+  } else if (isConnected && sessionError) {
+    actionButton = (
+      <button
+        onClick={signIn}
+        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90"
+      >
+        Retry Sign In
+      </button>
+    );
+  } else if (isConnected && walletError) {
+    actionButton = (
+      <button
+        onClick={disconnect}
+        className="rounded-lg border border-border-default bg-bg-secondary px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-border-active hover:bg-bg-tertiary"
+      >
+        Disconnect
+      </button>
+    );
+  } else {
+    actionButton = (
+      <button
+        onClick={connectBrowser}
+        disabled={isConnecting}
+        className="rounded-lg border border-border-default bg-bg-secondary px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:border-border-active hover:bg-bg-tertiary disabled:opacity-50"
+      >
+        Connect Wallet
+      </button>
     );
   }
 
-  // Authenticated — render dashboard with session context
   return (
-    <SessionContext.Provider value={token}>
-      {children}
-    </SessionContext.Provider>
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <div className="panel-surface mx-auto max-w-md rounded-2xl p-8 text-center">
+        <h2 className="text-xl font-bold">{title}</h2>
+        <p className="mt-2 text-sm text-text-secondary">{description}</p>
+        {error && !walletError && (
+          <p className="mt-3 text-xs text-error">{error}</p>
+        )}
+        <div className="mt-6 flex justify-center">{actionButton}</div>
+      </div>
+    </div>
   );
 }

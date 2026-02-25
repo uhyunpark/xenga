@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { SiweMessage } from "siwe";
 import type { WalletClient, Address } from "viem";
 import { facilitatorFetch } from "@/lib/api/client";
@@ -30,11 +30,13 @@ export function useSession(
   const [token, setToken] = useState<string | null>(null);
   const [signing, setSigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hasAutoSignAttempted = useRef(false);
 
   // Load existing token from sessionStorage on mount / address change
   useEffect(() => {
     if (!address) {
       setToken(null);
+      hasAutoSignAttempted.current = false;
       return;
     }
     const stored = sessionStorage.getItem(getSessionKey(address));
@@ -53,8 +55,15 @@ export function useSession(
 
     try {
       // 1. Get nonce from server
-      const nonceRes = await facilitatorFetch("/api/auth/nonce");
-      if (!nonceRes.ok) throw new Error("Failed to get nonce");
+      let nonceRes: Response;
+      try {
+        nonceRes = await facilitatorFetch("/api/auth/nonce");
+      } catch {
+        throw new Error(
+          "Cannot connect to server. Is the facilitator running?"
+        );
+      }
+      if (!nonceRes.ok) throw new Error("Failed to get nonce from server.");
       const { nonce } = await nonceRes.json();
 
       // 2. Build SIWE message
@@ -82,10 +91,17 @@ export function useSession(
       });
 
       // 4. Verify on server and get JWT
-      const verifyRes = await facilitatorFetch("/api/auth/siwe", {
-        method: "POST",
-        body: JSON.stringify({ message: messageStr, signature }),
-      });
+      let verifyRes: Response;
+      try {
+        verifyRes = await facilitatorFetch("/api/auth/siwe", {
+          method: "POST",
+          body: JSON.stringify({ message: messageStr, signature }),
+        });
+      } catch {
+        throw new Error(
+          "Cannot connect to server. Is the facilitator running?"
+        );
+      }
 
       if (!verifyRes.ok) {
         const data = await verifyRes.json().catch(() => ({}));
@@ -103,11 +119,33 @@ export function useSession(
     }
   }, [walletClient, address]);
 
+  // Auto-trigger signIn after wallet connects (if no valid stored token)
+  useEffect(() => {
+    if (
+      walletClient &&
+      address &&
+      !token &&
+      !signing &&
+      !error &&
+      !hasAutoSignAttempted.current
+    ) {
+      // Double-check sessionStorage (race with the token-loading useEffect)
+      const stored = sessionStorage.getItem(getSessionKey(address));
+      if (stored && !isTokenExpired(stored)) {
+        setToken(stored);
+        return;
+      }
+      hasAutoSignAttempted.current = true;
+      signIn();
+    }
+  }, [walletClient, address, token, signing, error, signIn]);
+
   const signOut = useCallback(() => {
     if (address) {
       sessionStorage.removeItem(getSessionKey(address));
     }
     setToken(null);
+    hasAutoSignAttempted.current = false;
   }, [address]);
 
   return { token, signing, error, signIn, signOut };
