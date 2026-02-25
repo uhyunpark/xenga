@@ -223,7 +223,7 @@ web/
 - **Wallet**: `WalletProvider` manages ephemeral demo wallets (`generatePrivateKey()` stored in `sessionStorage`) and browser wallets (`window.ethereum`). Both expose viem `WalletClient`.
 - **Protocol Inspector**: React context + 4-tab panel showing HTTP traffic, EIP-712 signatures, on-chain transactions, and escrow state machine. Events emitted by `payment-flow.ts` during the xenga flow.
 - **CORS**: Required since frontend and facilitator are on different origins. Express facilitator has `CORS_ORIGIN` env var (defaults to `*`).
-- **Demo funding**: `POST /api/demo/fund` on the facilitator sends 10 USDC + 0.005 ETH from operator wallet. Rate-limited to 100 USDC/hr per IP+address. Requires `DEMO_MODE=true`.
+- **Demo funding**: `POST /api/demo/fund` on the facilitator sends 10 USDC + 0.005 ETH from operator wallet. Rate-limited to 100 USDC/hr per IP+address. Automatically available on testnets (detected via `chainConfig.isTestnet`).
 
 ## Key Technical Notes
 
@@ -238,7 +238,7 @@ web/
 ## Environment
 
 ### Facilitator (`src/server/`)
-Requires `.env` (see `.env.example`): `PRIVATE_KEY`, `ESCROW_VAULT_ADDRESS`, optionally `BASE_SEPOLIA_RPC`, `PORT`, `CORS_ORIGIN`, `DEMO_MODE`.
+Requires `.env` (see `.env.example`): `PRIVATE_KEY`, `ESCROW_VAULT_ADDRESS`, optionally `BASE_SEPOLIA_RPC`, `PORT`, `CORS_ORIGIN`.
 
 ### Web (`web/`)
 Requires `NEXT_PUBLIC_FACILITATOR_URL` pointing to the facilitator. For local dev, set to `http://localhost:3000` or leave empty if running on same origin.
