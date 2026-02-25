@@ -10,6 +10,8 @@ export interface ChainConfig {
   defaultRpc: string;
   /** Network name used in xenga payment headers */
   network: string;
+  /** Whether this is a testnet (enables faucet, etc.) */
+  isTestnet: boolean;
 }
 
 /** Known chain configurations */
@@ -20,6 +22,7 @@ const CHAIN_CONFIGS: Record<number, ChainConfig> = {
     usdcAddress: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
     defaultRpc: "https://sepolia.base.org",
     network: "base-sepolia",
+    isTestnet: true,
   },
   8453: {
     chain: base,
@@ -27,6 +30,7 @@ const CHAIN_CONFIGS: Record<number, ChainConfig> = {
     usdcAddress: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
     defaultRpc: "https://mainnet.base.org",
     network: "base",
+    isTestnet: false,
   },
 };
 
