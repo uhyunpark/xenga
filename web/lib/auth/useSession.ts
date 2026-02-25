@@ -63,7 +63,12 @@ export function useSession(
           "Cannot connect to server. Is the facilitator running?"
         );
       }
-      if (!nonceRes.ok) throw new Error("Failed to get nonce from server.");
+      if (!nonceRes.ok) {
+        const body = await nonceRes.text().catch(() => "");
+        throw new Error(
+          `Nonce request failed (${nonceRes.status}). ${body || "Check NEXT_PUBLIC_FACILITATOR_URL is set."}`
+        );
+      }
       const { nonce } = await nonceRes.json();
 
       // 2. Build SIWE message
