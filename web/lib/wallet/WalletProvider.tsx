@@ -34,6 +34,7 @@ interface WalletState {
   publicClient: AnyPublicClient;
   isConnecting: boolean;
   isFunding: boolean;
+  fundError: string | null;
   usdcBalance: string | null;
   ethBalance: string | null;
   connectDemo: () => void;
@@ -60,6 +61,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [walletClient, setWalletClient] = useState<WalletClient | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isFunding, setIsFunding] = useState(false);
+  const [fundError, setFundError] = useState<string | null>(null);
   const [usdcBalance, setUsdcBalance] = useState<string | null>(null);
   const [ethBalance, setEthBalance] = useState<string | null>(null);
 
@@ -176,6 +178,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const fundDemoWallet = useCallback(async () => {
     if (!address || type !== "demo") return;
     setIsFunding(true);
+    setFundError(null);
     try {
       const res = await facilitatorFetch("/api/demo/fund", {
         method: "POST",
@@ -186,6 +189,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         throw new Error(data.error || "Funding failed");
       }
       await refreshBalances();
+    } catch (err: any) {
+      setFundError(err.message || "Funding failed");
     } finally {
       setIsFunding(false);
     }
@@ -213,6 +218,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         publicClient,
         isConnecting,
         isFunding,
+        fundError,
         usdcBalance,
         ethBalance,
         connectDemo,

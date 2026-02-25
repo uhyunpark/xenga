@@ -7,6 +7,9 @@ interface SellerPanelProps {
   step: DemoStep;
   productTitle?: string;
   deliveryConfirmed?: boolean;
+  loading?: boolean;
+  onConfirmDelivery?: () => void;
+  onRefund?: () => void;
 }
 
 const sellerMessages: Record<DemoStep, { text: string; status: "idle" | "active" | "done" }> = {
@@ -15,15 +18,18 @@ const sellerMessages: Record<DemoStep, { text: string; status: "idle" | "active"
   request_payment: { text: "Waiting for payment...", status: "active" },
   sign: { text: "Buyer is signing payment...", status: "active" },
   submit: { text: "Processing payment...", status: "active" },
-  escrowed: { text: "Payment received! Preparing to ship...", status: "active" },
-  delivery: { text: "Shipping item & confirming delivery...", status: "active" },
+  escrowed: { text: "Payment escrowed! Ready to ship.", status: "active" },
+  delivery: { text: "Confirm delivery when order is shipped.", status: "active" },
   complete: { text: "Funds received! Order complete.", status: "done" },
 };
 
-export function SellerPanel({ step, productTitle, deliveryConfirmed }: SellerPanelProps) {
+export function SellerPanel({ step, productTitle, deliveryConfirmed, loading, onConfirmDelivery, onRefund }: SellerPanelProps) {
   const message = step === "delivery" && deliveryConfirmed
-    ? { text: "Delivery confirmed!", status: "done" as const }
+    ? { text: "Delivery confirmed on-chain.", status: "done" as const }
     : sellerMessages[step];
+
+  const showActions = step === "escrowed" || (step === "delivery" && !deliveryConfirmed);
+  const showRefundAfterDelivery = step === "delivery" && deliveryConfirmed;
 
   return (
     <div className="panel-surface rounded-xl p-4">
@@ -34,8 +40,8 @@ export function SellerPanel({ step, productTitle, deliveryConfirmed }: SellerPan
             <path d="M2 13c0-2.8 2.2-5 5-5s5 2.2 5 5" />
           </svg>
         </div>
-        <span className="text-sm font-semibold">Seller Operator</span>
-        <span className="text-xs text-text-tertiary">(Auto-simulated)</span>
+        <span className="text-sm font-semibold">Seller</span>
+        <span className="text-xs text-text-tertiary">(You)</span>
         <span
           className={`ml-auto rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
             message.status === "done"
@@ -92,15 +98,46 @@ export function SellerPanel({ step, productTitle, deliveryConfirmed }: SellerPan
             </div>
           </div>
 
-          {step === "delivery" && !deliveryConfirmed && (
-            <div className="rounded-lg border border-warning/20 bg-warning/5 p-2 text-xs text-warning">
-              Auto-confirming delivery in ~5 seconds...
+          {/* Action buttons for escrowed / pre-delivery states */}
+          {showActions && (
+            <div className="space-y-2">
+              <button
+                onClick={onConfirmDelivery}
+                disabled={loading}
+                className="w-full rounded-lg bg-accent-purple px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-purple/90 disabled:opacity-50"
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    Processing...
+                  </span>
+                ) : (
+                  "Confirm Delivery"
+                )}
+              </button>
+              <button
+                onClick={onRefund}
+                disabled={loading}
+                className="w-full rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-50"
+              >
+                Refund Buyer
+              </button>
             </div>
           )}
 
-          {step === "delivery" && deliveryConfirmed && (
-            <div className="rounded-lg border border-success/20 bg-success/5 p-2 text-xs text-success">
-              Delivery has been confirmed on-chain. Waiting for buyer to release funds.
+          {/* After delivery confirmed, still allow refund */}
+          {showRefundAfterDelivery && (
+            <div className="space-y-2">
+              <div className="rounded-lg border border-success/20 bg-success/5 p-2 text-xs text-success">
+                Delivery has been confirmed on-chain. Waiting for buyer to release funds.
+              </div>
+              <button
+                onClick={onRefund}
+                disabled={loading}
+                className="w-full rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-50"
+              >
+                Refund Buyer
+              </button>
             </div>
           )}
 
