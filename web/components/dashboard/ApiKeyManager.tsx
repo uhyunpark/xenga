@@ -191,8 +191,6 @@ export function ApiKeyManager() {
                   <p className="mt-0.5 text-xs text-text-tertiary">
                     Created{" "}
                     {new Date(key.createdAt * 1000).toLocaleDateString()}
-                    {key.lastUsedAt &&
-                      ` \u00b7 Last used ${new Date(key.lastUsedAt * 1000).toLocaleDateString()}`}
                   </p>
                 </div>
                 <button

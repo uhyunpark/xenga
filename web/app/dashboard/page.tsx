@@ -3,9 +3,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { authenticatedFetch } from "@/lib/api/wallet-auth";
+import { facilitatorFetch } from "@/lib/api/client";
 import { StatsRow } from "@/components/dashboard/StatsRow";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
-import Link from "next/link";
 
 interface OrderData {
   id: string;
@@ -40,7 +40,7 @@ export default function DashboardOverview() {
           walletClient,
           address
         ),
-        authenticatedFetch(`/api/reputation/${address}`, walletClient, address),
+        facilitatorFetch(`/api/reputation/${address}`),
       ]);
 
       if (ordersRes.ok) {
@@ -107,19 +107,15 @@ export default function DashboardOverview() {
             Coming soon
           </span>
         </div>
-        <Link
-          href="/docs/api-reference"
-          className="panel-surface rounded-xl p-4 transition-colors hover:border-border-active"
-          target="_blank"
-        >
+        <div className="panel-surface rounded-xl p-4">
           <h3 className="text-sm font-semibold">API Documentation</h3>
           <p className="mt-1 text-xs text-text-tertiary">
             Integrate Xenga escrow into your backend.
           </p>
-          <span className="mt-3 inline-block text-xs text-accent">
-            View docs &rarr;
+          <span className="mt-3 inline-block rounded-full border border-border-default px-2.5 py-1 text-xs text-text-tertiary">
+            Coming soon
           </span>
-        </Link>
+        </div>
       </div>
     </div>
   );

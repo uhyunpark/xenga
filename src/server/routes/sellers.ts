@@ -30,7 +30,7 @@ router.post(
   "/",
   walletAuth(),
   (req: AuthenticatedRequest, res) => {
-    const address = req.callerAddress!;
+    const address = req.callerAddress!.toLowerCase();
     const { name } = req.body as { name?: string };
 
     if (name !== undefined && (typeof name !== "string" || name.length > 100)) {
@@ -48,7 +48,7 @@ router.post(
 
     const seller = db.prepare("SELECT * FROM sellers WHERE address = ?").get(address);
 
-    res.json(toSeller(seller));
+    res.json({ seller: toSeller(seller) });
   }
 );
 
@@ -69,7 +69,7 @@ router.get("/", (_req, res) => {
  * Get seller profile by address.
  */
 router.get("/:address", (req, res) => {
-  const addr = req.params.address as string;
+  const addr = (req.params.address as string).toLowerCase();
   if (!isAddress(addr)) {
     return res.status(400).json({ error: "Invalid address" });
   }

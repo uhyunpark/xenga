@@ -8,7 +8,7 @@ const router = Router();
 // Generate a new API key
 router.post("/", walletAuth(), (req: AuthenticatedRequest, res) => {
   const db = getDb();
-  const sellerAddress = req.callerAddress!;
+  const sellerAddress = req.callerAddress!.toLowerCase();
   const name = req.body?.name || null;
 
   // Generate a random API key: "xng_" + 32 random hex chars
@@ -29,7 +29,7 @@ router.post("/", walletAuth(), (req: AuthenticatedRequest, res) => {
 // List API keys for the connected wallet
 router.get("/", walletAuth(), (req: AuthenticatedRequest, res) => {
   const db = getDb();
-  const sellerAddress = req.callerAddress!;
+  const sellerAddress = req.callerAddress!.toLowerCase();
 
   const keys = db
     .query(
@@ -58,7 +58,7 @@ router.get("/", walletAuth(), (req: AuthenticatedRequest, res) => {
 // Revoke an API key
 router.delete("/:id", walletAuth(), (req: AuthenticatedRequest, res) => {
   const db = getDb();
-  const sellerAddress = req.callerAddress!;
+  const sellerAddress = req.callerAddress!.toLowerCase();
   const keyId = req.params.id as string;
   const now = Math.floor(Date.now() / 1000);
 
