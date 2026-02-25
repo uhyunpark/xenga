@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { SiweMessage } from "siwe";
 import type { WalletClient, Address } from "viem";
+import { getAddress } from "viem";
 import { facilitatorFetch } from "@/lib/api/client";
 
 const SESSION_KEY_PREFIX = "xenga-session-";
@@ -78,7 +79,7 @@ export function useSession(
       const expiry = new Date(now.getTime() + 5 * 60 * 1000); // 5 min to match nonce TTL
       const siweMessage = new SiweMessage({
         domain,
-        address,
+        address: getAddress(address),
         statement: "Sign in to the Xenga Seller Dashboard.",
         uri: origin,
         version: "1",
