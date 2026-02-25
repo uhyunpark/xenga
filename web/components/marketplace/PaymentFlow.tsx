@@ -129,7 +129,7 @@ const STEP_HINTS: Record<DemoStep, string> = {
 
 export function PaymentFlow() {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const { walletClient, publicClient, address, type: walletType, connectDemo, fundDemoWallet, usdcBalance, refreshBalances } = useWallet();
+  const { walletClient, publicClient, address, type: walletType, connectDemo, fundDemoWallet, isFunding, usdcBalance, refreshBalances } = useWallet();
   const inspector = useInspector();
   const operatorAddress = useOperatorAddress();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -615,14 +615,18 @@ export function PaymentFlow() {
                     </div>
                   ) : needsFunding ? (
                     <div className="panel-surface rounded-xl p-6 text-center">
-                      <p className="mb-3 text-sm text-text-secondary">
-                        Your demo wallet needs USDC to continue
+                      <p className="mb-1 text-sm font-medium text-text-primary">
+                        You need USDC to try this
+                      </p>
+                      <p className="mb-4 text-xs text-text-tertiary">
+                        Get free testnet USDC from the faucet to start the escrow flow.
                       </p>
                       <button
                         onClick={fundDemoWallet}
-                        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90"
+                        disabled={isFunding}
+                        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
                       >
-                        Fund Wallet with Test USDC
+                        {isFunding ? "Getting Test USDC..." : "Get Test USDC"}
                       </button>
                     </div>
                   ) : (
