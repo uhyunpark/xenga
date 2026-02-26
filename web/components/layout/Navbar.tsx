@@ -34,9 +34,9 @@ export function Navbar() {
     : "border-warning/30 bg-warning/10 text-warning";
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-border-default bg-bg-secondary/95 backdrop-blur-md">
+    <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl shadow-sm">
       <div className="mx-auto max-w-[90rem] px-4">
-        <div className="flex h-16 items-center justify-between gap-3">
+        <div className="flex h-14 items-center justify-between gap-3">
           <div className="flex items-center gap-6">
             <Link
               href="/"
@@ -101,7 +101,7 @@ export function Navbar() {
         </div>
 
         {mobileOpen && (
-          <div className="space-y-3 border-t border-border-default py-3 md:hidden">
+          <div className="space-y-3 border-t border-border-default bg-white/80 backdrop-blur-xl py-3 md:hidden">
             <div className="flex items-center justify-between rounded-lg border border-border-default bg-bg-secondary px-3 py-2">
               <span className="text-xs font-medium text-text-secondary">
                 Chain Environment
@@ -145,13 +145,16 @@ function NavLink({
   return (
     <Link
       href={href}
-      className={`rounded-lg px-3 py-2 text-sm transition-colors ${
+      className={`relative px-3 py-2 text-sm font-medium transition-colors ${
         active
-          ? "bg-accent/10 text-accent"
-          : "text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"
-      } ${mobile ? "block w-full" : ""}`}
+          ? "text-accent"
+          : "text-text-secondary hover:text-text-primary"
+      } ${mobile ? "block w-full rounded-lg hover:bg-bg-tertiary" : ""}`}
     >
       {children}
+      {active && !mobile && (
+        <span className="absolute bottom-0 left-3 right-3 h-0.5 rounded-full bg-accent" />
+      )}
     </Link>
   );
 }
@@ -166,12 +169,5 @@ function HealthDot({ status }: { status: boolean | null }) {
   const label =
     status === null ? "Checking..." : status ? "Connected" : "Disconnected";
 
-  return (
-    <div className="flex items-center gap-1.5 rounded-full border border-border-default bg-bg-secondary px-2 py-1" title={label}>
-      <div className={`h-2 w-2 rounded-full ${color}`} />
-      <span className="hidden text-xs text-text-tertiary sm:inline">
-        {label}
-      </span>
-    </div>
-  );
+  return <div className={`h-2 w-2 rounded-full ${color}`} title={label} />;
 }
