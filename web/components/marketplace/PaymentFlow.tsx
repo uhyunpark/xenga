@@ -16,6 +16,7 @@ import type { ReputationScore } from "@shared/types";
 import { escrowVaultAbi } from "@shared/abi.js";
 import { baseSepolia } from "viem/chains";
 import { ReputationBadge } from "@/components/ui/ReputationBadge";
+import { TxLink } from "@/components/ui/TxLink";
 import { ProductGrid, type Product } from "./ProductGrid";
 import { BUYER_STEPS, StepTracker, type BuyerStep, type PaySubStep } from "./StepTracker";
 import { SellerPanel } from "./SellerPanel";
@@ -31,6 +32,7 @@ interface FlowState {
   orderId: string | null;
   escrowId: number | null;
   txHash: string | null;
+  releaseTxHash: string | null;
   error: string | null;
   loading: boolean;
   orderData: any | null;
@@ -56,6 +58,7 @@ type FlowAction =
   | { type: "SET_LOADING"; loading: boolean }
   | { type: "FILE_DISPUTE" }
   | { type: "DELIVERY_CONFIRMED" }
+  | { type: "RELEASE_COMPLETE"; releaseTxHash: string }
   | { type: "RESET" }
   | { type: "SET_COMPLETION_REPUTATION"; reputation: ReputationScore };
 
@@ -65,6 +68,7 @@ const initialState: FlowState = {
   orderId: null,
   escrowId: null,
   txHash: null,
+  releaseTxHash: null,
   error: null,
   loading: false,
   orderData: null,
@@ -109,6 +113,8 @@ function reducer(state: FlowState, action: FlowAction): FlowState {
       return { ...state, disputeFiled: true };
     case "DELIVERY_CONFIRMED":
       return { ...state, deliveryConfirmed: true };
+    case "RELEASE_COMPLETE":
+      return { ...state, releaseTxHash: action.releaseTxHash, step: "complete", error: null };
     case "RESET":
       return initialState;
     case "SET_COMPLETION_REPUTATION":
@@ -184,7 +190,11 @@ export function PaymentFlow() {
               break;
             case "completed":
               dispatch({ type: "PAYMENT_COMPLETE", escrowId: found.escrowId, txHash: found.txHash });
-              dispatch({ type: "SET_STEP", step: "complete" });
+              if (parsed.releaseTxHash) {
+                dispatch({ type: "RELEASE_COMPLETE", releaseTxHash: parsed.releaseTxHash });
+              } else {
+                dispatch({ type: "SET_STEP", step: "complete" });
+              }
               break;
             case "disputed":
               dispatch({ type: "PAYMENT_COMPLETE", escrowId: found.escrowId, txHash: found.txHash });
@@ -213,11 +223,12 @@ export function PaymentFlow() {
         orderId: state.orderId,
         escrowId: state.escrowId,
         txHash: state.txHash,
+        releaseTxHash: state.releaseTxHash,
         orderData: state.orderData,
         paymentRequired: state.paymentRequired,
       }));
     }
-  }, [state.step, state.product, state.orderId, state.escrowId, state.txHash, state.orderData, state.paymentRequired]);
+  }, [state.step, state.product, state.orderId, state.escrowId, state.txHash, state.releaseTxHash, state.orderData, state.paymentRequired]);
 
   // ---- Delivery polling ----
   const deliveryOrderId = state.step === "tracking" && !state.deliveryConfirmed ? state.orderId : null;
@@ -401,7 +412,7 @@ export function PaymentFlow() {
         data: { previousState: "DeliveryConfirmed", newState: "Completed" },
       });
 
-      dispatch({ type: "SET_STEP", step: "complete" });
+      dispatch({ type: "RELEASE_COMPLETE", releaseTxHash: txHash });
     } catch {
       // Demo graceful degradation: mark complete even on failure (e.g. MetaMask reject,
       // gas error, mock mode). In production, you'd show an error and let the user retry.
@@ -653,6 +664,22 @@ export function PaymentFlow() {
                   <p className="mb-4 text-sm text-text-secondary">
                     Funds have been released to the seller.
                   </p>
+                  {(state.txHash || state.releaseTxHash) && (
+                    <div className="mx-auto mb-4 max-w-sm space-y-1.5">
+                      {state.txHash && (
+                        <div className="flex items-center justify-between rounded-lg border border-border-default bg-bg-secondary px-3 py-2">
+                          <span className="text-xs text-text-tertiary">Escrow creation</span>
+                          <TxLink hash={state.txHash} className="text-xs" />
+                        </div>
+                      )}
+                      {state.releaseTxHash && (
+                        <div className="flex items-center justify-between rounded-lg border border-border-default bg-bg-secondary px-3 py-2">
+                          <span className="text-xs text-text-tertiary">Funds released</span>
+                          <TxLink hash={state.releaseTxHash} className="text-xs" />
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {state.completionReputation && (
                     <div className="mx-auto mb-4 max-w-sm text-left">
                       <div className="rounded-lg border border-border-default bg-bg-secondary p-3 space-y-2">
@@ -735,7 +762,7 @@ export function PaymentFlow() {
                 />
                 <MetaRow
                   label="Tx Hash"
-                  value={state.txHash ? `${state.txHash.slice(0, 12)}...` : "Pending"}
+                  value={state.txHash ? <TxLink hash={state.txHash} label={`${state.txHash.slice(0, 12)}...`} className="text-xs" /> : "Pending"}
                   mono
                 />
                 <MetaRow label="Current Step" value={currentStepLabel} />
@@ -754,7 +781,7 @@ function MetaRow({
   mono,
 }: {
   label: string;
-  value: string;
+  value: React.ReactNode;
   mono?: boolean;
 }) {
   return (
