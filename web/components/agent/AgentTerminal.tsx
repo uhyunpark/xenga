@@ -41,6 +41,8 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
   const [isComplete, setIsComplete] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [disputeTxHash, setDisputeTxHash] = useState<string | null>(null);
+  const [resolveTxHash, setResolveTxHash] = useState<string | null>(null);
   const [activeScenario, setActiveScenario] = useState<Scenario | null>(null);
   const [reputationData, setReputationData] = useState<{
     buyer: ReputationScore | null;
@@ -77,6 +79,8 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
     setActiveScenario(scenario);
     setLines([]);
     setIsComplete(false);
+    setDisputeTxHash(null);
+    setResolveTxHash(null);
     setReputationData(null);
     inspector.clear();
     inspector.setOpen(true);
@@ -224,7 +228,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
 
       // Step 6: Auto-verify
       addLine({ type: "dim", text: "", delay: 0 });
-      addLine({ type: "info", text: "[verify] Waiting for seller to confirm delivery...", delay: 0 });
+      addLine({ type: "info", text: "[verify] Seller processing request...", delay: 0 });
 
       // Trigger confirm delivery
       try {
@@ -234,7 +238,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
         console.warn("[agent] confirm-delivery failed:", err);
       }
       await wait(2000);
-      addLine({ type: "info", text: "[verify] Seller is shipping item...", delay: 0 });
+      addLine({ type: "info", text: "[verify] Received API response — verifying data...", delay: 0 });
       await wait(2000);
       addLine({
         type: "info",
@@ -245,7 +249,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
       });
       await wait(1500);
 
-      addLine({ type: "success", text: "[verify] ✓ Delivery confirmed by operator", delay: 0 });
+      addLine({ type: "success", text: "[verify] ✓ Response delivered and confirmed on-chain", delay: 0 });
       inspector.addEvent({
         type: "state_change",
         label: "Delivery Confirmed",
@@ -313,6 +317,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
         addLine({ type: "info", text: `[dispute] Dispute ID: ${disputeData.disputeId.slice(0, 8)}...`, delay: 0 });
 
         if (disputeData.txHash) {
+          setDisputeTxHash(disputeData.txHash);
           inspector.addEvent({
             type: "tx_confirmed",
             label: "Dispute Filed",
@@ -372,6 +377,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
         await wait(500);
 
         if (resolveData.txHash) {
+          setResolveTxHash(resolveData.txHash);
           inspector.addEvent({
             type: "tx_confirmed",
             label: "Dispute Resolved",
@@ -832,16 +838,6 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
           <span className="rounded-full border border-border-default bg-bg-primary/55 px-2 py-0.5 text-[10px] uppercase tracking-wide text-text-tertiary">
             {lines.length} log lines
           </span>
-          {walletType === "demo" && usdcBalance !== null && (
-            <>
-              <span className="rounded-full border border-border-default bg-bg-primary/55 px-2 py-0.5 text-[10px] uppercase tracking-wide text-text-tertiary">
-                <span className="font-mono">{address?.slice(0, 6)}...{address?.slice(-4)}</span>
-              </span>
-              <span className="rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent">
-                {usdcBalance} USDC
-              </span>
-            </>
-          )}
 
           {!isRunning && !isComplete && (
             <div className="w-full flex flex-wrap justify-center gap-2">
@@ -939,6 +935,19 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
         </div>
       )}
 
+      {/* Wallet info card */}
+      {walletType === "demo" && usdcBalance !== null && address && (
+        <div className="panel-surface flex items-center gap-3 rounded-xl p-2 px-3">
+          <svg className="h-3.5 w-3.5 text-text-tertiary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" /><path d="M3 5v14a2 2 0 0 0 2 2h16v-5" /><path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
+          </svg>
+          <span className="font-mono text-xs text-text-secondary">{address.slice(0, 6)}...{address.slice(-4)}</span>
+          <span className="ml-auto rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
+            {usdcBalance} USDC
+          </span>
+        </div>
+      )}
+
       {/* Terminal */}
       <div className="panel-surface overflow-hidden rounded-xl">
         <div className="flex items-center gap-1.5 border-b border-border-default bg-bg-primary/55 px-4 py-2">
@@ -954,7 +963,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
         </div>
         <div
           ref={terminalRef}
-          className="max-h-[500px] overflow-y-auto bg-slate-950 p-4 font-mono text-[13px] leading-relaxed"
+          className="max-h-[500px] overflow-y-auto bg-slate-950 p-4 font-mono text-sm leading-6"
         >
           {lines.length === 0 && !isRunning && (
             <div className="text-text-tertiary">
@@ -975,10 +984,10 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
                       : line.type === "request"
                         ? "text-accent"
                         : line.type === "reputation"
-                          ? "text-violet"
+                          ? "text-violet-400"
                           : line.type === "dim"
-                            ? "text-text-tertiary"
-                            : "text-text-secondary"
+                            ? "text-slate-500"
+                            : "text-slate-300"
                 }
               >
                 {line.text || "\u00A0"}
@@ -992,22 +1001,33 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
       </div>
 
       {txHash && activeScenario !== "reputation" && (
-        <div className="panel-surface flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-text-tertiary">
-          <span>{isMockChainClient ? "Transaction ID:" : "View on BaseScan:"}</span>
-          {isMockChainClient ? (
-            <span className="font-mono text-text-secondary">
-              {txHash.slice(0, 14)}...
-            </span>
-          ) : (
-            <a
-              href={`https://sepolia.basescan.org/tx/${txHash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-mono text-accent hover:underline"
-            >
-              {txHash.slice(0, 14)}...
-            </a>
-          )}
+        <div className="panel-surface space-y-2 rounded-xl border border-accent/20 bg-accent/5 px-4 py-3">
+          {[
+            { label: "Escrow Created", hash: txHash },
+            ...(disputeTxHash ? [{ label: "Dispute", hash: disputeTxHash }] : []),
+            ...(resolveTxHash ? [{ label: "Resolution", hash: resolveTxHash }] : []),
+          ].map(({ label, hash }) => (
+            <div key={hash} className="flex items-center gap-2 text-sm">
+              <span className="text-text-secondary font-medium">{label}:</span>
+              {isMockChainClient ? (
+                <span className="font-mono text-text-secondary">
+                  {hash.slice(0, 22)}...
+                </span>
+              ) : (
+                <a
+                  href={`https://sepolia.basescan.org/tx/${hash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 font-mono font-medium text-accent hover:underline"
+                >
+                  {hash.slice(0, 22)}...
+                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M7 7h10v10" /><path d="M7 17 17 7" />
+                  </svg>
+                </a>
+              )}
+            </div>
+          ))}
         </div>
       )}
 
