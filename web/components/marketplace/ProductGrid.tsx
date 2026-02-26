@@ -99,7 +99,7 @@ export function ProductGrid({ onSelect, disabled }: ProductGridProps) {
               {product.price.toFixed(2)} USDC
             </span>
             <span className="text-xs text-text-tertiary transition-colors group-hover:text-text-primary">
-              Buy Now &rarr;
+              Configure options &rarr;
             </span>
           </div>
         </motion.button>

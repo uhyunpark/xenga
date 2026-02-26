@@ -1,27 +1,25 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import type { DemoStep } from "./StepTracker";
+import type { BuyerStep } from "./StepTracker";
 
 interface SellerPanelProps {
-  step: DemoStep;
+  step: BuyerStep;
   productTitle?: string;
   deliveryConfirmed?: boolean;
 }
 
-const sellerMessages: Record<DemoStep, { text: string; status: "idle" | "active" | "done" }> = {
-  select: { text: "Waiting for buyer...", status: "idle" },
-  create_order: { text: "New order received!", status: "active" },
-  request_payment: { text: "Waiting for payment...", status: "active" },
-  sign: { text: "Buyer is signing payment...", status: "active" },
-  submit: { text: "Processing payment...", status: "active" },
-  escrowed: { text: "Payment received! Preparing to ship...", status: "active" },
-  delivery: { text: "Shipping item & confirming delivery...", status: "active" },
+const sellerMessages: Record<BuyerStep, { text: string; status: "idle" | "active" | "done" }> = {
+  browse: { text: "Waiting for buyer...", status: "idle" },
+  configure: { text: "Buyer customizing order...", status: "active" },
+  review_terms: { text: "Buyer reviewing terms...", status: "active" },
+  paying: { text: "Processing payment...", status: "active" },
+  tracking: { text: "Shipping item...", status: "active" },
   complete: { text: "Funds received! Order complete.", status: "done" },
 };
 
 export function SellerPanel({ step, productTitle, deliveryConfirmed }: SellerPanelProps) {
-  const message = step === "delivery" && deliveryConfirmed
+  const message = step === "tracking" && deliveryConfirmed
     ? { text: "Delivery confirmed!", status: "done" as const }
     : sellerMessages[step];
 
@@ -61,7 +59,7 @@ export function SellerPanel({ step, productTitle, deliveryConfirmed }: SellerPan
           exit={{ opacity: 0, y: -10 }}
           className="space-y-3"
         >
-          {productTitle && step !== "select" && (
+          {productTitle && step !== "browse" && (
             <div className="rounded-lg border border-border-default bg-bg-primary/55 p-3 text-xs text-text-secondary">
               Order: {productTitle}
             </div>
@@ -92,13 +90,13 @@ export function SellerPanel({ step, productTitle, deliveryConfirmed }: SellerPan
             </div>
           </div>
 
-          {step === "delivery" && !deliveryConfirmed && (
+          {step === "tracking" && !deliveryConfirmed && (
             <div className="rounded-lg border border-warning/20 bg-warning/5 p-2 text-xs text-warning">
               Auto-confirming delivery in ~5 seconds...
             </div>
           )}
 
-          {step === "delivery" && deliveryConfirmed && (
+          {step === "tracking" && deliveryConfirmed && (
             <div className="rounded-lg border border-success/20 bg-success/5 p-2 text-xs text-success">
               Delivery has been confirmed on-chain. Waiting for buyer to release funds.
             </div>

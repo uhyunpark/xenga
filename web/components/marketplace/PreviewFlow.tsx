@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   PREVIEW_STEPS,
   PREVIEW_PRODUCT,
+  PREVIEW_VARIANT,
   PREVIEW_ORDER,
   PREVIEW_PAYMENT_REQUIRED,
   PREVIEW_SETTLEMENT,
@@ -188,78 +189,72 @@ export function PreviewFlow({ onExit }: { onExit: () => void }) {
 /** Full detail view for the active step */
 function StepDetail({ stepId }: { stepId: string }) {
   switch (stepId) {
-    case "select":
+    case "browse":
       return (
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-lg bg-accent/10" />
           <div>
             <p className="font-medium">{PREVIEW_PRODUCT.title}</p>
-            <p className="text-sm text-text-tertiary">{PREVIEW_PRODUCT.price} USDC</p>
+            <p className="text-sm text-text-tertiary">from {PREVIEW_PRODUCT.price} USDC</p>
           </div>
         </div>
       );
-    case "create_order":
+    case "configure":
+      return (
+        <div className="space-y-1.5 text-xs">
+          <p className="font-medium">{PREVIEW_PRODUCT.title}</p>
+          <div className="space-y-1 text-text-tertiary">
+            <p>Tier: <span className="text-text-primary">{PREVIEW_VARIANT.tier}</span></p>
+            <p>Sectors: <span className="text-text-primary">{PREVIEW_VARIANT.sectors}</span></p>
+            <p>Speed: <span className="text-text-primary">{PREVIEW_VARIANT.speed}</span></p>
+          </div>
+          <p className="pt-1 font-mono text-accent">{PREVIEW_PRODUCT.price} USDC</p>
+        </div>
+      );
+    case "review_terms":
+      return (
+        <div className="space-y-1.5 text-xs">
+          <p className="font-medium text-accent">Escrow Terms</p>
+          <div className="space-y-1 text-text-tertiary">
+            <p>Release Window: <span className="text-text-primary">7 days</span></p>
+            <p>Dispute Window: <span className="text-text-primary">3 days</span></p>
+            <p>Facilitator Fee: <span className="text-text-primary">{(Number(PREVIEW_PAYMENT_REQUIRED.facilitatorFee) / 1_000_000).toFixed(3)} USDC ({(PREVIEW_PAYMENT_REQUIRED.feeBps / 100).toFixed(1)}%)</span></p>
+            <p>Buyer Protection: <span className="text-success">Full refund on cancel</span></p>
+          </div>
+        </div>
+      );
+    case "pay":
+      return (
+        <div className="space-y-2 text-xs">
+          <p className="font-medium">Payment Protocol (4 sub-steps)</p>
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 text-text-tertiary">
+              <svg className="h-3 w-3 text-success" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 8l3 3 5-5" /></svg>
+              <span>Create order — <span className="text-text-primary">POST /api/orders</span></span>
+            </div>
+            <div className="flex items-center gap-2 text-text-tertiary">
+              <svg className="h-3 w-3 text-success" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 8l3 3 5-5" /></svg>
+              <span>Request terms — <span className="text-warning">HTTP 402</span></span>
+            </div>
+            <div className="flex items-center gap-2 text-text-tertiary">
+              <svg className="h-3 w-3 text-success" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 8l3 3 5-5" /></svg>
+              <span>Sign — <span className="text-accent">EIP-712 ReceiveWithAuthorization</span></span>
+            </div>
+            <div className="flex items-center gap-2 text-text-tertiary">
+              <svg className="h-3 w-3 text-success" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M4 8l3 3 5-5" /></svg>
+              <span>Submit — <span className="text-success">200 OK, escrowId: {PREVIEW_SETTLEMENT.escrowId}</span></span>
+            </div>
+          </div>
+        </div>
+      );
+    case "tracking":
       return (
         <div className="space-y-1 font-mono text-xs">
-          <p><span className="text-text-tertiary">POST</span> /api/orders</p>
-          <p><span className="text-text-tertiary">orderId:</span> {PREVIEW_ORDER.orderId.slice(0, 18)}...</p>
-          <p><span className="text-text-tertiary">seller:</span> {PREVIEW_ORDER.sellerAddress.slice(0, 10)}...</p>
-          <p><span className="text-text-tertiary">status:</span> <span className="text-success">created</span></p>
-        </div>
-      );
-    case "request_payment":
-      return (
-        <div className="space-y-2 font-mono text-xs">
-          <p className="text-warning">HTTP 402 Payment Required</p>
-          <div className="space-y-1 text-text-tertiary">
-            <p>scheme: <span className="text-text-primary">escrow</span></p>
-            <p>amount: <span className="text-text-primary">{PREVIEW_PAYMENT_REQUIRED.amount}</span> (25 USDC)</p>
-            <p>releaseWindow: <span className="text-text-primary">604800</span> (7 days)</p>
-            <p>serviceType: <span className="text-text-primary">marketplace</span></p>
-            <p>facilitatorFee: <span className="text-text-primary">{PREVIEW_PAYMENT_REQUIRED.facilitatorFee}</span></p>
-          </div>
-        </div>
-      );
-    case "sign":
-      return (
-        <div className="space-y-2 font-mono text-xs">
-          <p className="text-accent">EIP-712 ReceiveWithAuthorization</p>
-          <div className="space-y-1 text-text-tertiary">
-            <p>domain: <span className="text-text-primary">USDC on Base Sepolia</span></p>
-            <p>from: <span className="text-text-primary">0xBuyer...1234</span></p>
-            <p>to: <span className="text-text-primary">EscrowVault</span></p>
-            <p>value: <span className="text-text-primary">25000000</span></p>
-            <p>nonce: <span className="text-text-primary">0xabc123...</span></p>
-          </div>
-        </div>
-      );
-    case "submit":
-      return (
-        <div className="space-y-2 font-mono text-xs">
-          <p className="text-success">HTTP 200 OK</p>
-          <div className="space-y-1 text-text-tertiary">
-            <p>escrowId: <span className="text-text-primary">{PREVIEW_SETTLEMENT.escrowId}</span></p>
-            <p>txHash: <span className="text-text-primary">{PREVIEW_SETTLEMENT.txHash.slice(0, 18)}...</span></p>
-            <p>onChain: <span className="text-text-primary">createEscrowWithAuth()</span></p>
-          </div>
-        </div>
-      );
-    case "escrowed":
-      return (
-        <div className="space-y-1 font-mono text-xs">
-          <p>state: <span className="text-accent">Active</span></p>
-          <p>buyer: 0xBuyer...1234</p>
-          <p>seller: {PREVIEW_ORDER.sellerAddress.slice(0, 10)}...</p>
-          <p>amount: 25 USDC (locked)</p>
-          <p>autoRelease: 7 days + dispute window</p>
-        </div>
-      );
-    case "delivery":
-      return (
-        <div className="space-y-1 font-mono text-xs">
-          <p>seller calls: <span className="text-accent">confirmDelivery(42)</span></p>
-          <p>buyer calls: <span className="text-success">releaseFunds(42)</span></p>
-          <p>state: Active → <span className="text-success">Completed</span></p>
+          <p>t+0s: <span className="text-success">Order Confirmed</span></p>
+          <p>t+3s: <span className="text-text-primary">Preparing Shipment</span></p>
+          <p>t+6s: <span className="text-text-primary">In Transit</span></p>
+          <p>t+9s: <span className="text-success">Delivered</span></p>
+          <p className="pt-1 text-text-tertiary">buyer calls: <span className="text-success">releaseFunds({PREVIEW_SETTLEMENT.escrowId})</span></p>
         </div>
       );
     case "complete":
@@ -274,4 +269,3 @@ function StepDetail({ stepId }: { stepId: string }) {
       return null;
   }
 }
-

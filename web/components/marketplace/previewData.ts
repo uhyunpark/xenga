@@ -12,6 +12,12 @@ export const PREVIEW_PRODUCT = {
   image: null,
 };
 
+export const PREVIEW_VARIANT = {
+  tier: "Detailed",
+  sectors: "3 sectors",
+  speed: "Express",
+};
+
 export const PREVIEW_ORDER = {
   id: "d4e5f6a7-b8c9-0d1e-2f3a-4b5c6d7e8f90",
   orderId: "0x8a7b6c5d4e3f2a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7" as const,
@@ -52,51 +58,39 @@ export interface PreviewStep {
 
 export const PREVIEW_STEPS: PreviewStep[] = [
   {
-    id: "select",
-    label: "Select Product",
-    description: "Buyer chooses an item from the marketplace.",
+    id: "browse",
+    label: "Browse Products",
+    description: "Buyer browses the marketplace and selects a product.",
+    durationMs: 4000,
+  },
+  {
+    id: "configure",
+    label: "Configure Options",
+    description: "Buyer customizes the order — tier, quantity, and delivery speed affect the final price.",
     durationMs: 5000,
   },
   {
-    id: "create_order",
-    label: "Create Order",
-    description: "Server creates an off-chain order with a keccak256 hash ID.",
-    durationMs: 5500,
-  },
-  {
-    id: "request_payment",
-    label: "Request Payment (402)",
-    description: "Client sends POST without payment header. Server responds with HTTP 402 and escrow terms.",
-    durationMs: 7000,
-  },
-  {
-    id: "sign",
-    label: "Sign Authorization",
-    description: "Buyer signs an EIP-712 ReceiveWithAuthorization for gasless USDC transfer to the EscrowVault.",
-    durationMs: 7500,
-  },
-  {
-    id: "submit",
-    label: "Submit & Settle",
-    description: "Client retries with PAYMENT-SIGNATURE header. Server verifies signature, creates escrow on-chain.",
-    durationMs: 7000,
-  },
-  {
-    id: "escrowed",
-    label: "Funds in Escrow",
-    description: "USDC is locked in the EscrowVault contract. Seller can now confirm delivery.",
+    id: "review_terms",
+    label: "Review Escrow Terms",
+    description: "Buyer reviews escrow parameters: release window, dispute window, fees, and buyer protection.",
     durationMs: 6000,
   },
   {
-    id: "delivery",
-    label: "Delivery & Release",
-    description: "Seller confirms delivery. Buyer releases funds (or disputes within the window).",
-    durationMs: 6500,
+    id: "pay",
+    label: "Pay",
+    description: "Single click triggers the full payment protocol: order creation, 402 payment request, EIP-712 signing, and on-chain settlement.",
+    durationMs: 8000,
+  },
+  {
+    id: "tracking",
+    label: "Delivery Tracking",
+    description: "Buyer watches delivery progress. Once confirmed, they can release funds or file a dispute.",
+    durationMs: 6000,
   },
   {
     id: "complete",
     label: "Complete",
-    description: "Seller receives USDC minus facilitator fee. Both parties' reputation scores update.",
+    description: "Seller receives USDC minus facilitator fee. Both parties' reputation scores update on-chain.",
     durationMs: 6000,
   },
 ];

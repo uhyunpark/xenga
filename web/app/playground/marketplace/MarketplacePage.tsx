@@ -29,7 +29,7 @@ export default function MarketplacePage() {
             <p className="mt-1 text-sm text-text-secondary">
               {mode === "demo"
                 ? "Watch the full escrow payment lifecycle — no wallet needed."
-                : "Simulate buyer-side checkout, typed-data signing, escrow settlement, and release/dispute decisions."}
+                : "Configure, review escrow terms, pay in one click, and track delivery with release or dispute options."}
             </p>
             {/* Demo / Live toggle */}
             <div className="mt-4 flex gap-1 rounded-lg border border-border-default bg-bg-primary/50 p-1 w-fit">
