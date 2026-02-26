@@ -40,6 +40,8 @@ export const config = {
   isMock,
   apiKeys: (process.env.API_KEYS || "").split(",").map(k => k.trim()).filter(Boolean),
   jwtSecret: process.env.JWT_SECRET || "dev-jwt-secret-change-in-production",
+  /** On-chain disputeWindow (seconds), populated at startup */
+  disputeWindow: undefined as number | undefined,
 };
 
 export function validateConfig() {

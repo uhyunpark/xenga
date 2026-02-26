@@ -36,6 +36,15 @@ export async function getEscrow(escrowId: number): Promise<OnChainEscrow> {
   };
 }
 
+export async function getDisputeWindow(): Promise<number> {
+  const result = await getPublicClient().readContract({
+    address: config.escrowVaultAddress,
+    abi: escrowVaultAbi,
+    functionName: "disputeWindow",
+  });
+  return Number(result);
+}
+
 export async function isReleasable(escrowId: number): Promise<boolean> {
   return getPublicClient().readContract({
     address: config.escrowVaultAddress,

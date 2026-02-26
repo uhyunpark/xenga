@@ -282,6 +282,11 @@ async function buildPaymentRequiredResponse(
     }
   }
 
+  // Ensure releaseWindow >= on-chain disputeWindow (contract enforces this)
+  if (deps.config.disputeWindow && releaseWindow < deps.config.disputeWindow) {
+    releaseWindow = deps.config.disputeWindow;
+  }
+
   const feeBps = deps.config.feeBps;
   const flatFee = deps.config.flatFee;
   const fee = computeFee(order.price, feeBps, flatFee);

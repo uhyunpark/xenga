@@ -25,6 +25,7 @@ import sellersRouter from "./routes/sellers.js";
 import sellerApiKeysRouter from "./routes/sellerApiKeys.js";
 import authRouter from "./routes/auth.js";
 import { startEventListener } from "./services/eventListener.js";
+import { getDisputeWindow } from "./services/escrowService.js";
 import { rateLimit } from "./middleware/rateLimit.js";
 import { logger } from "./services/logger.js";
 import { startWalletMonitor, getLastWalletStatus } from "./services/walletMonitor.js";
@@ -119,6 +120,16 @@ const server = app.listen(config.port, () => {
   logger.info("server", `Escrow Contract: ${config.escrowVaultAddress}`);
   logger.info("server", `USDC: ${config.usdcAddress} | Chain: ${config.chainConfig.network} (${config.chainConfig.chainId})`);
 });
+
+// Read on-chain disputeWindow for releaseWindow clamping
+getDisputeWindow()
+  .then((dw) => {
+    config.disputeWindow = dw;
+    logger.info("server", `On-chain disputeWindow: ${dw}s`);
+  })
+  .catch((err) => {
+    logger.warn("server", `Failed to read disputeWindow: ${err instanceof Error ? err.message : String(err)}`);
+  });
 
 // Start event listener for on-chain events
 startEventListener();

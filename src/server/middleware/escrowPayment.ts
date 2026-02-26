@@ -52,6 +52,7 @@ function buildExpressDeps(): PaymentDeps {
       feeBps: config.feeBps,
       flatFee: config.flatFee,
       network: config.chainConfig.network,
+      disputeWindow: config.disputeWindow,
     },
     logger,
   };

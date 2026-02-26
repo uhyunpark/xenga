@@ -104,6 +104,8 @@ export interface PaymentDeps {
     flatFee: bigint;
     /** Network identifier for xenga headers (e.g. "base-sepolia", "base") */
     network?: string;
+    /** On-chain disputeWindow (seconds) — used to clamp releaseWindow */
+    disputeWindow?: number;
   };
 
   // ── Logging (optional) ──
