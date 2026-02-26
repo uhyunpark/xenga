@@ -1,7 +1,6 @@
 "use client";
 
 import { WalletProvider } from "@/lib/wallet/WalletProvider";
-import { InspectorProvider } from "@/lib/protocol-inspector/context";
 
 export default function PlaygroundLayout({
   children,
@@ -10,7 +9,7 @@ export default function PlaygroundLayout({
 }) {
   return (
     <WalletProvider mode="demo">
-      <InspectorProvider>{children}</InspectorProvider>
+      {children}
     </WalletProvider>
   );
 }

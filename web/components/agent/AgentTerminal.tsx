@@ -51,6 +51,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
     progression?: RoundSnapshot[];
     screeningResults?: ScreeningAgentProfile[];
   } | null>(null);
+  const [copied, setCopied] = useState(false);
   const terminalRef = useRef<HTMLDivElement>(null);
   const { walletClient, address, connectDemo, fundDemoWallet, isFunding, usdcBalance, error, type: walletType, refreshBalances } = useWallet();
   const inspector = useInspector();
@@ -79,6 +80,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
     setActiveScenario(scenario);
     setLines([]);
     setIsComplete(false);
+    setTxHash(null);
     setDisputeTxHash(null);
     setResolveTxHash(null);
     setReputationData(null);
@@ -941,7 +943,26 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
           <svg className="h-3.5 w-3.5 text-text-tertiary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" /><path d="M3 5v14a2 2 0 0 0 2 2h16v-5" /><path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
           </svg>
-          <span className="font-mono text-xs text-text-secondary">{address.slice(0, 6)}...{address.slice(-4)}</span>
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(address);
+              setCopied(true);
+              setTimeout(() => setCopied(false), 1500);
+            }}
+            className="group flex items-center gap-1 font-mono text-xs text-text-secondary transition-colors hover:text-text-primary"
+            title="Copy address"
+          >
+            {address.slice(0, 6)}...{address.slice(-4)}
+            {copied ? (
+              <svg className="h-3 w-3 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            ) : (
+              <svg className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100 text-text-tertiary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect width="14" height="14" x="8" y="8" rx="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+              </svg>
+            )}
+          </button>
           <span className="ml-auto rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
             {usdcBalance} USDC
           </span>
