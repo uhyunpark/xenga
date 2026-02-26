@@ -44,7 +44,11 @@ type InspectorAction =
 function reducer(state: InspectorState, action: InspectorAction): InspectorState {
   switch (action.type) {
     case "ADD_EVENT":
-      return { ...state, events: [...state.events, action.event] };
+      return {
+        ...state,
+        events: [...state.events, action.event],
+        ...(state.events.length === 0 ? { isOpen: true } : {}),
+      };
     case "SET_TAB":
       return { ...state, activeTab: action.tab };
     case "TOGGLE_OPEN":

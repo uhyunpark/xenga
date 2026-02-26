@@ -10,14 +10,17 @@ import { isMockChainClient } from "@/lib/env/isMockChainClient";
 export function OnChainTab() {
   const { events } = useInspector();
 
-  const txEvents = useMemo(
-    () => events.filter((e) => e.type === "tx_submitted" || e.type === "tx_confirmed"),
+  const onchainEvents = useMemo(
+    () =>
+      events.filter(
+        (e) => e.type === "tx_submitted" || e.type === "tx_confirmed" || e.type === "state_change"
+      ),
     [events]
   );
 
-  const scrollRef = useAutoScroll(txEvents.length);
+  const scrollRef = useAutoScroll(onchainEvents.length);
 
-  if (txEvents.length === 0) {
+  if (onchainEvents.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-text-tertiary text-sm">
         {isMockChainClient
@@ -41,9 +44,13 @@ export function OnChainTab() {
         </span>
       </div>
 
-      {txEvents.map((event) => (
-        <TxEventCard key={event.id} event={event} />
-      ))}
+      {onchainEvents.map((event) =>
+        event.type === "state_change" ? (
+          <StateChangeCard key={event.id} event={event} />
+        ) : (
+          <TxEventCard key={event.id} event={event} />
+        )
+      )}
     </div>
   );
 }
@@ -88,6 +95,27 @@ function TxEventCard({ event }: { event: any }) {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function StateChangeCard({ event }: { event: any }) {
+  const { data } = event;
+  const from = data.previousState || "Unknown";
+  const to = data.newState || "Unknown";
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-border-default/60 bg-bg-secondary/50 animate-inspector-flash">
+      <div className="flex items-center gap-2 px-3 py-2">
+        <Badge variant="default">State</Badge>
+        <div className="flex items-center gap-1.5 text-xs">
+          <span className="font-mono text-text-tertiary">{from}</span>
+          <svg className="h-3 w-3 text-text-tertiary shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M3 8h10m-4-4 4 4-4 4" />
+          </svg>
+          <span className="font-mono text-text-primary font-medium">{to}</span>
+        </div>
       </div>
     </div>
   );
