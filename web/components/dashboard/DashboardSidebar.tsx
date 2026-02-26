@@ -63,10 +63,22 @@ export function DashboardSidebar() {
 
   const sidebar = (
     <div className="flex h-full flex-col">
-      <div className="flex h-14 items-center px-4">
-        <Link href="/" className="font-semibold text-accent transition-colors hover:text-accent/80">
-          Xenga
-        </Link>
+      <div className="px-4 py-4 border-b border-border-default">
+        {address ? (
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent text-sm font-bold">
+              {address.slice(2, 4).toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-text-primary">
+                {address.slice(0, 6)}...{address.slice(-4)}
+              </p>
+              <p className="text-[11px] text-text-tertiary">Seller Dashboard</p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm font-semibold text-text-primary">Dashboard</p>
+        )}
       </div>
 
       <nav className="flex-1 space-y-1 px-2 py-2">
@@ -109,17 +121,6 @@ export function DashboardSidebar() {
       </nav>
 
       <div className="border-t border-border-default px-2 py-3 space-y-1">
-        {address && (
-          <button
-            onClick={disconnect}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
-          >
-            <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3m4-9l4 4-4 4m4-4H6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            <span className="truncate">{address.slice(0, 6)}...{address.slice(-4)}</span>
-          </button>
-        )}
         <Link
           href="/"
           className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
@@ -129,6 +130,17 @@ export function DashboardSidebar() {
           </svg>
           Back to site
         </Link>
+        {address && (
+          <button
+            onClick={disconnect}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-error"
+          >
+            <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3m4-9l4 4-4 4m4-4H6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Disconnect
+          </button>
+        )}
       </div>
     </div>
   );
@@ -150,7 +162,9 @@ export function DashboardSidebar() {
             )}
           </svg>
         </button>
-        <span className="ml-3 font-semibold text-accent">Xenga</span>
+        <span className="ml-3 text-sm font-semibold text-text-primary">
+          {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Dashboard"}
+        </span>
       </div>
 
       {/* Mobile overlay */}
