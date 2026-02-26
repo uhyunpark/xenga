@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
-import { WalletProvider } from "@/lib/wallet/WalletProvider";
-import { InspectorProvider } from "@/lib/protocol-inspector/context";
 
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://xenga.xyz";
 
@@ -43,12 +41,8 @@ export default function RootLayout({
     <html lang="en">
       <head />
       <body className="min-h-screen bg-bg-primary text-text-primary">
-        <WalletProvider>
-          <InspectorProvider>
-            <Navbar />
-            <main>{children}</main>
-          </InspectorProvider>
-        </WalletProvider>
+        <Navbar />
+        <main>{children}</main>
         <Analytics />
       </body>
     </html>

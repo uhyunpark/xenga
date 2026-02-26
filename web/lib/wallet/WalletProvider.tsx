@@ -57,7 +57,12 @@ const DISCONNECT_KEY = "xenga-wallet-disconnected";
 const BASE_SEPOLIA_CHAIN_ID = 84532;
 const BASE_SEPOLIA_CHAIN_ID_HEX = "0x14A34";
 
-export function WalletProvider({ children }: { children: ReactNode }) {
+interface WalletProviderProps {
+  children: ReactNode;
+  mode?: "demo" | "browser";
+}
+
+export function WalletProvider({ children, mode }: WalletProviderProps) {
   const [type, setType] = useState<WalletType>(null);
   const [address, setAddress] = useState<Address | null>(null);
   const [walletClient, setWalletClient] = useState<WalletClient | null>(null);
@@ -113,6 +118,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [address]);
 
   const connectDemo = useCallback(() => {
+    if (mode === "browser") return; // No-op in browser-only mode
     // Check sessionStorage for existing demo wallet
     let pk = sessionStorage.getItem(DEMO_KEY_STORAGE);
     if (!pk) {
@@ -129,7 +135,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setAddress(account.address);
     setWalletClient(client);
     setError(null);
-  }, []);
+  }, [mode]);
 
   // Internal helper: set browser wallet state from an address
   const setBrowserWallet = useCallback((addr: Address) => {
@@ -145,6 +151,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const connectBrowser = useCallback(async () => {
+    if (mode === "demo") return; // No-op in demo-only mode
     if (typeof window === "undefined" || !window.ethereum) {
       setError("No wallet detected. Please install MetaMask.");
       return;
@@ -206,7 +213,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsConnecting(false);
     }
-  }, [setBrowserWallet]);
+  }, [mode, setBrowserWallet]);
 
   // Internal: clear wallet state without setting disconnect flag
   const resetWallet = useCallback(() => {
@@ -238,6 +245,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [resetWallet]);
 
   const fundDemoWallet = useCallback(async () => {
+    if (mode === "browser") return; // No-op in browser-only mode
     if (!address || type !== "demo") return;
     setIsFunding(true);
     try {
@@ -253,23 +261,25 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsFunding(false);
     }
-  }, [address, type, refreshBalances]);
+  }, [mode, address, type, refreshBalances]);
 
   // Refresh balances when address changes
   useEffect(() => {
     if (address) refreshBalances();
   }, [address, refreshBalances]);
 
-  // Auto-reconnect demo wallet on page load/refresh
+  // Auto-reconnect demo wallet on page load/refresh (skip in browser-only mode)
   useEffect(() => {
+    if (mode === "browser") return;
     if (typeof window !== "undefined") {
       const pk = sessionStorage.getItem(DEMO_KEY_STORAGE);
       if (pk) connectDemo();
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-connect browser wallet on mount (silent, no popup)
+  // Auto-connect browser wallet on mount (silent, no popup; skip in demo-only mode)
   useEffect(() => {
+    if (mode === "demo") return;
     if (hasAutoConnectAttempted.current) return;
     hasAutoConnectAttempted.current = true;
 
