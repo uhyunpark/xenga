@@ -15,6 +15,7 @@ import type { PaymentRequired, PaymentPayload } from "@/lib/api/payment-flow";
 import type { ReputationScore } from "@shared/types";
 import { escrowVaultAbi } from "@shared/abi.js";
 import { baseSepolia } from "viem/chains";
+import { AddressDisplay } from "@/components/ui/AddressDisplay";
 import { ReputationBadge } from "@/components/ui/ReputationBadge";
 import { TxLink } from "@/components/ui/TxLink";
 import { ProductGrid, type Product } from "./ProductGrid";
@@ -597,7 +598,7 @@ export function PaymentFlow() {
                       {walletType === "demo" && usdcBalance !== null && (
                         <div className="panel-surface mb-3 flex items-center justify-between rounded-lg px-3 py-2 text-xs">
                           <div className="flex items-center gap-2 text-text-tertiary">
-                            <span className="font-mono">{address?.slice(0, 6)}...{address?.slice(-4)}</span>
+                            <AddressDisplay address={address!} full className="text-xs" />
                             <span className="text-text-primary font-medium">{usdcBalance} USDC</span>
                           </div>
                           <button
