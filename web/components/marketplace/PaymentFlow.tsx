@@ -633,7 +633,24 @@ export function PaymentFlow() {
                       )}
                     </div>
                   ) : (
-                    <ProductGrid onSelect={handleSelectProduct} />
+                    <>
+                      {walletType === "demo" && usdcBalance !== null && (
+                        <div className="panel-surface mb-3 flex items-center justify-between rounded-lg px-3 py-2 text-xs">
+                          <div className="flex items-center gap-2 text-text-tertiary">
+                            <span className="font-mono">{address?.slice(0, 6)}...{address?.slice(-4)}</span>
+                            <span className="text-text-primary font-medium">{usdcBalance} USDC</span>
+                          </div>
+                          <button
+                            onClick={fundDemoWallet}
+                            disabled={isFunding}
+                            className="text-accent hover:underline disabled:opacity-50"
+                          >
+                            {isFunding ? "Funding..." : "Get More"}
+                          </button>
+                        </div>
+                      )}
+                      <ProductGrid onSelect={handleSelectProduct} />
+                    </>
                   )}
                 </motion.div>
               )}

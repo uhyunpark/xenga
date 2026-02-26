@@ -832,6 +832,16 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
           <span className="rounded-full border border-border-default bg-bg-primary/55 px-2 py-0.5 text-[10px] uppercase tracking-wide text-text-tertiary">
             {lines.length} log lines
           </span>
+          {walletType === "demo" && usdcBalance !== null && (
+            <>
+              <span className="rounded-full border border-border-default bg-bg-primary/55 px-2 py-0.5 text-[10px] uppercase tracking-wide text-text-tertiary">
+                <span className="font-mono">{address?.slice(0, 6)}...{address?.slice(-4)}</span>
+              </span>
+              <span className="rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent">
+                {usdcBalance} USDC
+              </span>
+            </>
+          )}
 
           {!isRunning && !isComplete && (
             <div className="w-full flex flex-wrap justify-center gap-2">
