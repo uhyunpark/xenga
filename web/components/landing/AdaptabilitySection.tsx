@@ -155,13 +155,13 @@ export function AdaptabilitySection() {
   const isInView = useInView(ref, { once: true, margin: "-50px" });
 
   return (
-    <section className="px-4 py-20" ref={ref}>
+    <section className="px-4 py-24" ref={ref}>
       <div className="mx-auto max-w-6xl">
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.4 }}
-          className="mb-4 text-center text-2xl font-semibold md:text-3xl"
+          className="mb-4 text-center text-3xl font-semibold text-text-primary"
         >
           Built to Fit Your Stack
         </motion.h2>
@@ -169,7 +169,7 @@ export function AdaptabilitySection() {
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.4, delay: 0.1 }}
-          className="mb-10 text-center text-text-secondary"
+          className="mb-10 text-center text-base text-text-secondary max-w-2xl mx-auto"
         >
           Drop-in escrow infrastructure for any framework. Use built-in service
           types or define your own.
@@ -183,7 +183,7 @@ export function AdaptabilitySection() {
               initial={{ opacity: 0, y: 20 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.4, delay: 0.2 + i * 0.1 }}
-              className="flex flex-col panel-surface rounded-2xl p-5"
+              className="flex flex-col rounded-xl border border-border-default bg-bg-secondary shadow-sm hover:shadow-md transition-shadow p-5"
             >
               <div className="mb-3 flex items-center gap-2">
                 <div className={`rounded-lg p-2 ${colorMap[card.color].iconBg}`}>
@@ -217,7 +217,7 @@ export function AdaptabilitySection() {
           transition={{ duration: 0.4, delay: 0.5 }}
           className="mx-auto mt-8 max-w-4xl"
         >
-          <div className="panel-surface overflow-hidden rounded-2xl">
+          <div className="panel-surface overflow-hidden rounded-2xl shadow-sm">
             <div className="flex border-b border-border-default bg-bg-tertiary/55">
               {codeTabs.map((tab, i) => (
                 <button

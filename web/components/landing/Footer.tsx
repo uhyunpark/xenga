@@ -103,7 +103,7 @@ export function Footer() {
                     href="https://sepolia.basescan.org"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="block text-sm text-text-secondary transition-colors hover:text-text-primary"
+                    className="block text-sm text-text-secondary transition-colors hover:text-accent"
                   >
                     BaseScan (Sepolia)
                   </a>
@@ -111,7 +111,7 @@ export function Footer() {
                     href="https://www.circle.com/en/multi-chain-usdc/base"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="block text-sm text-text-secondary transition-colors hover:text-text-primary"
+                    className="block text-sm text-text-secondary transition-colors hover:text-accent"
                   >
                     USDC on Base
                   </a>

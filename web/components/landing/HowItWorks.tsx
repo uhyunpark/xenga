@@ -38,12 +38,12 @@ export function HowItWorks() {
   const isInView = useInView(ref, { once: true, margin: "-50px" });
 
   return (
-    <section className="px-4 py-20" ref={ref}>
+    <section className="px-4 py-24" ref={ref}>
       <div className="mx-auto max-w-4xl">
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          className="mb-4 text-center text-2xl font-semibold md:text-3xl"
+          className="mb-4 text-center text-3xl font-semibold text-text-primary"
         >
           Add escrow payments in minutes
         </motion.h2>
@@ -51,7 +51,7 @@ export function HowItWorks() {
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ delay: 0.1 }}
-          className="mb-10 text-center text-text-secondary"
+          className="mb-10 text-center text-base text-text-secondary max-w-2xl mx-auto"
         >
           Two SDK calls — client and server. The rest is handled on-chain.
         </motion.p>
@@ -60,7 +60,7 @@ export function HowItWorks() {
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ delay: 0.2 }}
-          className="panel-surface overflow-hidden rounded-2xl"
+          className="panel-surface overflow-hidden rounded-2xl shadow-sm"
         >
           {/* Tab bar */}
           <div className="flex border-b border-border-default bg-bg-tertiary/55">

@@ -54,13 +54,13 @@ export function ReputationSection() {
   const isInView = useInView(ref, { once: true, margin: "-50px" });
 
   return (
-    <section className="px-4 py-20" ref={ref}>
+    <section className="px-4 py-24" ref={ref}>
       <div className="mx-auto max-w-6xl">
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.4 }}
-          className="mb-4 text-center text-2xl font-semibold md:text-3xl"
+          className="mb-4 text-center text-3xl font-semibold text-text-primary"
         >
           On-Chain Reputation System
         </motion.h2>
@@ -68,7 +68,7 @@ export function ReputationSection() {
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.4, delay: 0.1 }}
-          className="mb-10 text-center text-text-secondary"
+          className="mb-10 text-center text-base text-text-secondary max-w-2xl mx-auto"
         >
           Every escrow outcome builds a permissionless credit score that shapes future transaction terms.
         </motion.p>
@@ -79,7 +79,7 @@ export function ReputationSection() {
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.4, delay: 0.2 }}
-            className="panel-surface rounded-2xl p-5"
+            className="rounded-xl border border-border-default bg-bg-secondary shadow-sm hover:shadow-md transition-shadow p-5"
           >
             <div className="mb-3 flex items-center gap-2">
               <div className="rounded-lg bg-accent/10 p-2 text-accent">
@@ -109,7 +109,7 @@ export function ReputationSection() {
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.4, delay: 0.3 }}
-            className="panel-surface rounded-2xl p-5"
+            className="rounded-xl border border-border-default bg-bg-secondary shadow-sm hover:shadow-md transition-shadow p-5"
           >
             <div className="mb-3 flex items-center gap-2">
               <div className="rounded-lg bg-success/10 p-2 text-success">
@@ -142,7 +142,7 @@ export function ReputationSection() {
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.4, delay: 0.4 }}
-            className="panel-surface rounded-2xl p-5"
+            className="rounded-xl border border-border-default bg-bg-secondary shadow-sm hover:shadow-md transition-shadow p-5"
           >
             <div className="mb-3 flex items-center gap-2">
               <div className="rounded-lg bg-accent-purple/10 p-2 text-accent-purple">

@@ -46,12 +46,12 @@ export function DemoCards() {
   const isInView = useInView(ref, { once: true, margin: "-50px" });
 
   return (
-    <section className="px-4 py-20" ref={ref}>
+    <section className="px-4 py-24" ref={ref}>
       <div className="mx-auto max-w-6xl">
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          className="mb-4 text-center text-2xl font-semibold md:text-3xl"
+          className="mb-4 text-center text-3xl font-semibold text-text-primary"
         >
           Choose Your Demo Path
         </motion.h2>
@@ -59,7 +59,7 @@ export function DemoCards() {
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ delay: 0.1 }}
-          className="mb-10 text-center text-text-secondary"
+          className="mb-10 text-center text-base text-text-secondary max-w-2xl mx-auto"
         >
           {isMockChainClient
             ? "Test interactive and autonomous escrow flows with simulated protocol events."
@@ -75,13 +75,13 @@ export function DemoCards() {
               transition={{ delay: 0.2 + i * 0.1 }}
             >
               <Link href={demo.href} className="group block">
-                <div className="panel-surface rounded-2xl p-6 transition-all duration-200 hover:border-border-active hover:shadow-sm">
+                <div className="rounded-xl border border-border-default bg-bg-secondary p-6 shadow-sm hover:shadow-md transition-shadow">
                   <div className="mb-4 flex items-center justify-between">
                     <div
                       className={`rounded-lg p-2.5 ${
                         demo.color === "accent"
                           ? "bg-accent/10 text-accent"
-                          : demo.color === "accent-green"
+                          : demo.color === "success"
                             ? "bg-success/10 text-success"
                             : demo.color === "warning"
                               ? "bg-warning/10 text-warning"
@@ -94,7 +94,7 @@ export function DemoCards() {
                       className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
                         demo.color === "accent"
                           ? "bg-accent/10 text-accent"
-                          : demo.color === "accent-green"
+                          : demo.color === "success"
                             ? "bg-success/10 text-success"
                             : demo.color === "warning"
                               ? "bg-warning/10 text-warning"
@@ -120,7 +120,7 @@ export function DemoCards() {
                       </div>
                     ))}
                   </div>
-                  <div className="mt-4 flex items-center gap-1 text-sm font-medium text-text-tertiary transition-colors group-hover:text-text-primary">
+                  <div className="mt-4 flex items-center gap-1 text-sm font-medium text-text-tertiary transition-colors group-hover:text-accent">
                     Start Demo
                     <svg
                       width="14"

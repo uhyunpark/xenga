@@ -19,25 +19,25 @@ export function ProtocolFlow() {
   const isInView = useInView(ref, { once: true, margin: "-100px" });
 
   return (
-    <section className="px-4 py-20" ref={ref}>
+    <section className="px-4 py-24" ref={ref}>
       <div className="mx-auto max-w-7xl">
         <motion.h2
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
-          className="mb-12 text-center text-2xl font-semibold md:text-3xl"
+          className="mb-12 text-center text-3xl font-semibold text-text-primary"
         >
           End-to-End Escrow Settlement Flow
         </motion.h2>
 
         <div className="panel-surface rounded-2xl p-4 md:p-5">
-          <div className="grid gap-3 pb-1 grid-cols-2 sm:grid-cols-4 lg:grid-cols-8">
+          <div className="grid gap-4 pb-1 grid-cols-2 sm:grid-cols-4 lg:grid-cols-8">
             {steps.map((step, i) => (
               <motion.div
                 key={step.label}
                 initial={{ opacity: 0, y: 20 }}
                 animate={isInView ? { opacity: 1, y: 0 } : {}}
                 transition={{ delay: i * 0.06 }}
-                className="flex min-h-[88px] rounded-xl border border-border-default bg-bg-secondary p-3"
+                className="flex min-h-[88px] rounded-xl border border-border-default bg-bg-secondary p-3 shadow-sm"
               >
                 <div className="flex h-full flex-col">
                   <span
@@ -46,7 +46,7 @@ export function ProtocolFlow() {
                         ? "border-warning/30 bg-warning/10 text-warning"
                         : step.icon === "★"
                           ? "border-success/30 bg-success/10 text-success"
-                          : "border-accent/30 bg-accent/10 text-accent"
+                          : "border-accent/30 bg-accent-light text-accent"
                     }`}
                   >
                     {step.icon}
