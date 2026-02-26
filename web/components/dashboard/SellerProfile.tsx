@@ -62,7 +62,7 @@ export function SellerProfile() {
   };
 
   return (
-    <div className="panel-surface rounded-xl p-6">
+    <div className="rounded-xl border border-border-default bg-bg-secondary p-6 shadow-sm">
       <h3 className="text-sm font-semibold">Seller Profile</h3>
 
       <div className="mt-4 space-y-4">
@@ -76,7 +76,7 @@ export function SellerProfile() {
             onChange={(e) => setName(e.target.value)}
             maxLength={100}
             placeholder="Your business name"
-            className="mt-1 w-full rounded-lg border border-border-default bg-bg-primary px-3 py-2 text-sm outline-none transition-colors focus:border-accent"
+            className="mt-1 w-full rounded-lg border border-border-default bg-bg-primary px-3 py-2 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent/20"
           />
         </div>
 
@@ -96,13 +96,13 @@ export function SellerProfile() {
           <p className="text-xs text-error">{error}</p>
         )}
         {success && (
-          <p className="text-xs text-success">Profile saved successfully.</p>
+          <p className="rounded-lg border border-accent-muted bg-accent-light px-3 py-2 text-xs text-accent">Profile saved successfully.</p>
         )}
 
         <button
           onClick={handleSave}
           disabled={saving || (isRegistered && name.trim() === (savedName || ""))}
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
+          className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
         >
           {saving ? "Saving..." : isRegistered ? "Update Profile" : "Register as Seller"}
         </button>

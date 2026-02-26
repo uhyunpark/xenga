@@ -96,7 +96,7 @@ export function OrderActions({ order, onComplete }: OrderActionsProps) {
             <button
               onClick={() => executeAction(confirmDialog as "confirmDelivery" | "refund")}
               disabled={!!pending}
-              className="rounded-md bg-accent px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
+              className="rounded-md bg-accent px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
             >
               {pending ? "Signing..." : "Confirm"}
             </button>
@@ -116,7 +116,7 @@ export function OrderActions({ order, onComplete }: OrderActionsProps) {
             <button
               onClick={() => setConfirmDialog("confirmDelivery")}
               disabled={!!pending}
-              className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
+              className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
             >
               {pending === "confirmDelivery" ? "Signing..." : "Confirm Delivery"}
             </button>
@@ -125,7 +125,7 @@ export function OrderActions({ order, onComplete }: OrderActionsProps) {
             <button
               onClick={() => setConfirmDialog("refund")}
               disabled={!!pending}
-              className="rounded-md border border-error/30 px-3 py-1.5 text-xs font-medium text-error transition-colors hover:bg-error/10 disabled:opacity-50"
+              className="rounded-md border border-border-default px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-bg-tertiary disabled:opacity-50"
             >
               {pending === "refund" ? "Signing..." : "Refund"}
             </button>

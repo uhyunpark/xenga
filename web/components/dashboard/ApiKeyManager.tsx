@@ -112,7 +112,7 @@ export function ApiKeyManager() {
   return (
     <div className="space-y-6">
       {/* Create new key */}
-      <div className="panel-surface rounded-xl p-6">
+      <div className="rounded-xl border border-border-default bg-bg-secondary p-6 shadow-sm">
         <h3 className="text-sm font-semibold">Create API Key</h3>
         <p className="mt-1 text-xs text-text-tertiary">
           Use API keys to authenticate programmatic requests to the Xenga API.
@@ -125,12 +125,12 @@ export function ApiKeyManager() {
             onChange={(e) => setNewKeyName(e.target.value)}
             placeholder="Key name (optional)"
             maxLength={100}
-            className="flex-1 rounded-lg border border-border-default bg-bg-primary px-3 py-2 text-sm outline-none focus:border-accent"
+            className="flex-1 rounded-lg border border-border-default bg-bg-primary px-3 py-2 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent/20"
           />
           <button
             onClick={handleCreate}
             disabled={creating}
-            className="shrink-0 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
+            className="shrink-0 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
           >
             {creating ? "Creating..." : "Create Key"}
           </button>
@@ -138,8 +138,8 @@ export function ApiKeyManager() {
 
         {/* Show new key (only visible once, right after creation) */}
         {newKeyValue && (
-          <div className="mt-3 rounded-lg border border-success/30 bg-success/10 p-3">
-            <p className="text-xs font-medium text-success">
+          <div className="mt-3 rounded-lg border border-accent-muted bg-accent-light p-3">
+            <p className="text-xs font-medium text-accent">
               Key created! Copy it now &mdash; it won&apos;t be shown again.
             </p>
             <div className="mt-2 flex items-center gap-2">
@@ -148,7 +148,7 @@ export function ApiKeyManager() {
               </code>
               <button
                 onClick={copyKey}
-                className="shrink-0 rounded-md border border-border-default px-2 py-1 text-xs hover:bg-bg-tertiary"
+                className="shrink-0 rounded-md border border-accent/30 px-2 py-1 text-xs text-accent hover:bg-accent/10"
               >
                 {copied ? "Copied!" : "Copy"}
               </button>
@@ -160,7 +160,7 @@ export function ApiKeyManager() {
       </div>
 
       {/* Existing keys */}
-      <div className="panel-surface rounded-xl">
+      <div className="rounded-xl border border-border-default bg-bg-secondary shadow-sm">
         <div className="border-b border-border-default px-4 py-3">
           <h3 className="text-sm font-semibold">Active Keys</h3>
         </div>

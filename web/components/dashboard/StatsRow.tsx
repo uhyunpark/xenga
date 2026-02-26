@@ -9,13 +9,13 @@ interface StatCardProps {
 
 function StatCard({ label, value, accent, warn }: StatCardProps) {
   return (
-    <div className="panel-surface rounded-xl p-4">
+    <div className="rounded-xl border border-border-default bg-bg-secondary p-4 shadow-sm">
       <p className="text-xs font-medium uppercase tracking-wide text-text-tertiary">
         {label}
       </p>
       <p
         className={`mt-1 text-2xl font-light ${
-          warn ? "text-warning" : accent ? "text-success" : "text-text-primary"
+          warn ? "text-warning" : accent ? "text-accent" : "text-text-primary"
         }`}
       >
         {value}

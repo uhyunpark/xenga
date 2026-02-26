@@ -80,7 +80,7 @@ export function WalletGate({ children }: { children: React.ReactNode }) {
     actionButton = (
       <button
         onClick={signIn}
-        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90"
+        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
       >
         Retry Sign In
       </button>
@@ -108,7 +108,7 @@ export function WalletGate({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center">
-      <div className="panel-surface mx-auto max-w-md rounded-2xl p-8 text-center">
+      <div className="mx-auto max-w-md rounded-2xl border border-border-default bg-bg-secondary p-8 text-center shadow-md">
         <h2 className="text-xl font-bold">{title}</h2>
         <p className="mt-2 text-sm text-text-secondary">{description}</p>
         {error && !walletError && (

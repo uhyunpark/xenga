@@ -27,19 +27,19 @@ export function ActivityFeed({ orders }: { orders: OrderEvent[] }) {
 
   if (recent.length === 0) {
     return (
-      <div className="panel-surface rounded-xl p-6 text-center text-sm text-text-secondary">
+      <div className="rounded-xl border border-border-default bg-bg-secondary p-6 text-center text-sm text-text-secondary shadow-sm">
         No orders yet. Create a payment link or integrate via API to get started.
       </div>
     );
   }
 
   return (
-    <div className="panel-surface rounded-xl">
+    <div className="rounded-xl border border-border-default bg-bg-secondary shadow-sm">
       <div className="flex items-center justify-between border-b border-border-default px-4 py-3">
         <h3 className="text-sm font-semibold">Recent Activity</h3>
         <Link
           href="/dashboard/orders"
-          className="text-xs text-accent hover:text-accent/80"
+          className="text-xs text-accent hover:text-accent-hover"
         >
           View all orders &rarr;
         </Link>
@@ -48,7 +48,7 @@ export function ActivityFeed({ orders }: { orders: OrderEvent[] }) {
         {recent.map((order) => (
           <div
             key={order.id}
-            className="flex items-center justify-between px-4 py-3"
+            className="flex items-center justify-between px-4 py-3 transition-colors hover:bg-bg-tertiary"
           >
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">{order.title}</p>

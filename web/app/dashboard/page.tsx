@@ -99,8 +99,8 @@ export default function DashboardOverview() {
       <ActivityFeed orders={orders} />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="panel-surface rounded-xl p-4">
-          <h3 className="text-sm font-semibold">Payment Links</h3>
+        <div className="rounded-xl border border-border-default bg-bg-secondary p-4 shadow-sm">
+          <h3 className="text-sm font-semibold text-accent">Payment Links</h3>
           <p className="mt-1 text-xs text-text-tertiary">
             Create shareable checkout links for buyers.
           </p>
@@ -108,8 +108,8 @@ export default function DashboardOverview() {
             Coming soon
           </span>
         </div>
-        <div className="panel-surface rounded-xl p-4">
-          <h3 className="text-sm font-semibold">API Documentation</h3>
+        <div className="rounded-xl border border-border-default bg-bg-secondary p-4 shadow-sm">
+          <h3 className="text-sm font-semibold text-accent">API Documentation</h3>
           <p className="mt-1 text-xs text-text-tertiary">
             Integrate Xenga escrow into your backend.
           </p>

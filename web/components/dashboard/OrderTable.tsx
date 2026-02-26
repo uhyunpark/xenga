@@ -62,36 +62,39 @@ export function OrderTable({ orders, actionSlot }: OrderTableProps) {
   return (
     <div className="space-y-4">
       {/* Filter tabs */}
-      <div className="flex gap-1 rounded-lg border border-border-default bg-bg-secondary p-1">
+      <div className="flex gap-4 border-b border-border-default">
         {FILTER_TABS.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setFilter(tab.key)}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`relative px-1 pb-2 text-xs font-medium transition-colors ${
               filter === tab.key
-                ? "bg-accent/10 text-accent"
+                ? "text-accent"
                 : "text-text-secondary hover:text-text-primary"
             }`}
           >
             {tab.label}
+            {filter === tab.key && (
+              <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-accent" />
+            )}
           </button>
         ))}
       </div>
 
       {/* Order list */}
       {filtered.length === 0 ? (
-        <div className="panel-surface rounded-xl p-8 text-center text-sm text-text-secondary">
+        <div className="rounded-xl border border-border-default bg-bg-secondary p-8 text-center text-sm text-text-secondary shadow-sm">
           No orders match this filter.
         </div>
       ) : (
-        <div className="panel-surface divide-y divide-border-default rounded-xl">
+        <div className="divide-y divide-border-default rounded-xl border border-border-default bg-bg-secondary shadow-sm">
           {filtered.map((order) => (
             <div key={order.id}>
               <button
                 onClick={() =>
                   setExpandedId(expandedId === order.id ? null : order.id)
                 }
-                className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-bg-tertiary/50"
+                className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-bg-tertiary"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
@@ -117,8 +120,8 @@ export function OrderTable({ orders, actionSlot }: OrderTableProps) {
                   </div>
                 </div>
                 <svg
-                  className={`ml-2 h-4 w-4 shrink-0 text-text-tertiary transition-transform ${
-                    expandedId === order.id ? "rotate-180" : ""
+                  className={`ml-2 h-4 w-4 shrink-0 transition-transform ${
+                    expandedId === order.id ? "rotate-180 text-accent" : "text-text-tertiary"
                   }`}
                   viewBox="0 0 16 16"
                   fill="none"
@@ -135,7 +138,7 @@ export function OrderTable({ orders, actionSlot }: OrderTableProps) {
 
               {/* Inline detail panel */}
               {expandedId === order.id && (
-                <div className="border-t border-border-default bg-bg-tertiary/30 px-4 py-3">
+                <div className="border-t border-border-default bg-bg-tertiary/30 px-4 py-3 shadow-sm">
                   <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
                     <div>
                       <span className="text-text-tertiary">Escrow ID</span>
