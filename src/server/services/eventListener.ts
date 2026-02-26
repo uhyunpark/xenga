@@ -8,6 +8,7 @@ import {
   EVENT_LISTENER_MAX_RETRIES,
   EVENT_LISTENER_BASE_BACKOFF_MS,
   EVENT_LISTENER_MAX_BACKOFF_MS,
+  EVENT_LISTENER_POLL_INTERVAL_MS,
 } from "../../shared/constants.js";
 import { config } from "../config.js";
 import { getDb } from "../db/index.js";
@@ -19,7 +20,11 @@ import { confirmDeliveryOnChain } from "../facilitator/settler.js";
 
 let _publicClient: ReturnType<typeof createPublicClient> | undefined;
 const getPublicClient = () => {
-  if (!_publicClient) _publicClient = createPublicClient({ chain: CHAIN, transport: http(config.rpcUrl) });
+  if (!_publicClient) _publicClient = createPublicClient({
+    chain: CHAIN,
+    transport: http(config.rpcUrl),
+    pollingInterval: EVENT_LISTENER_POLL_INTERVAL_MS,
+  });
   return _publicClient;
 };
 
@@ -50,87 +55,36 @@ export function startEventListener() {
     logger.error("events", `Startup reconciliation failed: ${(err as Error).message}`);
   });
 
-  // Watch EscrowCreated events
-  watchWithReconnect(client, "EscrowCreated", (logs) => {
-    for (const log of logs) {
-      const args = log.args as any;
-      logger.info("events", `EscrowCreated: escrowId=${args.escrowId}, orderId=${args.orderId}`);
-      trackBlock(log.blockNumber);
-      saveEvent("EscrowCreated", Number(args.escrowId), log);
-      syncOrderStatus(args.orderId, "escrowed");
-      scheduleAutoVerify(Number(args.escrowId), args.orderId);
-    }
-  });
+  // Single consolidated watcher for all EscrowVault events (saves ~7x RPC calls)
+  const statusMap: Record<string, OrderStatus> = {
+    EscrowCreated: "escrowed",
+    DeliveryConfirmed: "delivery_confirmed",
+    EscrowReleased: "completed",
+    EscrowAutoReleased: "completed",
+    EscrowDisputed: "disputed",
+    DisputeResolved: "resolved",
+    EscrowRefunded: "refunded",
+  };
 
-  // Watch DeliveryConfirmed events
-  watchWithReconnect(client, "DeliveryConfirmed", (logs) => {
+  watchWithReconnect(client, (logs) => {
     for (const log of logs) {
       const args = log.args as any;
-      logger.info("events", `DeliveryConfirmed: escrowId=${args.escrowId}`);
-      trackBlock(log.blockNumber);
-      saveEvent("DeliveryConfirmed", Number(args.escrowId), log);
-      const orderId = getEscrowOrderId(Number(args.escrowId));
-      if (orderId) syncOrderStatus(orderId, "delivery_confirmed");
-    }
-  });
+      const eventName = (log as any).eventName as string;
 
-  // Watch EscrowReleased events
-  watchWithReconnect(client, "EscrowReleased", (logs) => {
-    for (const log of logs) {
-      const args = log.args as any;
-      logger.info("events", `EscrowReleased: escrowId=${args.escrowId}`);
-      trackBlock(log.blockNumber);
-      saveEvent("EscrowReleased", Number(args.escrowId), log);
-      const orderId = getEscrowOrderId(Number(args.escrowId));
-      if (orderId) syncOrderStatus(orderId, "completed");
-    }
-  });
+      if (!statusMap[eventName]) continue; // skip unknown events (e.g. owner/config events)
 
-  // Watch EscrowAutoReleased events
-  watchWithReconnect(client, "EscrowAutoReleased", (logs) => {
-    for (const log of logs) {
-      const args = log.args as any;
-      logger.info("events", `EscrowAutoReleased: escrowId=${args.escrowId}`);
+      logger.info("events", `${eventName}: escrowId=${args.escrowId}${eventName === "EscrowCreated" ? `, orderId=${args.orderId}` : ""}`);
       trackBlock(log.blockNumber);
-      saveEvent("EscrowAutoReleased", Number(args.escrowId), log);
-      const orderId = getEscrowOrderId(Number(args.escrowId));
-      if (orderId) syncOrderStatus(orderId, "completed");
-    }
-  });
+      saveEvent(eventName, Number(args.escrowId), log);
 
-  // Watch EscrowDisputed events
-  watchWithReconnect(client, "EscrowDisputed", (logs) => {
-    for (const log of logs) {
-      const args = log.args as any;
-      logger.info("events", `EscrowDisputed: escrowId=${args.escrowId}`);
-      trackBlock(log.blockNumber);
-      saveEvent("EscrowDisputed", Number(args.escrowId), log);
-      const orderId = getEscrowOrderId(Number(args.escrowId));
-      if (orderId) syncOrderStatus(orderId, "disputed");
-    }
-  });
+      const orderId = eventName === "EscrowCreated"
+        ? args.orderId
+        : getEscrowOrderId(Number(args.escrowId));
+      if (orderId) syncOrderStatus(orderId, statusMap[eventName]);
 
-  // Watch DisputeResolved events
-  watchWithReconnect(client, "DisputeResolved", (logs) => {
-    for (const log of logs) {
-      const args = log.args as any;
-      logger.info("events", `DisputeResolved: escrowId=${args.escrowId}`);
-      trackBlock(log.blockNumber);
-      saveEvent("DisputeResolved", Number(args.escrowId), log);
-      const orderId = getEscrowOrderId(Number(args.escrowId));
-      if (orderId) syncOrderStatus(orderId, "resolved");
-    }
-  });
-
-  // Watch EscrowRefunded events
-  watchWithReconnect(client, "EscrowRefunded", (logs) => {
-    for (const log of logs) {
-      const args = log.args as any;
-      logger.info("events", `EscrowRefunded: escrowId=${args.escrowId}`);
-      trackBlock(log.blockNumber);
-      saveEvent("EscrowRefunded", Number(args.escrowId), log);
-      const orderId = getEscrowOrderId(Number(args.escrowId));
-      if (orderId) syncOrderStatus(orderId, "refunded");
+      if (eventName === "EscrowCreated") {
+        scheduleAutoVerify(Number(args.escrowId), args.orderId);
+      }
     }
   });
 }
@@ -143,7 +97,6 @@ function trackBlock(blockNumber: bigint) {
 
 function watchWithReconnect(
   client: ReturnType<typeof createPublicClient>,
-  eventName: string,
   onLogs: (logs: any[]) => void
 ) {
   const contractAddress = config.escrowVaultAddress;
@@ -151,14 +104,13 @@ function watchWithReconnect(
 
   const startWatching = () => {
     if (retryCount >= EVENT_LISTENER_MAX_RETRIES) {
-      logger.error("events", `Max retries (${EVENT_LISTENER_MAX_RETRIES}) reached for ${eventName}. Giving up.`);
+      logger.error("events", `Max retries (${EVENT_LISTENER_MAX_RETRIES}) reached for event watcher. Giving up.`);
       return;
     }
 
     client.watchContractEvent({
       address: contractAddress,
       abi: escrowVaultAbi,
-      eventName: eventName as any,
       onLogs: (logs) => {
         retryCount = 0; // Reset on successful data
         onLogs(logs);
@@ -166,7 +118,7 @@ function watchWithReconnect(
       onError: (error) => {
         retryCount++;
         const backoffMs = Math.min(EVENT_LISTENER_BASE_BACKOFF_MS * Math.pow(2, retryCount - 1), EVENT_LISTENER_MAX_BACKOFF_MS);
-        logger.error("events", `Error watching ${eventName}, retrying in ${backoffMs}ms (attempt ${retryCount}/${EVENT_LISTENER_MAX_RETRIES})`, {
+        logger.error("events", `Error watching events, retrying in ${backoffMs}ms (attempt ${retryCount}/${EVENT_LISTENER_MAX_RETRIES})`, {
           error: (error as Error).message,
         });
         setTimeout(startWatching, backoffMs);
