@@ -1,15 +1,17 @@
 import type { Address } from "viem";
-import { USDC_ADDRESS, CHAIN_ID } from "./constants.js";
+import { USDC_ADDRESS, CHAIN_ID, getChainConfig } from "./constants.js";
 
 /**
  * EIP-712 domain for USDC.
  * Accepts optional chainId and usdcAddress overrides for multi-chain support.
+ * The domain name varies by chain (Base Sepolia = "USDC", Base mainnet = "USD Coin").
  */
 export function getUsdcEip712Domain(usdcAddress?: Address, chainId?: number) {
+  const resolvedChainId = chainId ?? CHAIN_ID;
   return {
-    name: "USD Coin",
+    name: getChainConfig(resolvedChainId).usdcDomainName,
     version: "2",
-    chainId: BigInt(chainId ?? CHAIN_ID),
+    chainId: BigInt(resolvedChainId),
     verifyingContract: usdcAddress ?? (USDC_ADDRESS as Address),
   } as const;
 }

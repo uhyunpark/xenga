@@ -7,6 +7,8 @@ export interface ChainConfig {
   chain: Chain;
   chainId: number;
   usdcAddress: `0x${string}`;
+  /** USDC contract's EIP-712 domain name (varies by chain deployment) */
+  usdcDomainName: string;
   defaultRpc: string;
   /** Network name used in xenga payment headers */
   network: string;
@@ -20,6 +22,7 @@ const CHAIN_CONFIGS: Record<number, ChainConfig> = {
     chain: baseSepolia,
     chainId: 84532,
     usdcAddress: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    usdcDomainName: "USDC",
     defaultRpc: "https://sepolia.base.org",
     network: "base-sepolia",
     isTestnet: true,
@@ -28,6 +31,7 @@ const CHAIN_CONFIGS: Record<number, ChainConfig> = {
     chain: base,
     chainId: 8453,
     usdcAddress: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    usdcDomainName: "USD Coin",
     defaultRpc: "https://mainnet.base.org",
     network: "base",
     isTestnet: false,
@@ -67,7 +71,7 @@ export const USDC_DECIMALS = 6;
 // EIP-712 domain for USDC on Base Sepolia
 /** @deprecated Use `getUsdcEip712Domain()` from eip712.ts with explicit chainId */
 export const USDC_EIP712_DOMAIN = {
-  name: "USD Coin",
+  name: "USDC",
   version: "2",
   chainId: CHAIN_ID,
   // verifyingContract is USDC_ADDRESS — set dynamically in signing code

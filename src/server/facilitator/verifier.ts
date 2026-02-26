@@ -40,7 +40,7 @@ export async function verifyEscrowPayment(
     // Verify the signature recovers to the `from` address
     const valid = await verifyTypedData({
       address: payload.from,
-      domain: getUsdcEip712Domain(config.usdcAddress),
+      domain: getUsdcEip712Domain(config.usdcAddress, config.chainConfig.chainId),
       types: receiveWithAuthorizationTypes,
       primaryType: "ReceiveWithAuthorization",
       message,

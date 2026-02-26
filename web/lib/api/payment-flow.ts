@@ -2,6 +2,7 @@ import type { WalletClient, Address, Hash } from "viem";
 import { keccak256, toHex } from "viem";
 import type { InspectorEvent } from "@/lib/protocol-inspector/context";
 import { buildReceiveAuthSigningParams } from "@shared/eip712.js";
+import { networkToChainId } from "@shared/constants.js";
 import { facilitatorUrl } from "./client";
 
 export interface PaymentRequired {
@@ -140,6 +141,7 @@ export async function signPayment(
     amount: BigInt(paymentRequired.amount),
     nonce,
     usdcAddress: paymentRequired.asset,
+    chainId: networkToChainId(paymentRequired.network),
   });
 
   emit?.({
