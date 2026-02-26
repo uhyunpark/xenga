@@ -70,37 +70,76 @@ export function PreviewFlow({ onExit }: { onExit: () => void }) {
 
       {currentIndex >= 0 && (
         <>
-          {/* Step progress bar */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-2">
-            {PREVIEW_STEPS.map((step, i) => (
-              <div key={step.id} className="flex items-center gap-1.5">
-                <div
-                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-medium transition-colors ${
-                    i < currentIndex
-                      ? "bg-success text-bg-primary"
-                      : i === currentIndex
-                        ? "bg-accent text-bg-primary"
-                        : "border border-border-default text-text-tertiary"
-                  }`}
+          {/* Step progress / completed actions */}
+          {!running && currentIndex >= PREVIEW_STEPS.length - 1 ? (
+            <div className="flex gap-4">
+              {/* Compact vertical step checklist */}
+              <div className="flex-1 space-y-1.5">
+                {PREVIEW_STEPS.map((step) => (
+                  <div key={step.id} className="flex items-center gap-2">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
+                      <svg className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                        <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
+                    <span className="text-xs text-text-secondary">{step.label}</span>
+                  </div>
+                ))}
+              </div>
+              {/* Action buttons */}
+              <div className="flex shrink-0 flex-col justify-center gap-2">
+                <button
+                  onClick={() => {
+                    setCurrentIndex(-1);
+                    setRunning(false);
+                  }}
+                  className="rounded-lg border border-border-default px-4 py-2 text-sm text-text-secondary transition-colors hover:border-border-active hover:text-text-primary"
                 >
-                  {i < currentIndex ? (
-                    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                      <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  ) : (
-                    i + 1
+                  Replay
+                </button>
+                <button
+                  onClick={onExit}
+                  className="flex items-center justify-center gap-1.5 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-bg-primary transition-colors hover:bg-accent/90"
+                >
+                  Try It Live
+                  <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M2.5 6h7M6.5 3l3 3-3 3" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-2">
+              {PREVIEW_STEPS.map((step, i) => (
+                <div key={step.id} className="flex items-center gap-1.5">
+                  <div
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-medium transition-colors ${
+                      i < currentIndex
+                        ? "bg-success text-bg-primary"
+                        : i === currentIndex
+                          ? "bg-accent text-bg-primary"
+                          : "border border-border-default text-text-tertiary"
+                    }`}
+                  >
+                    {i < currentIndex ? (
+                      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                        <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    ) : (
+                      i + 1
+                    )}
+                  </div>
+                  {i < PREVIEW_STEPS.length - 1 && (
+                    <div
+                      className={`h-px w-4 shrink-0 ${
+                        i < currentIndex ? "bg-success" : "bg-border-default"
+                      }`}
+                    />
                   )}
                 </div>
-                {i < PREVIEW_STEPS.length - 1 && (
-                  <div
-                    className={`h-px w-4 shrink-0 ${
-                      i < currentIndex ? "bg-success" : "bg-border-default"
-                    }`}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* Stacked step cards — descending order (latest on top) */}
           <div ref={topRef} />
@@ -159,26 +198,6 @@ export function PreviewFlow({ onExit }: { onExit: () => void }) {
             </AnimatePresence>
           </div>
 
-          {/* Completed state */}
-          {!running && currentIndex >= PREVIEW_STEPS.length - 1 && (
-            <div className="flex items-center justify-center gap-3">
-              <button
-                onClick={() => {
-                  setCurrentIndex(-1);
-                  setRunning(false);
-                }}
-                className="rounded-lg border border-border-default px-4 py-2 text-sm text-text-secondary transition-colors hover:border-border-active hover:text-text-primary"
-              >
-                Replay
-              </button>
-              <button
-                onClick={onExit}
-                className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-bg-primary transition-colors hover:bg-accent/90"
-              >
-                Try It Live
-              </button>
-            </div>
-          )}
         </>
       )}
     </div>

@@ -18,6 +18,7 @@ import { baseSepolia } from "viem/chains";
 import { AddressDisplay } from "@/components/ui/AddressDisplay";
 import { ReputationBadge } from "@/components/ui/ReputationBadge";
 import { TxLink } from "@/components/ui/TxLink";
+import { isMockChainClient } from "@/lib/env/isMockChainClient";
 import { ProductGrid, type Product } from "./ProductGrid";
 import { BUYER_STEPS, StepTracker, type BuyerStep, type PaySubStep } from "./StepTracker";
 import { SellerPanel } from "./SellerPanel";
@@ -347,6 +348,8 @@ export function PaymentFlow() {
         dispatch({ type: "SET_ORDER", orderId: data.id, orderData: data });
       }
 
+      await new Promise(r => setTimeout(r, 1500));
+
       // Step 2: Request payment (402)
       dispatch({ type: "SET_PAY_SUBSTEP", paySubStep: "requesting_payment" });
       let paymentRequired: PaymentRequired;
@@ -367,10 +370,14 @@ export function PaymentFlow() {
         throw err;
       }
 
+      await new Promise(r => setTimeout(r, 1500));
+
       // Step 3: Sign EIP-712
       dispatch({ type: "SET_PAY_SUBSTEP", paySubStep: "signing" });
       const payload = await signPayment(walletClient, paymentRequired, inspector.addEvent);
       dispatch({ type: "SET_PAYMENT_PAYLOAD", paymentPayload: payload });
+
+      await new Promise(r => setTimeout(r, 1500));
 
       // Step 4: Submit on-chain
       dispatch({ type: "SET_PAY_SUBSTEP", paySubStep: "submitting" });
@@ -759,7 +766,33 @@ export function PaymentFlow() {
                 />
                 <MetaRow
                   label="Escrow"
-                  value={state.escrowId ? `#${state.escrowId}` : "Pending"}
+                  value={
+                    state.escrowId != null ? (
+                      !isMockChainClient && state.paymentRequired?.escrowContract ? (
+                        <a
+                          href={`https://sepolia.basescan.org/address/${state.paymentRequired.escrowContract}#readContract`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-accent transition-colors hover:text-accent/80"
+                        >
+                          <span>#{state.escrowId}</span>
+                          <svg
+                            className="h-3 w-3 shrink-0"
+                            viewBox="0 0 12 12"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                          >
+                            <path d="M3.5 1.5h7v7M10.5 1.5l-9 9" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </a>
+                      ) : (
+                        `#${state.escrowId}`
+                      )
+                    ) : (
+                      "Pending"
+                    )
+                  }
                 />
                 <MetaRow
                   label="Tx Hash"

@@ -4,13 +4,11 @@ import { useMemo } from "react";
 import { useInspector } from "@/lib/protocol-inspector/context";
 import { cn } from "@/lib/utils";
 import { HttpTrafficTab } from "./HttpTrafficTab";
-import { SignatureTab } from "./SignatureTab";
 import { OnChainTab } from "./OnChainTab";
 import { ReputationTab } from "./ReputationTab";
 
 const TABS = [
   { key: "http" as const, label: "HTTP Traffic", eventTypes: ["http_request", "http_response"] },
-  { key: "signatures" as const, label: "Signatures", eventTypes: ["eip712_sign", "signature_result"] },
   { key: "onchain" as const, label: "On-Chain", eventTypes: ["tx_submitted", "tx_confirmed", "state_change"] },
   { key: "reputation" as const, label: "Reputation", eventTypes: ["reputation_check"] },
 ];
@@ -54,7 +52,7 @@ export function InspectorPanel() {
       </div>
 
       {/* Desktop side panel */}
-      <div className="hidden h-[calc(100vh-4rem)] w-[430px] shrink-0 flex-col overflow-hidden border-l border-border-default bg-bg-secondary shadow-md md:flex">
+      <div className="hidden mt-8 h-[calc(100vh-6rem)] w-[430px] shrink-0 flex-col overflow-hidden border-l border-border-default bg-bg-secondary shadow-md md:flex">
         <PanelContent
           activeTab={activeTab}
           setTab={setTab}
@@ -168,7 +166,6 @@ function PanelContent({
       {/* Tab content */}
       <div className="min-h-0 flex-1 overflow-hidden p-3">
         {activeTab === "http" && <HttpTrafficTab />}
-        {activeTab === "signatures" && <SignatureTab />}
         {activeTab === "onchain" && <OnChainTab />}
         {activeTab === "reputation" && <ReputationTab />}
       </div>

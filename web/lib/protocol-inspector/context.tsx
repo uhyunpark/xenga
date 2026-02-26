@@ -28,7 +28,7 @@ export interface InspectorEvent {
 
 interface InspectorState {
   events: InspectorEvent[];
-  activeTab: "http" | "signatures" | "onchain" | "reputation";
+  activeTab: "http" | "onchain" | "reputation";
   isOpen: boolean;
   currentState?: string;
 }
@@ -91,11 +91,6 @@ export function InspectorProvider({ children }: { children: ReactNode }) {
       // Auto-switch tab based on event type
       if (event.type === "http_request" || event.type === "http_response") {
         dispatch({ type: "SET_TAB", tab: "http" });
-      } else if (
-        event.type === "eip712_sign" ||
-        event.type === "signature_result"
-      ) {
-        dispatch({ type: "SET_TAB", tab: "signatures" });
       } else if (
         event.type === "tx_submitted" ||
         event.type === "tx_confirmed"
