@@ -18,7 +18,7 @@ const codeLines = [
 
 export function HeroSection() {
   return (
-    <section className="relative overflow-hidden px-4 pb-20 pt-20 md:pt-24">
+    <section className="relative overflow-hidden px-4 py-20 md:py-32">
       <div className="bg-grid pointer-events-none absolute inset-0" />
 
       <div className="relative mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
@@ -27,11 +27,11 @@ export function HeroSection() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45 }}
         >
-          <span className="inline-flex rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-accent">
+          <span className="inline-flex rounded-full border border-accent-muted bg-accent-light px-3 py-1 text-xs font-semibold uppercase tracking-wide text-accent">
             Escrow + Reputation Protocol
           </span>
           <h1
-            className="gradient-text mt-5 pb-1 text-4xl font-light tracking-tight md:text-5xl lg:text-6xl"
+            className="gradient-text mt-5 pb-1 text-4xl font-semibold tracking-tight md:text-5xl lg:text-6xl"
             style={{ textWrap: "balance" }}
           >
             On-chain escrow and reputation for humans and autonomous agents
@@ -45,7 +45,7 @@ export function HeroSection() {
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <Link
               href="/playground/agent"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent-purple px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-purple/90"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
             >
               Try Agent Service
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
@@ -54,7 +54,7 @@ export function HeroSection() {
             </Link>
             <Link
               href="/playground/marketplace"
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-accent/90"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-accent px-6 py-3 text-sm font-medium text-accent transition-colors hover:bg-accent-light"
             >
               Try Human Escrow
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
@@ -69,7 +69,7 @@ export function HeroSection() {
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.12 }}
-          className="panel-surface rounded-2xl p-4 md:p-5"
+          className="panel-surface shadow-md rounded-2xl p-4 md:p-5"
         >
           <CodeSnippet />
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -89,9 +89,9 @@ function CodeSnippet() {
   return (
     <div className="code-block overflow-hidden p-4 text-left">
       <div className="mb-2 flex items-center gap-1.5">
-        <div className="h-3 w-3 rounded-full bg-error/60" />
-        <div className="h-3 w-3 rounded-full bg-warning/60" />
-        <div className="h-3 w-3 rounded-full bg-success/60" />
+        <div className="h-2.5 w-2.5 rounded-full bg-error/60" />
+        <div className="h-2.5 w-2.5 rounded-full bg-warning/60" />
+        <div className="h-2.5 w-2.5 rounded-full bg-success/60" />
         <span className="ml-2 text-xs text-text-tertiary">payment.ts</span>
       </div>
       <pre className="text-[13px] leading-relaxed text-text-secondary">
@@ -145,7 +145,7 @@ function TrustMetric({ label, value }: { label: string; value: string }) {
 
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-border-default bg-bg-secondary px-3 py-2">
+    <div className="rounded-lg border border-border-default bg-bg-secondary px-3 py-2 shadow-sm hover:shadow-md transition-shadow">
       <div className="text-[10px] uppercase tracking-wide text-text-tertiary">
         {label}
       </div>
