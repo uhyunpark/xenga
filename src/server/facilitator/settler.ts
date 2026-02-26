@@ -1,41 +1,15 @@
 import {
-  createPublicClient,
-  createWalletClient,
   decodeEventLog,
-  http,
   parseEther,
   parseUnits,
   type Address,
   type Hash,
 } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
 import { escrowVaultAbi } from "../../shared/abi.js";
-import { CHAIN, USDC_DECIMALS } from "../../shared/constants.js";
+import { USDC_DECIMALS } from "../../shared/constants.js";
 import type { EscrowPaymentPayload } from "../../shared/types.js";
 import { config } from "../config.js";
-
-let _account: ReturnType<typeof privateKeyToAccount> | undefined;
-const getAccount = () => {
-  if (!_account) _account = privateKeyToAccount(config.privateKey);
-  return _account;
-};
-
-let _publicClient: ReturnType<typeof createPublicClient> | undefined;
-const getPublicClient = () => {
-  if (!_publicClient) _publicClient = createPublicClient({ chain: CHAIN, transport: http(config.rpcUrl) });
-  return _publicClient;
-};
-
-const getWalletClient = (() => {
-  let client: ReturnType<typeof create> | undefined;
-  function create() {
-    return createWalletClient({ chain: CHAIN, transport: http(config.rpcUrl), account: getAccount() });
-  }
-  return () => {
-    if (!client) client = create();
-    return client;
-  };
-})();
+import { txQueue, getPublicClient } from "./txQueue.js";
 
 /**
  * Submit createEscrowWithAuth transaction on-chain
@@ -46,7 +20,7 @@ export async function settleEscrow(
 ): Promise<{ txHash: Hash; escrowId: number }> {
   const { v, r, s } = payload.signature;
 
-  const txHash = await getWalletClient().writeContract({
+  const txHash = await txQueue.writeContract("createEscrowWithAuth", {
     address: config.escrowVaultAddress,
     abi: escrowVaultAbi,
     functionName: "createEscrowWithAuth",
@@ -95,7 +69,7 @@ export async function settleEscrow(
 }
 
 export async function resolveDisputeOnChain(escrowId: number, buyerPct: number): Promise<Hash> {
-  const txHash = await getWalletClient().writeContract({
+  const txHash = await txQueue.writeContract("resolveDispute", {
     address: config.escrowVaultAddress,
     abi: escrowVaultAbi,
     functionName: "resolveDispute",
@@ -107,7 +81,7 @@ export async function resolveDisputeOnChain(escrowId: number, buyerPct: number):
 }
 
 export async function refundOnChain(escrowId: number): Promise<Hash> {
-  const txHash = await getWalletClient().writeContract({
+  const txHash = await txQueue.writeContract("refund", {
     address: config.escrowVaultAddress,
     abi: escrowVaultAbi,
     functionName: "refund",
@@ -128,7 +102,7 @@ export async function getEscrowOnChain(escrowId: number) {
 }
 
 export async function confirmDeliveryOnChain(escrowId: number): Promise<Hash> {
-  const txHash = await getWalletClient().writeContract({
+  const txHash = await txQueue.writeContract("confirmDelivery", {
     address: config.escrowVaultAddress,
     abi: escrowVaultAbi,
     functionName: "confirmDelivery",
@@ -139,7 +113,7 @@ export async function confirmDeliveryOnChain(escrowId: number): Promise<Hash> {
 }
 
 export async function autoReleaseOnChain(escrowId: number): Promise<Hash> {
-  const txHash = await getWalletClient().writeContract({
+  const txHash = await txQueue.writeContract("autoRelease", {
     address: config.escrowVaultAddress,
     abi: escrowVaultAbi,
     functionName: "autoRelease",
@@ -167,22 +141,25 @@ export async function fundWallet(
 ): Promise<{ usdcTx: Hash; ethTx: Hash }> {
   const fundAmount = parseUnits("1", USDC_DECIMALS);
 
-  const usdcTx = await getWalletClient().writeContract({
+  // Submit both transactions through the queue — nonces are serialized,
+  // so no collision. Each submission is ~200ms, then receipts wait in parallel.
+  const usdcTx = await txQueue.writeContract("transfer USDC", {
     address: config.usdcAddress,
     abi: erc20TransferAbi,
     functionName: "transfer",
     args: [address, fundAmount],
   });
 
-  // Wait for USDC receipt before sending ETH to avoid nonce collision
-  await getPublicClient().waitForTransactionReceipt({ hash: usdcTx });
-
-  const ethTx = await getWalletClient().sendTransaction({
+  const ethTx = await txQueue.sendTransaction("send ETH", {
     to: address,
     value: parseEther("0.001"),
   });
 
-  await getPublicClient().waitForTransactionReceipt({ hash: ethTx });
+  // Wait for both receipts in parallel (~10s instead of ~20s)
+  await Promise.all([
+    getPublicClient().waitForTransactionReceipt({ hash: usdcTx }),
+    getPublicClient().waitForTransactionReceipt({ hash: ethTx }),
+  ]);
 
   return { usdcTx, ethTx };
 }

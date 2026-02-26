@@ -29,6 +29,7 @@ import { rateLimit } from "./middleware/rateLimit.js";
 import { logger } from "./services/logger.js";
 import { startWalletMonitor, getLastWalletStatus } from "./services/walletMonitor.js";
 import { startOrderCleanup } from "./services/orderCleanup.js";
+import { txQueue } from "./facilitator/txQueue.js";
 
 // ──────────── Bootstrap ────────────
 
@@ -85,6 +86,7 @@ function healthHandler(_req: express.Request, res: express.Response) {
       isLow: walletStatus.isLow,
       checkedAt: walletStatus.checkedAt,
     } : undefined,
+    txQueueDepth: txQueue.getQueueDepth(),
     serviceTypes: getAllServiceTypes().map((st) => ({
       name: st.name,
       releaseWindow: st.releaseWindow,
