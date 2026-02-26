@@ -63,20 +63,26 @@ export function DashboardSidebar() {
 
   const sidebar = (
     <div className="flex h-full flex-col">
-      <div className="flex h-16 items-center px-4">
+      <div className="flex h-14 items-center px-4">
         <Link href="/" className="font-semibold text-accent transition-colors hover:text-accent/80">
           Xenga
         </Link>
       </div>
 
       <nav className="flex-1 space-y-1 px-2 py-2">
+        <p className="px-3 pb-1 pt-4 text-[11px] font-medium uppercase tracking-wider text-text-tertiary">
+          Navigation
+        </p>
+
         {NAV_ITEMS.map((item) => (
           <SidebarLink key={item.href} href={item.href} active={isActive(item.href)} icon={item.icon} onClick={() => setMobileOpen(false)}>
             {item.label}
           </SidebarLink>
         ))}
 
-        <div className="my-3 border-t border-border-default" />
+        <p className="px-3 pb-1 pt-5 text-[11px] font-medium uppercase tracking-wider text-text-tertiary">
+          Settings
+        </p>
 
         {SETTINGS_ITEMS.map((item) => (
           <SidebarLink key={item.href} href={item.href} active={isActive(item.href)} icon={item.icon} onClick={() => setMobileOpen(false)}>
@@ -84,7 +90,9 @@ export function DashboardSidebar() {
           </SidebarLink>
         ))}
 
-        <div className="my-3 border-t border-border-default" />
+        <p className="px-3 pb-1 pt-5 text-[11px] font-medium uppercase tracking-wider text-text-tertiary">
+          Coming Soon
+        </p>
 
         {COMING_SOON.map((item) => (
           <div
@@ -93,7 +101,7 @@ export function DashboardSidebar() {
           >
             {ICONS[item.icon]}
             <span>{item.label}</span>
-            <span className="ml-auto rounded-full border border-border-default px-1.5 py-0.5 text-[10px]">
+            <span className="ml-auto rounded-full bg-bg-tertiary px-1.5 py-0.5 text-[10px] text-text-tertiary">
               Soon
             </span>
           </div>
@@ -128,7 +136,7 @@ export function DashboardSidebar() {
   return (
     <>
       {/* Mobile hamburger */}
-      <div className="sticky top-0 z-50 flex h-14 items-center border-b border-border-default bg-bg-secondary/95 px-4 backdrop-blur-md lg:hidden">
+      <div className="sticky top-0 z-50 flex h-14 items-center bg-white/80 backdrop-blur-xl shadow-sm px-4 lg:hidden">
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
           className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border-default text-text-secondary"
@@ -150,7 +158,7 @@ export function DashboardSidebar() {
         <div className="fixed inset-0 z-40 lg:hidden" onClick={() => setMobileOpen(false)}>
           <div className="absolute inset-0 bg-black/50" />
           <div
-            className="absolute left-0 top-0 h-full w-64 bg-bg-secondary"
+            className="absolute left-0 top-0 h-full w-60 bg-bg-secondary"
             onClick={(e) => e.stopPropagation()}
           >
             {sidebar}
@@ -159,7 +167,7 @@ export function DashboardSidebar() {
       )}
 
       {/* Desktop sidebar */}
-      <div className="hidden w-56 shrink-0 border-r border-border-default bg-bg-secondary lg:block">
+      <div className="hidden w-60 shrink-0 bg-bg-secondary shadow-[1px_0_0_0_#e2e8f0] lg:block">
         {sidebar}
       </div>
     </>
@@ -183,12 +191,15 @@ function SidebarLink({
     <Link
       href={href}
       onClick={onClick}
-      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+      className={`relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
         active
-          ? "bg-accent/10 text-accent"
+          ? "bg-accent-light text-accent font-medium"
           : "text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"
       }`}
     >
+      {active && (
+        <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-accent" />
+      )}
       {ICONS[icon]}
       {children}
     </Link>
