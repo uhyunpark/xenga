@@ -15,28 +15,28 @@ const products: Product[] = [
     id: "api-access",
     title: "Premium API Access",
     description: "30 days of premium API access with 10k requests/day",
-    price: 0.05,
+    price: 0.50,
     image: "api",
   },
   {
     id: "data-report",
     title: "Custom Data Report",
     description: "Comprehensive market analysis report with insights",
-    price: 0.1,
+    price: 0.60,
     image: "report",
   },
   {
     id: "design-template",
     title: "Design Template Pack",
     description: "Professional UI/UX design templates for web3 apps",
-    price: 0.02,
+    price: 0.55,
     image: "design",
   },
   {
     id: "consulting-hour",
     title: "1-Hour Consulting",
     description: "Expert blockchain consulting session via video call",
-    price: 0.25,
+    price: 0.70,
     image: "consulting",
   },
 ];
@@ -99,7 +99,7 @@ export function ProductGrid({ onSelect, disabled }: ProductGridProps) {
               {product.price.toFixed(2)} USDC
             </span>
             <span className="text-xs text-text-tertiary transition-colors group-hover:text-text-primary">
-              Configure options &rarr;
+              Select &rarr;
             </span>
           </div>
         </motion.button>

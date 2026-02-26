@@ -1,11 +1,10 @@
 "use client";
 
-export type BuyerStep = "browse" | "configure" | "review_terms" | "paying" | "tracking" | "complete";
+export type BuyerStep = "browse" | "review_terms" | "paying" | "tracking" | "complete";
 export type PaySubStep = "creating_order" | "requesting_payment" | "signing" | "submitting";
 
 export const BUYER_STEPS: { key: BuyerStep; label: string }[] = [
   { key: "browse", label: "Browse" },
-  { key: "configure", label: "Configure" },
   { key: "review_terms", label: "Review Terms" },
   { key: "paying", label: "Pay" },
   { key: "tracking", label: "Tracking" },
@@ -34,7 +33,7 @@ export function StepTracker({ currentStep, paySubStep, onStepClick, className = 
       {BUYER_STEPS.map((step, i) => {
         const isPast = i < currentIndex;
         const isCurrent = i === currentIndex;
-        const isClickable = isPast && !!onStepClick && (step.key === "browse" || step.key === "configure");
+        const isClickable = isPast && !!onStepClick && step.key === "browse";
 
         return (
           <div key={step.key}>

@@ -3,13 +3,10 @@
 import { motion } from "framer-motion";
 import { ReputationBadge } from "@/components/ui/ReputationBadge";
 import type { Product } from "./ProductGrid";
-import { buildOrderDescription, type VariantSelections } from "./productVariants";
 import { formatReleaseWindow } from "./utils";
 
 interface ReviewTermsStepProps {
   product: Product;
-  selections: VariantSelections;
-  computedPrice: number;
   operatorAddress: string | null;
   loading: boolean;
   onPayNow: () => void;
@@ -18,18 +15,16 @@ interface ReviewTermsStepProps {
 
 export function ReviewTermsStep({
   product,
-  selections,
-  computedPrice,
   operatorAddress,
   loading,
   onPayNow,
   onBack,
 }: ReviewTermsStepProps) {
-  const description = buildOrderDescription(product, selections);
+  const price = product.price;
   // Estimate fee: 0.3% + $0 flat (matches typical demo config)
   const feeBps = 30;
-  const estimatedFee = computedPrice * feeBps / 10000;
-  const sellerReceives = computedPrice - estimatedFee;
+  const estimatedFee = price * feeBps / 10000;
+  const sellerReceives = price - estimatedFee;
   // Marketplace default release window
   const releaseWindow = 604800; // 7 days
   const disputeWindow = 259200; // 3 days
@@ -49,17 +44,17 @@ export function ReviewTermsStep({
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M7.5 9.5l-3.5-3.5 3.5-3.5" />
         </svg>
-        Back to options
+        Back to products
       </button>
 
       {/* Product summary */}
       <div className="mb-4 rounded-lg border border-border-default bg-bg-secondary/50 p-3">
         <h4 className="text-sm font-semibold">{product.title}</h4>
-        <p className="mt-0.5 text-xs text-text-tertiary">{description}</p>
+        <p className="mt-0.5 text-xs text-text-tertiary">{product.description}</p>
         <div className="mt-2 flex items-center justify-between">
           <span className="text-xs text-text-secondary">Payment Amount</span>
           <span className="font-mono text-sm font-bold text-accent">
-            {computedPrice.toFixed(2)} USDC
+            {price.toFixed(2)} USDC
           </span>
         </div>
       </div>
@@ -144,7 +139,7 @@ export function ReviewTermsStep({
             Processing...
           </span>
         ) : (
-          `Pay ${computedPrice.toFixed(2)} USDC`
+          `Pay ${price.toFixed(2)} USDC`
         )}
       </button>
 

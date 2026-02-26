@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   PREVIEW_STEPS,
   PREVIEW_PRODUCT,
-  PREVIEW_VARIANT,
   PREVIEW_ORDER,
   PREVIEW_PAYMENT_REQUIRED,
   PREVIEW_SETTLEMENT,
@@ -195,20 +194,8 @@ function StepDetail({ stepId }: { stepId: string }) {
           <div className="h-10 w-10 rounded-lg bg-accent/10" />
           <div>
             <p className="font-medium">{PREVIEW_PRODUCT.title}</p>
-            <p className="text-sm text-text-tertiary">from {PREVIEW_PRODUCT.price} USDC</p>
+            <p className="text-sm text-text-tertiary">{PREVIEW_PRODUCT.price} USDC</p>
           </div>
-        </div>
-      );
-    case "configure":
-      return (
-        <div className="space-y-1.5 text-xs">
-          <p className="font-medium">{PREVIEW_PRODUCT.title}</p>
-          <div className="space-y-1 text-text-tertiary">
-            <p>Tier: <span className="text-text-primary">{PREVIEW_VARIANT.tier}</span></p>
-            <p>Sectors: <span className="text-text-primary">{PREVIEW_VARIANT.sectors}</span></p>
-            <p>Speed: <span className="text-text-primary">{PREVIEW_VARIANT.speed}</span></p>
-          </div>
-          <p className="pt-1 font-mono text-accent">{PREVIEW_PRODUCT.price} USDC</p>
         </div>
       );
     case "review_terms":
@@ -218,7 +205,7 @@ function StepDetail({ stepId }: { stepId: string }) {
           <div className="space-y-1 text-text-tertiary">
             <p>Release Window: <span className="text-text-primary">7 days</span></p>
             <p>Dispute Window: <span className="text-text-primary">3 days</span></p>
-            <p>Facilitator Fee: <span className="text-text-primary">{(Number(PREVIEW_PAYMENT_REQUIRED.facilitatorFee) / 1_000_000).toFixed(3)} USDC ({(PREVIEW_PAYMENT_REQUIRED.feeBps / 100).toFixed(1)}%)</span></p>
+            <p>Facilitator Fee: <span className="text-text-primary">{(Number(PREVIEW_PAYMENT_REQUIRED.facilitatorFee) / 1_000_000).toFixed(4)} USDC ({(PREVIEW_PAYMENT_REQUIRED.feeBps / 100).toFixed(1)}%)</span></p>
             <p>Buyer Protection: <span className="text-success">Full refund on cancel</span></p>
           </div>
         </div>
@@ -260,8 +247,8 @@ function StepDetail({ stepId }: { stepId: string }) {
     case "complete":
       return (
         <div className="space-y-1 font-mono text-xs">
-          <p>seller receives: <span className="text-success">24.925 USDC</span> (minus fee)</p>
-          <p>feeRecipient: <span className="text-text-primary">0.075 USDC</span></p>
+          <p>seller receives: <span className="text-success">{(PREVIEW_PRODUCT.price - Number(PREVIEW_PAYMENT_REQUIRED.facilitatorFee) / 1_000_000).toFixed(4)} USDC</span> (minus fee)</p>
+          <p>feeRecipient: <span className="text-text-primary">{(Number(PREVIEW_PAYMENT_REQUIRED.facilitatorFee) / 1_000_000).toFixed(4)} USDC</span></p>
           <p>reputation: seller +1 completed, buyer +1 completed</p>
         </div>
       );

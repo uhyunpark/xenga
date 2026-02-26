@@ -19,23 +19,15 @@ import { ReputationBadge } from "@/components/ui/ReputationBadge";
 import { ProductGrid, type Product } from "./ProductGrid";
 import { BUYER_STEPS, StepTracker, type BuyerStep, type PaySubStep } from "./StepTracker";
 import { SellerPanel } from "./SellerPanel";
-import { ConfigureStep } from "./ConfigureStep";
 import { ReviewTermsStep } from "./ReviewTermsStep";
 import { PayingStep } from "./PayingStep";
 import { TrackingStep } from "./TrackingStep";
 import { facilitatorFetch } from "@/lib/api/client";
-import {
-  computePrice,
-  getDefaultSelections,
-  type VariantSelections,
-} from "./productVariants";
 import { formatReleaseWindow } from "./utils";
 
 interface FlowState {
   step: BuyerStep;
   product: Product | null;
-  variantSelections: VariantSelections;
-  computedPrice: number;
   orderId: string | null;
   escrowId: number | null;
   txHash: string | null;
@@ -52,8 +44,6 @@ interface FlowState {
 
 type FlowAction =
   | { type: "SELECT_PRODUCT"; product: Product }
-  | { type: "SET_VARIANT"; categoryId: string; optionId: string }
-  | { type: "PROCEED_TO_REVIEW" }
   | { type: "START_PAYMENT" }
   | { type: "SET_PAY_SUBSTEP"; paySubStep: PaySubStep }
   | { type: "SET_ORDER"; orderId: string; orderData: any }
@@ -72,8 +62,6 @@ type FlowAction =
 const initialState: FlowState = {
   step: "browse",
   product: null,
-  variantSelections: {},
-  computedPrice: 0,
   orderId: null,
   escrowId: null,
   txHash: null,
@@ -90,27 +78,13 @@ const initialState: FlowState = {
 
 function reducer(state: FlowState, action: FlowAction): FlowState {
   switch (action.type) {
-    case "SELECT_PRODUCT": {
-      const selections = getDefaultSelections(action.product.id);
+    case "SELECT_PRODUCT":
       return {
         ...state,
         product: action.product,
-        variantSelections: selections,
-        computedPrice: computePrice(action.product, selections),
-        step: "configure",
+        step: "review_terms",
         error: null,
       };
-    }
-    case "SET_VARIANT": {
-      const newSelections = { ...state.variantSelections, [action.categoryId]: action.optionId };
-      return {
-        ...state,
-        variantSelections: newSelections,
-        computedPrice: state.product ? computePrice(state.product, newSelections) : 0,
-      };
-    }
-    case "PROCEED_TO_REVIEW":
-      return { ...state, step: "review_terms", error: null };
     case "START_PAYMENT":
       return { ...state, step: "paying", paySubStep: "creating_order", error: null };
     case "SET_PAY_SUBSTEP":
@@ -146,7 +120,6 @@ function reducer(state: FlowState, action: FlowAction): FlowState {
 
 const STEP_HINTS: Record<BuyerStep, string> = {
   browse: "Choose an item to purchase from the marketplace.",
-  configure: "Customize your order options and see the price update.",
   review_terms: "Review escrow terms and buyer protection before paying.",
   paying: "Payment is being processed — order, signing, and on-chain settlement.",
   tracking: "Your order is being fulfilled. Release funds or dispute when ready.",
@@ -175,7 +148,7 @@ export function PaymentFlow() {
 
     try {
       const parsed = JSON.parse(saved);
-      if (!parsed.orderId || parsed.step === "browse" || parsed.step === "configure") return;
+      if (!parsed.orderId || parsed.step === "browse") return;
 
       // Validate the order still exists on the server before restoring
       facilitatorFetch("/api/orders")
@@ -188,14 +161,9 @@ export function PaymentFlow() {
             return;
           }
 
-          // Restore product + variant state
+          // Restore product state
           if (parsed.product) {
             dispatch({ type: "SELECT_PRODUCT", product: parsed.product });
-            if (parsed.variantSelections) {
-              for (const [catId, optId] of Object.entries(parsed.variantSelections)) {
-                dispatch({ type: "SET_VARIANT", categoryId: catId, optionId: optId as string });
-              }
-            }
           }
 
           dispatch({ type: "SET_ORDER", orderId: parsed.orderId, orderData: parsed.orderData });
@@ -205,8 +173,7 @@ export function PaymentFlow() {
             case "created":
             case "pending_payment":
               // Pre-payment — restore to review so user can click "Pay Now" to restart.
-              // The orderId is already set, so handlePayNow will skip order creation.
-              dispatch({ type: "PROCEED_TO_REVIEW" });
+              dispatch({ type: "SET_STEP", step: "review_terms" });
               break;
             case "escrowed":
               dispatch({ type: "PAYMENT_COMPLETE", escrowId: found.escrowId, txHash: found.txHash });
@@ -243,7 +210,6 @@ export function PaymentFlow() {
       sessionStorage.setItem(SESSION_KEY, JSON.stringify({
         step: state.step,
         product: state.product,
-        variantSelections: state.variantSelections,
         orderId: state.orderId,
         escrowId: state.escrowId,
         txHash: state.txHash,
@@ -251,7 +217,7 @@ export function PaymentFlow() {
         paymentRequired: state.paymentRequired,
       }));
     }
-  }, [state.step, state.product, state.variantSelections, state.orderId, state.escrowId, state.txHash, state.orderData, state.paymentRequired]);
+  }, [state.step, state.product, state.orderId, state.escrowId, state.txHash, state.orderData, state.paymentRequired]);
 
   // ---- Delivery polling ----
   const deliveryOrderId = state.step === "tracking" && !state.deliveryConfirmed ? state.orderId : null;
@@ -321,14 +287,6 @@ export function PaymentFlow() {
     dispatch({ type: "SELECT_PRODUCT", product });
   }, [inspector]);
 
-  const handleVariantChange = useCallback((categoryId: string, optionId: string) => {
-    dispatch({ type: "SET_VARIANT", categoryId, optionId });
-  }, []);
-
-  const handleProceedToReview = useCallback(() => {
-    dispatch({ type: "PROCEED_TO_REVIEW" });
-  }, []);
-
   // Collapsed payment flow — runs all 4 protocol steps sequentially
   const handlePayNow = useCallback(async () => {
     if (!state.product || !address || !operatorAddress || !walletClient) return;
@@ -340,7 +298,6 @@ export function PaymentFlow() {
       if (!orderId) {
         dispatch({ type: "SET_PAY_SUBSTEP", paySubStep: "creating_order" });
 
-        const description = `${state.product.title} — configured order`;
         inspector.addEvent({
           type: "http_request",
           label: "Create Order",
@@ -349,7 +306,7 @@ export function PaymentFlow() {
             url: "/api/orders",
             body: {
               title: state.product.title,
-              price: state.computedPrice,
+              price: state.product.price,
               serviceType: "marketplace",
               sellerAddress: operatorAddress,
             },
@@ -360,8 +317,8 @@ export function PaymentFlow() {
           method: "POST",
           body: JSON.stringify({
             title: state.product.title,
-            description,
-            price: state.computedPrice,
+            description: state.product.description,
+            price: state.product.price,
             serviceType: "marketplace",
             sellerAddress: operatorAddress,
           }),
@@ -415,7 +372,7 @@ export function PaymentFlow() {
     } catch (err: any) {
       dispatch({ type: "SET_ERROR", error: err.message });
     }
-  }, [state.product, state.computedPrice, state.orderId, address, operatorAddress, walletClient, inspector, refreshBalances]);
+  }, [state.product, state.orderId, address, operatorAddress, walletClient, inspector, refreshBalances]);
 
   const handleRelease = useCallback(async () => {
     if (!state.escrowId || !walletClient?.account || !state.paymentRequired) return;
@@ -494,10 +451,8 @@ export function PaymentFlow() {
   const handleStepClick = useCallback((step: BuyerStep) => {
     if (step === "browse") {
       handleReset();
-    } else if (step === "configure" && state.step === "review_terms") {
-      dispatch({ type: "SET_STEP", step: "configure" });
     }
-  }, [state.step, handleReset]);
+  }, [handleReset]);
 
   // ---- Derived values ----
   const needsWallet = !address;
@@ -520,7 +475,7 @@ export function PaymentFlow() {
             paySubStep={state.step === "paying" ? state.paySubStep : undefined}
             className="mt-2"
             onStepClick={
-              state.step === "configure" || state.step === "review_terms"
+              state.step === "review_terms"
                 ? handleStepClick
                 : undefined
             }
@@ -649,27 +604,14 @@ export function PaymentFlow() {
                 </motion.div>
               )}
 
-              {/* Configure step */}
-              {state.step === "configure" && state.product && (
-                <ConfigureStep
-                  product={state.product}
-                  selections={state.variantSelections}
-                  onSelectionChange={handleVariantChange}
-                  onContinue={handleProceedToReview}
-                  onBack={handleReset}
-                />
-              )}
-
               {/* Review Terms step */}
               {state.step === "review_terms" && state.product && (
                 <ReviewTermsStep
                   product={state.product}
-                  selections={state.variantSelections}
-                  computedPrice={state.computedPrice}
                   operatorAddress={operatorAddress}
                   loading={state.loading}
                   onPayNow={handlePayNow}
-                  onBack={() => dispatch({ type: "SET_STEP", step: "configure" })}
+                  onBack={handleReset}
                 />
               )}
 

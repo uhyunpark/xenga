@@ -11,7 +11,6 @@ interface SellerPanelProps {
 
 const sellerMessages: Record<BuyerStep, { text: string; status: "idle" | "active" | "done" }> = {
   browse: { text: "Waiting for buyer...", status: "idle" },
-  configure: { text: "Buyer customizing order...", status: "active" },
   review_terms: { text: "Buyer reviewing terms...", status: "active" },
   paying: { text: "Processing payment...", status: "active" },
   tracking: { text: "Shipping item...", status: "active" },
