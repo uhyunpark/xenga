@@ -1,7 +1,20 @@
 import type { Metadata } from "next";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  display: "swap",
+});
 
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://xenga.xyz";
 
@@ -40,7 +53,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head />
-      <body className="min-h-screen bg-bg-primary text-text-primary">
+      <body className={`${inter.variable} ${jetbrainsMono.variable} font-sans min-h-screen bg-bg-primary text-text-primary`}>
         <Navbar />
         <main>{children}</main>
         <Analytics />

@@ -1,145 +1,30 @@
 @import "tailwindcss";
 
-@font-face {
-  font-family: "Coinbase Sans";
-  src: url("/fonts/Coinbase_Sans-Extra_Light-web-1.32.woff2") format("woff2");
-  font-weight: 200;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Coinbase Sans";
-  src: url("/fonts/Coinbase_Sans-Extra_Light_Italic-web-1.32.woff2") format("woff2");
-  font-weight: 200;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Coinbase Sans";
-  src: url("/fonts/Coinbase_Sans-Light-web-1.32.woff2") format("woff2");
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Coinbase Sans";
-  src: url("/fonts/Coinbase_Sans-Light_Italic-web-1.32.woff2") format("woff2");
-  font-weight: 300;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Coinbase Sans";
-  src: url("/fonts/Coinbase_Sans-Regular-web-1.32.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Coinbase Sans";
-  src: url("/fonts/Coinbase_Sans-Regular_Italic-web-1.32.woff2") format("woff2");
-  font-weight: 400;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Coinbase Sans";
-  src: url("/fonts/Coinbase_Sans-Medium-web-1.32.woff2") format("woff2");
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Coinbase Sans";
-  src: url("/fonts/Coinbase_Sans-Medium_Italic-web-1.32.woff2") format("woff2");
-  font-weight: 500;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Coinbase Sans";
-  src: url("/fonts/Coinbase_Sans-Bold-web-1.32.woff2") format("woff2");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Coinbase Sans";
-  src: url("/fonts/Coinbase_Sans-Bold_Italic-web-1.32.woff2") format("woff2");
-  font-weight: 700;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Coinbase Mono";
-  src: url("/fonts/Coinbase_Mono-Extra_Light-web.woff2") format("woff2");
-  font-weight: 200;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Coinbase Mono";
-  src: url("/fonts/Coinbase_Mono-Light-web.woff2") format("woff2");
-  font-weight: 300;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Coinbase Mono";
-  src: url("/fonts/Coinbase_Mono-Regular-web.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Coinbase Mono";
-  src: url("/fonts/Coinbase_Mono-Medium-web.woff2") format("woff2");
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Coinbase Mono";
-  src: url("/fonts/Coinbase_Mono-Bold-web.woff2") format("woff2");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
 @theme {
-  --color-bg-primary: #F6F8FB;
+  --color-bg-primary: #F8FAFB;
   --color-bg-secondary: #FFFFFF;
-  --color-bg-tertiary: #EEF2F7;
-  --color-border-default: #D6DEE8;
-  --color-border-active: #93B4F8;
+  --color-bg-tertiary: #F1F5F9;
+  --color-border-default: #E2E8F0;
+  --color-border-active: #5EEAD4;
   --color-text-primary: #0F172A;
   --color-text-secondary: #475569;
   --color-text-tertiary: #64748B;
-  --color-accent: #2563EB;
-  --color-accent-purple: #2563EB;
+  --color-accent: #0D9488;
+  --color-accent-hover: #0F766E;
+  --color-accent-light: #CCFBF1;
+  --color-accent-muted: #99F6E4;
+  --color-accent-purple: #8B5CF6;
   --color-success: #16A34A;
   --color-warning: #D97706;
   --color-error: #DC2626;
   --color-violet: #8B5CF6;
 
-  --font-sans: "Coinbase Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "Coinbase Mono", ui-monospace, monospace;
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, monospace;
 
-  --font-weight-semibold: 500;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03);
+  --shadow-lg: 0 2px 4px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.06);
 }
 
 html {
@@ -148,7 +33,7 @@ html {
 
 body {
   background-color: var(--color-bg-primary);
-  background-image: linear-gradient(180deg, #f9fbfe 0%, #f6f8fb 100%);
+  background-image: linear-gradient(180deg, #fafcfd 0%, #f8fafb 100%);
   color: var(--color-text-primary);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -156,7 +41,7 @@ body {
 }
 
 ::selection {
-  background: rgba(37, 99, 235, 0.2);
+  background: rgba(13, 148, 136, 0.2);
   color: #0b1220;
 }
 
@@ -169,26 +54,26 @@ body {
 }
 
 .gradient-text {
-  background: linear-gradient(120deg, #0f172a 0%, #1d4ed8 100%);
+  background: linear-gradient(120deg, #0f172a 0%, #0D9488 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
-.glow-blue {
-  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.2);
+.glow-teal {
+  box-shadow: 0 8px 20px rgba(13, 148, 136, 0.2);
 }
 
 .glow-purple {
-  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.16);
+  box-shadow: 0 8px 20px rgba(139, 92, 246, 0.16);
 }
 
 @keyframes pulse-glow {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.28);
+    box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.28);
   }
   50% {
-    box-shadow: 0 0 0 10px rgba(37, 99, 235, 0);
+    box-shadow: 0 0 0 10px rgba(13, 148, 136, 0);
   }
 }
 
@@ -233,7 +118,7 @@ body {
 
 @keyframes inspector-flash {
   from {
-    background-color: rgba(37, 99, 235, 0.1);
+    background-color: rgba(13, 148, 136, 0.1);
   }
   to {
     background-color: transparent;
