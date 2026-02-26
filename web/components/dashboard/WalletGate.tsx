@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
+import Link from "next/link";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { useSession } from "@/lib/auth/useSession";
 
@@ -107,7 +108,12 @@ export function WalletGate({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-[60vh] items-center justify-center">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-bg-primary">
+      <div className="mb-8">
+        <Link href="/" className="text-xl font-semibold text-accent hover:text-accent/80">
+          Xenga
+        </Link>
+      </div>
       <div className="mx-auto max-w-md rounded-2xl border border-border-default bg-bg-secondary p-8 text-center shadow-md">
         <h2 className="text-xl font-bold">{title}</h2>
         <p className="mt-2 text-sm text-text-secondary">{description}</p>

@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useWallet } from "@/lib/wallet/WalletProvider";
+import { WalletPopover } from "./WalletPopover";
+import { facilitatorFetch } from "@/lib/api/client";
+import { shortenAddress } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Overview", icon: "home" },
@@ -56,28 +59,44 @@ const ICONS: Record<string, React.ReactNode> = {
 export function DashboardSidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { address, disconnect } = useWallet();
+  const { address, disconnect, connectBrowser } = useWallet();
+  const [healthOk, setHealthOk] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    facilitatorFetch("/api/health")
+      .then((r) => setHealthOk(r.ok))
+      .catch(() => setHealthOk(false));
+  }, []);
 
   const isActive = (href: string) =>
     href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
 
+  const handleSwitchWallet = () => {
+    disconnect();
+    setTimeout(() => connectBrowser(), 100);
+  };
+
   const sidebar = (
     <div className="flex h-full flex-col">
-      <div className="px-4 py-4 border-b border-border-default">
+      {/* Brand */}
+      <div className="px-4 pt-4 pb-2">
+        <Link href="/" className="font-semibold text-accent hover:text-accent/80">
+          Xenga
+        </Link>
+      </div>
+
+      {/* Wallet identity */}
+      <div className="border-b border-border-default px-1 pb-3">
         {address ? (
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent text-sm font-bold">
-              {address.slice(2, 4).toUpperCase()}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-text-primary">
-                {address.slice(0, 6)}...{address.slice(-4)}
-              </p>
-              <p className="text-[11px] text-text-tertiary">Seller Dashboard</p>
-            </div>
-          </div>
+          <WalletPopover
+            address={address}
+            onDisconnect={disconnect}
+            onSwitchWallet={handleSwitchWallet}
+          />
         ) : (
-          <p className="text-sm font-semibold text-text-primary">Dashboard</p>
+          <div className="px-3 py-2">
+            <p className="text-sm font-semibold text-text-primary">Dashboard</p>
+          </div>
         )}
       </div>
 
@@ -120,34 +139,19 @@ export function DashboardSidebar() {
         ))}
       </nav>
 
-      <div className="border-t border-border-default px-2 py-3 space-y-1">
-        <Link
-          href="/"
-          className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
-        >
-          <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M10 3L5 8l5 5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          Back to site
-        </Link>
-        {address && (
-          <button
-            onClick={disconnect}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-error"
-          >
-            <svg className="h-4 w-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3m4-9l4 4-4 4m4-4H6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Disconnect
-          </button>
-        )}
-      </div>
+      {/* Health indicator — only visible when unhealthy */}
+      {healthOk === false && (
+        <div className="mx-2 mb-2 flex items-center gap-2 rounded-lg bg-error/10 px-3 py-2">
+          <div className="h-2 w-2 shrink-0 rounded-full bg-error" />
+          <span className="text-xs font-medium text-error">Server disconnected</span>
+        </div>
+      )}
     </div>
   );
 
   return (
     <>
-      {/* Mobile hamburger */}
+      {/* Mobile hamburger bar */}
       <div className="sticky top-0 z-50 flex h-14 items-center bg-white/80 backdrop-blur-xl shadow-sm px-4 lg:hidden">
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
@@ -162,9 +166,14 @@ export function DashboardSidebar() {
             )}
           </svg>
         </button>
-        <span className="ml-3 text-sm font-semibold text-text-primary">
-          {address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Dashboard"}
-        </span>
+        <Link href="/" className="ml-3 font-semibold text-accent hover:text-accent/80">
+          Xenga
+        </Link>
+        {address && (
+          <span className="ml-auto text-sm text-text-secondary">
+            {shortenAddress(address)}
+          </span>
+        )}
       </div>
 
       {/* Mobile overlay */}
@@ -180,9 +189,11 @@ export function DashboardSidebar() {
         </div>
       )}
 
-      {/* Desktop sidebar */}
-      <div className="hidden w-60 shrink-0 bg-bg-secondary shadow-[1px_0_0_0_#e2e8f0] lg:block">
-        {sidebar}
+      {/* Desktop sidebar — sticky */}
+      <div className="hidden w-60 shrink-0 lg:block">
+        <div className="sticky top-0 h-screen overflow-y-auto bg-bg-secondary shadow-[1px_0_0_0_#e2e8f0]">
+          {sidebar}
+        </div>
       </div>
     </>
   );

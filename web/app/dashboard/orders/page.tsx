@@ -6,6 +6,7 @@ import { useSessionToken } from "@/components/dashboard/WalletGate";
 import { authenticatedFetch } from "@/lib/api/wallet-auth";
 import { OrderTable } from "@/components/dashboard/OrderTable";
 import { OrderActions } from "@/components/dashboard/OrderActions";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 
 interface OrderData {
   id: string;
@@ -58,12 +59,10 @@ export default function OrdersPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Orders</h1>
-        <p className="mt-1 text-sm text-text-secondary">
-          Manage your escrow orders and confirm deliveries.
-        </p>
-      </div>
+      <DashboardPageHeader
+        title="Orders"
+        subtitle="Manage your escrow orders and confirm deliveries."
+      />
 
       <OrderTable
         orders={orders}

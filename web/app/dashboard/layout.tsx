@@ -15,14 +15,14 @@ export default function DashboardLayout({
 }) {
   return (
     <WalletProvider mode="browser">
-      <div className="flex min-h-screen">
-        <DashboardSidebar />
-        <main className="flex-1 overflow-auto">
-          <WalletGate>
-            <div className="mx-auto max-w-5xl p-4 md:p-8">{children}</div>
-          </WalletGate>
-        </main>
-      </div>
+      <WalletGate>
+        <div className="flex min-h-screen">
+          <DashboardSidebar />
+          <main className="flex-1 overflow-auto">
+            <div className="mx-auto max-w-6xl p-4 md:p-8">{children}</div>
+          </main>
+        </div>
+      </WalletGate>
     </WalletProvider>
   );
 }

@@ -7,6 +7,7 @@ import { authenticatedFetch } from "@/lib/api/wallet-auth";
 import { facilitatorFetch } from "@/lib/api/client";
 import { StatsRow } from "@/components/dashboard/StatsRow";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
+import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
 
 interface OrderData {
   id: string;
@@ -81,12 +82,10 @@ export default function DashboardOverview() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Overview</h1>
-        <p className="mt-1 text-sm text-text-secondary">
-          Your escrow activity at a glance.
-        </p>
-      </div>
+      <DashboardPageHeader
+        title="Overview"
+        subtitle="Your escrow activity at a glance."
+      />
 
       <StatsRow
         activeEscrows={activeEscrows}

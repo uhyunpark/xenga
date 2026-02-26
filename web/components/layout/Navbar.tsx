@@ -14,19 +14,23 @@ export function Navbar() {
   const [healthOk, setHealthOk] = useState<boolean | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
+  const isDashboard = pathname.startsWith("/dashboard");
   const isMockChain = process.env.NEXT_PUBLIC_MOCK_CHAIN === "true";
 
   useEffect(() => {
+    if (isDashboard) return;
     facilitatorFetch("/api/health")
       .then((r) => {
         setHealthOk(r.ok);
       })
       .catch(() => setHealthOk(false));
-  }, []);
+  }, [isDashboard]);
 
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
+
+  if (isDashboard) return null;
 
   const chainLabel = isMockChain ? "Mock Chain Mode" : "Base Sepolia";
   const chainBadgeClass = isMockChain
