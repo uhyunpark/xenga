@@ -72,7 +72,7 @@ export default function PlaygroundPage() {
           const c = colorClasses(demo.color);
           return (
             <Link key={demo.href} href={demo.href} className="group block">
-              <div className="panel-surface flex h-full flex-col rounded-2xl p-6 transition-all duration-200 hover:border-border-active hover:shadow-sm">
+              <div className="flex h-full flex-col rounded-xl border border-border-default bg-bg-secondary p-6 shadow-sm transition-shadow duration-200 hover:shadow-md">
                 <div className="mb-4 flex items-center justify-between">
                   <div className={`rounded-lg p-2.5 ${c.icon}`}>
                     {demo.icon}

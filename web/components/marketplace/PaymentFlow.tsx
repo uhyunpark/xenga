@@ -516,15 +516,15 @@ export function PaymentFlow() {
     ((currentStepIndex + 1) / DEMO_STEPS.length) * 100;
   const stepHint = STEP_HINTS[state.step];
   const primaryButtonClass =
-    "w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-accent/90 disabled:opacity-50";
+    "w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-accent-hover disabled:opacity-50";
   const primaryGlowButtonClass =
-    "w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-accent/90 disabled:opacity-50";
+    "w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-accent-hover disabled:opacity-50";
 
   return (
     <div className="flex flex-col gap-6 lg:flex-row">
       {/* Left sidebar - Step tracker */}
       <div className="hidden shrink-0 lg:block lg:w-56">
-        <div className="panel-surface sticky top-20 rounded-xl p-3">
+        <div className="panel-surface sticky top-20 rounded-xl p-3 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-text-tertiary">
             Flow Map
           </p>
@@ -608,7 +608,7 @@ export function PaymentFlow() {
                       </p>
                       <button
                         onClick={connectDemo}
-                        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90"
+                        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
                       >
                         Create Demo Wallet
                       </button>
@@ -624,7 +624,7 @@ export function PaymentFlow() {
                       <button
                         onClick={fundDemoWallet}
                         disabled={isFunding}
-                        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
+                        className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
                       >
                         {isFunding ? "Getting Test USDC..." : "Get Test USDC"}
                       </button>

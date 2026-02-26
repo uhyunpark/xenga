@@ -26,7 +26,7 @@ export function SellerPanel({ step, productTitle, deliveryConfirmed }: SellerPan
     : sellerMessages[step];
 
   return (
-    <div className="panel-surface rounded-xl p-4">
+    <div className="panel-surface rounded-xl p-4 shadow-sm">
       <div className="mb-3 flex items-center gap-2">
         <div className="flex h-7 w-7 items-center justify-center rounded-full bg-accent-purple/20 text-accent-purple">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">

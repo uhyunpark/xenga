@@ -85,7 +85,7 @@ export function ProductGrid({ onSelect, disabled }: ProductGridProps) {
           transition={{ delay: i * 0.05 }}
           onClick={() => onSelect(product)}
           disabled={disabled}
-          className="panel-surface group rounded-xl p-4 text-left transition-all hover:border-border-active hover:scale-[1.01] disabled:pointer-events-none disabled:opacity-50"
+          className="group rounded-xl border border-border-default bg-bg-secondary p-4 text-left shadow-sm transition-all hover:shadow-md hover:border-accent hover:scale-[1.01] disabled:pointer-events-none disabled:opacity-50"
         >
           <div className="mb-3 inline-flex rounded-lg border border-accent/25 bg-accent/10 p-2.5 text-accent">
             {iconMap[product.image]}

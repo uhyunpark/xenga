@@ -789,7 +789,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
           <button
             onClick={fundDemoWallet}
             disabled={isFunding}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
           >
             {isFunding ? "Getting Test USDC..." : "Get Test USDC"}
           </button>
@@ -821,7 +821,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
                   ? "border-violet-400/30 bg-violet-400/10 text-violet-400"
                   : activeScenario === "screening"
                     ? "border-amber-400/30 bg-amber-400/10 text-amber-400"
-                    : "border-accent-purple/30 bg-accent-purple/10 text-accent-purple"
+                    : "border-accent/30 bg-accent/10 text-accent"
             }`}>
               {scenarioLabel(activeScenario)}
             </span>
@@ -864,7 +864,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
                 <>
                   <button
                     onClick={() => runDemo("happy")}
-                    className="rounded-lg bg-accent-purple px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-accent-purple/90"
+                    className="rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-accent-hover"
                   >
                     Successful Payment
                   </button>
@@ -905,7 +905,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
               {activeScenario !== "happy" && (
                 <button
                   onClick={() => runDemo("happy")}
-                  className="rounded-lg border border-accent-purple/30 bg-accent-purple/10 px-4 py-2 text-sm font-medium text-accent-purple transition-colors hover:bg-accent-purple/20"
+                  className="rounded-lg border border-accent/30 bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/20"
                 >
                   Try Successful Payment
                 </button>

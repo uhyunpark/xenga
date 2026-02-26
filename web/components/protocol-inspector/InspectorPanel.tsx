@@ -54,7 +54,7 @@ export function InspectorPanel() {
       </div>
 
       {/* Desktop side panel */}
-      <div className="panel-surface hidden h-[calc(100vh-4rem)] w-[430px] shrink-0 flex-col overflow-hidden border-l border-border-default md:flex">
+      <div className="hidden h-[calc(100vh-4rem)] w-[430px] shrink-0 flex-col overflow-hidden border-l border-border-default bg-bg-secondary shadow-md md:flex">
         <PanelContent
           activeTab={activeTab}
           setTab={setTab}

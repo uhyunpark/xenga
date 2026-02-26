@@ -45,16 +45,16 @@ export function StepTracker({ currentStep, onStepClick, className = "" }: StepTr
               isCurrent
                 ? "border-accent/30 bg-accent/10 text-accent font-medium"
                 : isPast
-                  ? "border-success/25 bg-success/5 text-success"
+                  ? "border-accent/25 bg-accent/5 text-accent"
                   : "border-transparent text-text-tertiary"
-            } ${isClickable ? "cursor-pointer hover:border-success/35 hover:bg-success/10" : ""}`}
+            } ${isClickable ? "cursor-pointer hover:border-accent/35 hover:bg-accent/10" : ""}`}
           >
             <div
               className={`flex h-5 w-5 items-center justify-center rounded-full border text-[10px] font-bold ${
                 isCurrent
                   ? "border-accent bg-accent text-white"
                   : isPast
-                    ? "border-success bg-success/20 text-success"
+                    ? "border-accent bg-accent-light text-accent"
                     : "border-border-default"
               }`}
             >
