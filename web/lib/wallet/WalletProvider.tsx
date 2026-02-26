@@ -248,6 +248,7 @@ export function WalletProvider({ children, mode }: WalletProviderProps) {
     if (mode === "browser") return; // No-op in browser-only mode
     if (!address || type !== "demo") return;
     setIsFunding(true);
+    setError(null);
     try {
       const res = await facilitatorFetch("/api/demo/fund", {
         method: "POST",
@@ -258,6 +259,8 @@ export function WalletProvider({ children, mode }: WalletProviderProps) {
         throw new Error(data.error || "Funding failed");
       }
       await refreshBalances();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Funding failed");
     } finally {
       setIsFunding(false);
     }

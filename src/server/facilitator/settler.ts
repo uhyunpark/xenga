@@ -174,15 +174,15 @@ export async function fundWallet(
     args: [address, fundAmount],
   });
 
+  // Wait for USDC receipt before sending ETH to avoid nonce collision
+  await getPublicClient().waitForTransactionReceipt({ hash: usdcTx });
+
   const ethTx = await getWalletClient().sendTransaction({
     to: address,
     value: parseEther("0.001"),
   });
 
-  await Promise.all([
-    getPublicClient().waitForTransactionReceipt({ hash: usdcTx }),
-    getPublicClient().waitForTransactionReceipt({ hash: ethTx }),
-  ]);
+  await getPublicClient().waitForTransactionReceipt({ hash: ethTx });
 
   return { usdcTx, ethTx };
 }

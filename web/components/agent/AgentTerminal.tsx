@@ -50,7 +50,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
     screeningResults?: ScreeningAgentProfile[];
   } | null>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
-  const { walletClient, address, connectDemo, fundDemoWallet, isFunding, usdcBalance, type: walletType, refreshBalances } = useWallet();
+  const { walletClient, address, connectDemo, fundDemoWallet, isFunding, usdcBalance, error, type: walletType, refreshBalances } = useWallet();
   const inspector = useInspector();
   const { address: operatorAddress, error: operatorError, isLoading: operatorLoading, retry: retryOperator } = useOperatorAddress();
 
@@ -793,6 +793,9 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
           >
             {isFunding ? "Getting Test USDC..." : "Get Test USDC"}
           </button>
+          {error && (
+            <p className="mt-2 text-xs text-red-400">{error}</p>
+          )}
         </div>
       ) : (
         <div className="panel-surface flex flex-wrap items-center gap-3 rounded-xl p-3">

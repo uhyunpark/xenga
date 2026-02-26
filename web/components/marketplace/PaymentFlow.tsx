@@ -129,7 +129,7 @@ const STEP_HINTS: Record<DemoStep, string> = {
 
 export function PaymentFlow() {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const { walletClient, publicClient, address, type: walletType, connectDemo, fundDemoWallet, isFunding, usdcBalance, refreshBalances } = useWallet();
+  const { walletClient, publicClient, address, type: walletType, connectDemo, fundDemoWallet, isFunding, usdcBalance, error, refreshBalances } = useWallet();
   const inspector = useInspector();
   const { address: operatorAddress } = useOperatorAddress();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -628,6 +628,9 @@ export function PaymentFlow() {
                       >
                         {isFunding ? "Getting Test USDC..." : "Get Test USDC"}
                       </button>
+                      {error && (
+                        <p className="mt-2 text-xs text-red-400">{error}</p>
+                      )}
                     </div>
                   ) : (
                     <ProductGrid onSelect={handleSelectProduct} />
