@@ -12,7 +12,6 @@ const DOCS = [
   "sdk-reference",
   "api-reference",
   "seller-guide",
-  "deployment",
   "erc-8004-comparison",
 ] as const;
 

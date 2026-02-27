@@ -16,7 +16,6 @@ const SECTIONS = [
     title: "Guides",
     items: [
       { href: "/docs/seller-guide", label: "Seller Guide" },
-      { href: "/docs/deployment", label: "Deployment" },
     ],
   },
   {
