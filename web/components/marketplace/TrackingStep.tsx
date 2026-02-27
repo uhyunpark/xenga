@@ -175,8 +175,11 @@ export function TrackingStep({
 
       {/* Dispute filed */}
       {disputeFiled && (
-        <div className="rounded-lg border border-error/20 bg-error/5 p-3 text-xs text-error">
-          Dispute filed. Waiting for arbiter resolution.
+        <div className="flex items-center gap-3 rounded-lg border border-error/20 bg-error/5 p-3">
+          <span className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-error border-t-transparent" />
+          <span className="text-xs text-error">
+            Arbiter reviewing dispute...
+          </span>
         </div>
       )}
 

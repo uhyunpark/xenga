@@ -39,6 +39,7 @@ interface FlowState {
   loading: boolean;
   orderData: any | null;
   disputeFiled: boolean;
+  disputeResolved: boolean;
   deliveryConfirmed: boolean;
   paymentRequired: PaymentRequired | null;
   paymentPayload: PaymentPayload | null;
@@ -59,6 +60,7 @@ type FlowAction =
   | { type: "CLEAR_ERROR" }
   | { type: "SET_LOADING"; loading: boolean }
   | { type: "FILE_DISPUTE" }
+  | { type: "DISPUTE_RESOLVED" }
   | { type: "DELIVERY_CONFIRMED" }
   | { type: "RELEASE_COMPLETE"; releaseTxHash: string }
   | { type: "RESET" }
@@ -75,6 +77,7 @@ const initialState: FlowState = {
   loading: false,
   orderData: null,
   disputeFiled: false,
+  disputeResolved: false,
   deliveryConfirmed: false,
   paymentRequired: null,
   paymentPayload: null,
@@ -113,6 +116,8 @@ function reducer(state: FlowState, action: FlowAction): FlowState {
       return { ...state, loading: action.loading };
     case "FILE_DISPUTE":
       return { ...state, disputeFiled: true };
+    case "DISPUTE_RESOLVED":
+      return { ...state, disputeResolved: true, step: "complete" };
     case "DELIVERY_CONFIRMED":
       return { ...state, deliveryConfirmed: true };
     case "RELEASE_COMPLETE":
@@ -203,6 +208,12 @@ export function PaymentFlow() {
               dispatch({ type: "DELIVERY_CONFIRMED" });
               dispatch({ type: "FILE_DISPUTE" });
               break;
+            case "resolved":
+              dispatch({ type: "PAYMENT_COMPLETE", escrowId: found.escrowId, txHash: found.txHash });
+              dispatch({ type: "DELIVERY_CONFIRMED" });
+              dispatch({ type: "FILE_DISPUTE" });
+              dispatch({ type: "DISPUTE_RESOLVED" });
+              break;
             default:
               sessionStorage.removeItem(SESSION_KEY);
               break;
@@ -280,6 +291,47 @@ export function PaymentFlow() {
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, [deliveryOrderId, inspector]);
+
+  // ---- Dispute resolution polling ----
+  const disputePending = state.disputeFiled && !state.disputeResolved;
+
+  useEffect(() => {
+    if (!disputePending || !state.orderId) return;
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 60;
+
+    const interval = setInterval(async () => {
+      if (cancelled) return;
+      attempts++;
+      if (attempts > maxAttempts) {
+        clearInterval(interval);
+        dispatch({ type: "SET_ERROR", error: "Dispute resolution timed out. Try refreshing." });
+        return;
+      }
+      try {
+        const res = await facilitatorFetch(`/api/orders?status=resolved`);
+        const data = await res.json();
+        const orders = Array.isArray(data) ? data : data.orders ?? [];
+        if (orders.find((o: any) => o.id === state.orderId)) {
+          clearInterval(interval);
+          inspector.addEvent({
+            type: "state_change",
+            label: "Dispute Resolved",
+            data: { previousState: "Disputed", newState: "Resolved", buyerPct: 100 },
+          });
+          dispatch({ type: "DISPUTE_RESOLVED" });
+        }
+      } catch {
+        // Retry on next interval
+      }
+    }, 3000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [disputePending, state.orderId, inspector]);
 
   // ---- Fetch seller reputation on completion ----
   useEffect(() => {
@@ -436,29 +488,46 @@ export function PaymentFlow() {
   }, [state.escrowId, state.paymentRequired, walletClient, publicClient, inspector]);
 
   const handleDispute = useCallback(async () => {
-    if (!state.orderId) return;
+    if (!state.escrowId || !walletClient?.account || !state.paymentRequired || !state.orderId) return;
     dispatch({ type: "SET_LOADING", loading: true });
 
     try {
-      const res = await facilitatorFetch(`/api/disputes/${state.orderId}`, {
-        method: "POST",
-        body: JSON.stringify({ reason: "Product not as described" }),
+      // On-chain dispute call (buyer is msg.sender)
+      const disputeTxHash = await walletClient.writeContract({
+        chain: baseSepolia,
+        account: walletClient.account!,
+        address: state.paymentRequired.escrowContract,
+        abi: escrowVaultAbi,
+        functionName: "dispute",
+        args: [BigInt(state.escrowId)],
       });
 
-      if (res.ok) {
-        inspector.addEvent({
-          type: "state_change",
-          label: "Dispute Filed",
-          data: { previousState: "DeliveryConfirmed", newState: "Disputed" },
-        });
-        dispatch({ type: "FILE_DISPUTE" });
-      }
+      await publicClient.waitForTransactionReceipt({ hash: disputeTxHash });
+
+      inspector.addEvent({
+        type: "tx_confirmed",
+        label: "Dispute Filed",
+        data: { txHash: disputeTxHash, escrowId: state.escrowId, function: "dispute" },
+      });
+      inspector.addEvent({
+        type: "state_change",
+        label: "Dispute Filed",
+        data: { previousState: "DeliveryConfirmed", newState: "Disputed" },
+      });
+
+      dispatch({ type: "FILE_DISPUTE" });
+
+      // Fire-and-forget API POST (event listener may have already updated status)
+      facilitatorFetch(`/api/disputes/${state.orderId}`, {
+        method: "POST",
+        body: JSON.stringify({ reason: "Product not as described" }),
+      }).catch(() => {});
     } catch (err: any) {
       dispatch({ type: "SET_ERROR", error: err.message });
     } finally {
       dispatch({ type: "SET_LOADING", loading: false });
     }
-  }, [state.orderId, inspector]);
+  }, [state.escrowId, state.paymentRequired, state.orderId, walletClient, publicClient, inspector]);
 
   const handleReset = useCallback(() => {
     sessionStorage.removeItem(SESSION_KEY);
@@ -665,12 +734,14 @@ export function PaymentFlow() {
                   animate={{ opacity: 1, scale: 1 }}
                   className="rounded-xl border border-success/20 bg-success/5 p-6 text-center"
                 >
-                  <div className="mb-3 text-4xl">&#127881;</div>
+                  <div className="mb-3 text-4xl">{state.disputeResolved ? "\u2696\uFE0F" : "\u{1F389}"}</div>
                   <h3 className="mb-1 text-lg font-bold text-success">
-                    Transaction Complete!
+                    {state.disputeResolved ? "Dispute Resolved" : "Transaction Complete!"}
                   </h3>
                   <p className="mb-4 text-sm text-text-secondary">
-                    Funds have been released to the seller.
+                    {state.disputeResolved
+                      ? "Funds have been returned to the buyer."
+                      : "Funds have been released to the seller."}
                   </p>
                   {(state.txHash || state.releaseTxHash) && (
                     <div className="mx-auto mb-4 max-w-sm space-y-1.5">

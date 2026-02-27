@@ -16,7 +16,7 @@ import { updateOrderStatus, getOrderByOrderId } from "./orderService.js";
 import { getServiceType } from "../service-types/index.js";
 import { logger } from "./logger.js";
 import { dispatchWebhookEvent, chainEventToWebhookType } from "./webhookService.js";
-import { confirmDeliveryOnChain } from "../facilitator/settler.js";
+import { confirmDeliveryOnChain, resolveDisputeOnChain } from "../facilitator/settler.js";
 
 let _publicClient: ReturnType<typeof createPublicClient> | undefined;
 const getPublicClient = () => {
@@ -84,6 +84,10 @@ export function startEventListener() {
 
       if (eventName === "EscrowCreated") {
         scheduleAutoVerify(Number(args.escrowId), args.orderId);
+      }
+
+      if (eventName === "EscrowDisputed") {
+        scheduleAutoResolve(Number(args.escrowId));
       }
     }
   });
@@ -210,6 +214,29 @@ function scheduleAutoVerify(escrowId: number, orderId: `0x${string}`) {
   } catch (err) {
     logger.error("events", `Failed to schedule auto-verify: ${(err as Error).message}`);
   }
+}
+
+function scheduleAutoResolve(escrowId: number) {
+  logger.info("events", `Scheduling auto-resolve for escrow ${escrowId} (100% buyer refund)`);
+
+  setTimeout(async () => {
+    try {
+      const txHash = await resolveDisputeOnChain(escrowId, 100);
+      logger.info("events", `Auto-resolved dispute for escrow ${escrowId}: ${txHash}`);
+
+      // Update dispute record in DB
+      try {
+        const db = getDb();
+        db.prepare(
+          `UPDATE disputes SET status = 'resolved', buyer_pct = 100, resolved_at = ? WHERE escrow_id = ? AND status = 'open'`
+        ).run(Math.floor(Date.now() / 1000), escrowId);
+      } catch (dbErr) {
+        logger.error("events", `Failed to update dispute record for escrow ${escrowId}: ${(dbErr as Error).message}`);
+      }
+    } catch (err) {
+      logger.error("events", `Auto-resolve tx failed for escrow ${escrowId}: ${(err as Error).message}`);
+    }
+  }, 3000);
 }
 
 // ──────────── Event Reconciliation (Fix 9) ────────────
