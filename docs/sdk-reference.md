@@ -553,5 +553,6 @@ interface Stats {
 ## Next steps
 
 - [Quickstart](./quickstart.md) — get started in 5 minutes
+- [Agent Guide](./agent-guide.md) — end-to-end scenarios for AI agents, reputation screening, dispute handling
 - [API Reference](./api-reference.md) — REST API endpoints, request/response schemas
 - [Seller Guide](./seller-guide.md) — running the facilitator server, webhooks, fees

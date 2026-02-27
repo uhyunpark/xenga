@@ -11,6 +11,7 @@ const DOCS = [
   "quickstart",
   "sdk-reference",
   "api-reference",
+  "agent-guide",
   "seller-guide",
   "erc-8004-comparison",
 ] as const;
