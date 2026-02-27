@@ -23,62 +23,7 @@ Buyer                    Facilitator Server              Blockchain
   │  [or autoRelease after timeout]                        │
 ```
 
-The **facilitator server** is the intermediary that:
-- Manages orders in a database
-- Handles the xenga HTTP flow (402 → verify → settle)
-- Pays gas for `createEscrowWithAuth` on behalf of buyers
-- Syncs on-chain events to local state
-- Dispatches webhooks on escrow lifecycle changes
-
-## Setting up the facilitator server
-
-### 1. Environment variables
-
-Copy `.env.example` and configure:
-
-```bash
-# Required
-PRIVATE_KEY=0x...              # Operator wallet (pays gas, acts as arbiter)
-ESCROW_VAULT_ADDRESS=0x...     # Deployed EscrowVault contract address
-
-# Chain (optional, default: Base Sepolia)
-CHAIN_ID=84532                 # 84532=Base Sepolia, 8453=Base Mainnet
-
-# RPC (optional, default: public RPC for selected chain)
-BASE_SEPOLIA_RPC=https://sepolia.base.org
-
-# API authentication (recommended for production)
-API_KEYS=sk_live_abc123,sk_live_def456
-
-# Fee configuration (optional)
-FEE_BPS=100                    # 1% facilitator fee
-FEE_FLAT_USDC=50000            # + $0.05 flat fee (covers gas)
-FEE_RECIPIENT=0x...            # Address to receive fees
-```
-
-### 2. Start the server
-
-```bash
-bun install
-bun run dev    # development with watch
-bun run start  # production
-```
-
-The server will:
-- Validate configuration on startup
-- Initialize SQLite database
-- Start watching on-chain events
-- Monitor operator wallet balance
-- Clean up stuck `pending_payment` orders every 5 minutes
-
-### 3. Fund the operator wallet
-
-The operator wallet (`PRIVATE_KEY`) pays gas for:
-- `createEscrowWithAuth` — every payment
-- `resolveDispute` — when arbiter resolves disputes
-- `refund` — when arbiter-initiated
-
-Fund it with ETH on your target chain. The server logs warnings when balance drops below 0.01 ETH.
+The **facilitator server** handles the xenga HTTP flow — it mediates between buyers and the blockchain, manages orders, and dispatches webhooks on escrow lifecycle changes.
 
 ## Creating orders
 

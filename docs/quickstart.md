@@ -106,38 +106,7 @@ const { response, payment } = await escrowFetch(
 );
 ```
 
-## 4. Server-side: protect an endpoint with escrow payment
-
-### Express
-
-```typescript
-import { escrowPaymentMiddleware } from "@xenga/server/express";
-
-router.post("/:id/pay", escrowPaymentMiddleware(), (req, res) => {
-  // Only reaches here after successful payment
-  res.json({
-    message: "Payment successful",
-    order: req.order,
-    payment: req.escrowPayment,
-  });
-});
-```
-
-### Next.js App Router
-
-```typescript
-import { handleEscrowPayment, toNextResponse } from "@xenga/server/nextjs";
-
-export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const result = await handleEscrowPayment(request, { id }, deps);
-  return toNextResponse(result);
-}
-```
-
-Both adapters delegate to the same framework-independent `processEscrowPayment()` core. You provide dependencies via the `PaymentDeps` interface — see [API Reference](./api-reference.md) for details.
-
 ## Next steps
 
 - [API Reference](./api-reference.md) — all endpoints, request/response schemas, error codes
-- [Seller Guide](./seller-guide.md) — running the facilitator server, webhooks, fee configuration
+- [Seller Guide](./seller-guide.md) — webhooks, on-chain seller actions, fee structure
