@@ -72,6 +72,7 @@ export function escrowPaymentMiddleware() {
       {
         getHeader: (name) => req.headers[name.toLowerCase()] as string | undefined,
         params: req.params as Record<string, string>,
+        url: req.originalUrl,
       },
       deps
     );

@@ -1,4 +1,4 @@
-import type { WalletClient, Address } from "viem";
+import type { WalletClient, Address, Hash } from "viem";
 import type {
   EscrowPaymentRequired,
   EscrowPaymentResponse,
@@ -53,6 +53,42 @@ function isEscrowPaymentRequired(obj: unknown): obj is EscrowPaymentRequired {
     typeof o.releaseWindow === "number" &&
     typeof o.serviceType === "string"
   );
+}
+
+/** Unwrap x402 envelope or legacy format to EscrowPaymentRequired */
+function unwrapPaymentRequired(decoded: unknown): EscrowPaymentRequired | undefined {
+  if (typeof decoded !== "object" || decoded === null) return undefined;
+
+  const obj = decoded as Record<string, unknown>;
+
+  // x402 format: { x402Version, accepts: [...] }
+  if (obj.x402Version && Array.isArray(obj.accepts)) {
+    const escrowOption = (obj.accepts as Array<Record<string, unknown>>)
+      .find((opt) => opt.scheme === "escrow");
+    if (!escrowOption) return undefined;
+
+    const extra = (escrowOption.extra ?? {}) as Record<string, unknown>;
+    return {
+      scheme: "escrow",
+      network: String(escrowOption.network),
+      escrowContract: String(escrowOption.payTo) as Address,
+      asset: String(escrowOption.asset) as Address,
+      amount: String(escrowOption.maxAmountRequired),
+      orderId: String(extra.orderId) as Hash,
+      sellerAddress: String(extra.sellerAddress) as Address,
+      releaseWindow: Number(extra.releaseWindow),
+      serviceType: String(extra.serviceType),
+      facilitatorFee: extra.facilitatorFee as string | undefined,
+    };
+  }
+
+  // Array format: find escrow scheme
+  if (Array.isArray(decoded)) {
+    return decoded.find((r: { scheme?: string }) => r.scheme === "escrow");
+  }
+
+  // Single object (legacy)
+  return decoded as EscrowPaymentRequired;
 }
 
 export interface EscrowFetchOptions {
@@ -117,10 +153,8 @@ export async function escrowFetch(
         "Failed to decode PAYMENT-REQUIRED header: invalid base64 or JSON"
       );
     }
-    // Handle array format (xenga standard) or single object (legacy)
-    const candidate = Array.isArray(decoded)
-      ? decoded.find((r: { scheme?: string }) => r.scheme === "escrow")
-      : decoded;
+    // Handle x402 envelope, array format, or single object (legacy)
+    const candidate = unwrapPaymentRequired(decoded);
 
     if (!isEscrowPaymentRequired(candidate)) {
       throw new InvalidPaymentHeaderError(
@@ -225,7 +259,13 @@ export async function escrowFetch(
     retryResponse.headers.get("x-payment-response");
   if (paymentResponseHeader) {
     try {
-      payment = JSON.parse(decodeBase64(paymentResponseHeader));
+      const decoded = JSON.parse(decodeBase64(paymentResponseHeader)) as Record<string, unknown>;
+      // Handle x402 format (transaction field) or Xenga format (txHash field)
+      payment = {
+        success: Boolean(decoded.success),
+        txHash: (decoded.txHash ?? decoded.transaction) as Hash,
+        escrowId: Number(decoded.escrowId),
+      };
     } catch {
       // If payment response header is malformed, fall through to body parsing
     }
