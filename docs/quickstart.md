@@ -108,5 +108,6 @@ const { response, payment } = await escrowFetch(
 
 ## Next steps
 
+- [Agent Guide](./agent-guide.md) — end-to-end scenarios for AI agents, reputation screening, dispute handling
 - [API Reference](./api-reference.md) — all endpoints, request/response schemas, error codes
 - [Seller Guide](./seller-guide.md) — webhooks, on-chain seller actions, fee structure
