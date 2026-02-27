@@ -7,7 +7,7 @@ const steps = [
   { label: "Request", icon: "1", desc: "Client sends HTTP request" },
   { label: "402", icon: "402", desc: "Server returns Payment Required" },
   { label: "Sign", icon: "3", desc: "Client signs EIP-712 authorization" },
-  { label: "Retry", icon: "4", desc: "Client retries with X-PAYMENT" },
+  { label: "Retry", icon: "4", desc: "Client retries with PAYMENT-SIGNATURE" },
   { label: "Escrow", icon: "5", desc: "Funds locked in smart contract" },
   { label: "Deliver", icon: "6", desc: "Seller confirms delivery" },
   { label: "Release", icon: "7", desc: "Funds released to seller" },

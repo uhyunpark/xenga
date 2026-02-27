@@ -2,18 +2,18 @@ import type { Metadata } from "next";
 import AgentPage from "./AgentPage";
 
 export const metadata: Metadata = {
-  title: "Agent Service Demo",
+  title: "Agent Demo",
   description:
-    "Watch an autonomous agent execute discovery, payment, and on-chain escrow settlement — including dispute resolution on Base Sepolia.",
+    "Watch an autonomous agent discover, pay for, and settle a service — with on-chain escrow and reputation scoring on Base Sepolia.",
   openGraph: {
-    title: "Agent Service Demo — Xenga",
+    title: "Agent Demo — Xenga",
     description:
-      "Autonomous agent demo with machine-to-machine escrow payments, on-chain settlement, and dispute resolution.",
+      "Autonomous agent demo with on-chain escrow, reputation scoring, and dispute resolution. x402 compatible.",
   },
   twitter: {
-    title: "Agent Service Demo — Xenga",
+    title: "Agent Demo — Xenga",
     description:
-      "Autonomous agent demo with machine-to-machine escrow payments and on-chain settlement.",
+      "Autonomous agent demo with on-chain escrow, reputation scoring, and dispute resolution.",
   },
 };
 
