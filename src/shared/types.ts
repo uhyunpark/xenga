@@ -137,6 +137,57 @@ export interface EscrowPaymentResponse {
   escrowId: number;
 }
 
+// ──────────────────────── x402 Protocol Types ────────────────────────
+
+/** x402 PaymentRequirements envelope (402 response body/header) */
+export interface X402PaymentRequirements {
+  x402Version: 1;
+  error?: string;
+  accepts: X402PaymentOption[];
+}
+
+/** Single payment option in the x402 accepts array */
+export interface X402PaymentOption {
+  scheme: string;
+  network: string;
+  maxAmountRequired: string;
+  resource: string;
+  description: string;
+  mimeType: string;
+  outputSchema?: object | null;
+  payTo: Address;
+  maxTimeoutSeconds: number;
+  asset: Address;
+  extra?: Record<string, unknown>;
+}
+
+/** x402 PaymentPayload (client → server via PAYMENT-SIGNATURE header) */
+export interface X402PaymentPayload {
+  x402Version: 1;
+  scheme: string;
+  network: string;
+  payload: {
+    signature: Hex;
+    authorization: {
+      from: Address;
+      to: Address;
+      value: string;
+      validAfter: string;
+      validBefore: string;
+      nonce: Hash;
+    };
+  };
+}
+
+/** x402 SettlementResponse (server → client via PAYMENT-RESPONSE header) */
+export interface X402SettlementResponse {
+  success: boolean;
+  transaction: Hash;
+  network: string;
+  payer: Address;
+  escrowId?: number;
+}
+
 // ──────────────────────── API Request/Response ────────────────────────
 
 export interface CreateOrderRequest {

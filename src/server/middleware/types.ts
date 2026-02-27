@@ -20,6 +20,8 @@ export interface PaymentContext {
   getHeader(name: string): string | undefined;
   /** Route params, e.g. { id: "abc-123" }. */
   params: Record<string, string>;
+  /** Request URL (for x402 `resource` field). */
+  url?: string;
 }
 
 /**

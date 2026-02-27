@@ -76,10 +76,32 @@ export async function requestPayment(
 
   if (res.status === 402 && rawHeader) {
     const decoded = JSON.parse(atob(rawHeader));
-    // Handle array format (xenga standard) or single object (legacy)
-    const paymentRequired: PaymentRequired = Array.isArray(decoded)
-      ? decoded.find((r: { scheme: string }) => r.scheme === "escrow")
-      : decoded;
+    // Handle x402 envelope, array format, or single object (legacy)
+    let paymentRequired: PaymentRequired;
+    if (decoded.x402Version && Array.isArray(decoded.accepts)) {
+      // x402 envelope
+      const opt = decoded.accepts.find((o: any) => o.scheme === "escrow");
+      const extra = opt?.extra ?? {};
+      paymentRequired = {
+        scheme: "escrow",
+        network: opt.network,
+        escrowContract: opt.payTo,
+        asset: opt.asset,
+        amount: opt.maxAmountRequired,
+        orderId: extra.orderId,
+        sellerAddress: extra.sellerAddress,
+        releaseWindow: extra.releaseWindow,
+        serviceType: extra.serviceType,
+        facilitatorFee: extra.facilitatorFee,
+        feeBps: extra.feeBps,
+        flatFee: extra.flatFee,
+      };
+    } else {
+      // Legacy format (array or single object)
+      paymentRequired = Array.isArray(decoded)
+        ? decoded.find((r: { scheme: string }) => r.scheme === "escrow")
+        : decoded;
+    }
 
     emit?.({
       type: "http_response",
@@ -254,7 +276,13 @@ export async function submitPayment(
 
   let paymentResponse: PaymentResponse | undefined;
   if (paymentResponseHeader) {
-    paymentResponse = JSON.parse(atob(paymentResponseHeader));
+    const raw = JSON.parse(atob(paymentResponseHeader));
+    // Handle x402 format (transaction field) or Xenga format (txHash field)
+    paymentResponse = {
+      success: Boolean(raw.success),
+      txHash: raw.txHash ?? raw.transaction,
+      escrowId: Number(raw.escrowId),
+    };
   }
 
   emit?.({

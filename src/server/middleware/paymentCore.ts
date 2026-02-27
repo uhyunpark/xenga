@@ -1,10 +1,15 @@
-import type { Address } from "viem";
+import type { Address, Hash } from "viem";
 import type {
   EscrowPaymentPayload,
   EscrowPaymentRequired,
   SellerReputationInfo,
+  X402PaymentOption,
+  X402PaymentPayload,
+  X402PaymentRequirements,
+  X402SettlementResponse,
 } from "../../shared/types.js";
 import { computeFee } from "../../shared/fees.js";
+import { getChainConfig, networkToChainId } from "../../shared/constants.js";
 import { executeHooks, type HookContext } from "../hooks.js";
 import type { PaymentContext, PaymentDeps, PaymentResult } from "./types.js";
 
@@ -14,6 +19,54 @@ const noopLogger = {
   warn() {},
   error() {},
 };
+
+/**
+ * Detect x402 vs Xenga payload format and normalize to internal EscrowPaymentPayload.
+ * x402 format: { x402Version, scheme, network, payload: { signature, authorization } }
+ * Xenga format: { scheme, network, from, to, value, signature: { v, r, s }, ... }
+ */
+function normalizePaymentPayload(raw: unknown): EscrowPaymentPayload {
+  const obj = raw as Record<string, unknown>;
+
+  // Detect x402 format
+  if (
+    obj.x402Version &&
+    obj.payload &&
+    typeof obj.payload === "object" &&
+    (obj.payload as Record<string, unknown>).authorization
+  ) {
+    const x402 = raw as X402PaymentPayload;
+    const { authorization, signature } = x402.payload;
+
+    // Convert hex signature to v, r, s components
+    const sigHex = signature.startsWith("0x") ? signature.slice(2) : signature;
+    const r = `0x${sigHex.slice(0, 64)}` as Hash;
+    const s = `0x${sigHex.slice(64, 128)}` as Hash;
+    const v = parseInt(sigHex.slice(128, 130), 16);
+
+    // Extract escrow fields from extra or top-level
+    const extra = ((obj as Record<string, unknown>).extra ?? {}) as Record<string, unknown>;
+
+    return {
+      scheme: "escrow",
+      network: x402.network,
+      from: authorization.from,
+      to: authorization.to,
+      value: authorization.value,
+      validAfter: authorization.validAfter,
+      validBefore: authorization.validBefore,
+      nonce: authorization.nonce,
+      signature: { v, r, s },
+      orderId: (extra.orderId ?? obj.orderId ?? "0x") as Hash,
+      sellerAddress: (extra.sellerAddress ?? obj.sellerAddress ?? "0x") as Address,
+      releaseWindow: Number(extra.releaseWindow ?? obj.releaseWindow ?? 0),
+      serviceType: String(extra.serviceType ?? obj.serviceType ?? ""),
+    };
+  }
+
+  // Xenga native format — pass through
+  return raw as EscrowPaymentPayload;
+}
 
 /**
  * Framework-independent escrow payment processing.
@@ -48,11 +101,20 @@ export async function processEscrowPayment(
       txHash: order.txHash!,
       escrowId: order.escrowId!,
     };
-    const encoded = toBase64(paymentResponse);
+    const x402Response: X402SettlementResponse = {
+      success: true,
+      transaction: order.txHash!,
+      network: deps.config.network ?? "base-sepolia",
+      payer: (order.buyerAddress ?? "0x") as Address,
+      escrowId: order.escrowId!,
+    };
     return {
       status: 200,
       body: undefined, // adapter fills in the response body
-      headers: { "PAYMENT-RESPONSE": encoded, "X-PAYMENT-RESPONSE": encoded },
+      headers: {
+        "PAYMENT-RESPONSE": toBase64(x402Response),
+        "X-PAYMENT-RESPONSE": toBase64(paymentResponse),
+      },
       handled: false,
       payment: paymentResponse,
       order,
@@ -87,14 +149,14 @@ export async function processEscrowPayment(
     if (!hookResult.ok) {
       return { status: 403, body: { error: hookResult.error }, headers: {}, handled: true };
     }
-    return buildPaymentRequiredResponse(order, deps, log);
+    return buildPaymentRequiredResponse(order, deps, log, ctx.url);
   }
 
-  // ── Parse payment header ──
+  // ── Parse payment header (supports both x402 and Xenga native format) ──
   let payload: EscrowPaymentPayload;
   try {
     const decoded = Buffer.from(paymentHeader, "base64").toString("utf-8");
-    payload = JSON.parse(decoded);
+    payload = normalizePaymentPayload(JSON.parse(decoded));
   } catch {
     return { status: 400, body: { error: "Invalid payment header" }, headers: {}, handled: true };
   }
@@ -181,7 +243,13 @@ export async function processEscrowPayment(
     });
 
     const paymentResponse = { success: true, txHash, escrowId };
-    const encoded = toBase64(paymentResponse);
+    const x402Response: X402SettlementResponse = {
+      success: true,
+      transaction: txHash,
+      network: deps.config.network ?? "base-sepolia",
+      payer: payload.from,
+      escrowId,
+    };
 
     // Re-fetch updated order
     const updatedOrder = deps.getOrderById(order.id);
@@ -219,7 +287,10 @@ export async function processEscrowPayment(
     return {
       status: 200,
       body: undefined,
-      headers: { "PAYMENT-RESPONSE": encoded, "X-PAYMENT-RESPONSE": encoded },
+      headers: {
+        "PAYMENT-RESPONSE": toBase64(x402Response),
+        "X-PAYMENT-RESPONSE": toBase64(paymentResponse),
+      },
       handled: false,
       payment: paymentResponse,
       order: updatedOrder,
@@ -241,7 +312,8 @@ export async function processEscrowPayment(
 async function buildPaymentRequiredResponse(
   order: { id: string; price: bigint; orderId: `0x${string}`; sellerAddress: Address; serviceType: string },
   deps: PaymentDeps,
-  log: PaymentDeps["logger"] & object
+  log: PaymentDeps["logger"] & object,
+  resourceUrl?: string
 ): Promise<PaymentResult> {
   const serviceType = deps.getServiceType(order.serviceType);
   if (!serviceType) {
@@ -307,20 +379,53 @@ async function buildPaymentRequiredResponse(
   };
 
   const paymentRequirements = [paymentRequired];
-  const encodedArray = toBase64(paymentRequirements);
-  const encodedSingle = toBase64(paymentRequired);
+
+  // Build x402 envelope
+  const network = paymentRequired.network;
+  const x402Accepts: X402PaymentOption[] = [{
+    scheme: "escrow",
+    network,
+    maxAmountRequired: paymentRequired.amount,
+    resource: resourceUrl ?? "",
+    description: "Escrow payment for order",
+    mimeType: "application/json",
+    outputSchema: null,
+    payTo: paymentRequired.escrowContract,
+    maxTimeoutSeconds: 60,
+    asset: paymentRequired.asset,
+    extra: {
+      // EIP-712 domain hint (clients sign ReceiveWithAuthorization, not TransferWithAuthorization)
+      name: getChainConfig(networkToChainId(network)).usdcDomainName,
+      version: "2",
+      primaryType: "ReceiveWithAuthorization",
+      // Escrow-specific fields
+      orderId: paymentRequired.orderId,
+      sellerAddress: paymentRequired.sellerAddress,
+      releaseWindow: paymentRequired.releaseWindow,
+      serviceType: paymentRequired.serviceType,
+      facilitatorFee: paymentRequired.facilitatorFee,
+      ...(sellerReputation ? { sellerReputation } : {}),
+    },
+  }];
+  const x402Envelope: X402PaymentRequirements = {
+    x402Version: 1,
+    error: "Payment required",
+    accepts: x402Accepts,
+  };
 
   return {
     status: 402,
     body: {
-      error: "Payment required",
+      // x402 format (primary)
+      ...x402Envelope,
+      // Legacy Xenga format (backward compat)
       paymentRequired,
       paymentRequirements,
       sellerReputation,
     },
     headers: {
-      "PAYMENT-REQUIRED": encodedArray,
-      "X-PAYMENT-REQUIRED": encodedSingle,
+      "PAYMENT-REQUIRED": toBase64(x402Envelope),
+      "X-PAYMENT-REQUIRED": toBase64(paymentRequired),
     },
     handled: true,
   };

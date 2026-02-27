@@ -53,7 +53,7 @@ Vercel (web/)                    GCP Cloud Run (src/server/)
 ```
 
 **Other layers:**
-- **`contracts/`** — Foundry project: EscrowVault (escrow state machine + stats), SessionEscrow (session micropayments), AutoReleaseKeeper (Chainlink automation), MockUSDC (test token)
+- **`contracts/`** — Foundry project: EscrowVault (escrow state machine + stats), SessionEscrow (session micropayments), MockUSDC (test token)
 - **`src/client/`** — Client SDK: EIP-712 signing, reputation lookup (`getReputation()`), and xenga payment flow (`escrowFetch` with optional `onSellerReputation` callback)
 
 **Shared code** (`src/shared/`): types, constants, EIP-712 domain/types, and auto-generated ABIs (`abi.ts` — never edit manually, use `sync-abi`). The web app imports `@shared/` via webpack alias for types and EIP-712 signing functions (client-safe, no server deps).
@@ -62,7 +62,7 @@ Vercel (web/)                    GCP Cloud Run (src/server/)
 
 ```
 None → Active → DeliveryConfirmed → Completed      (buyer releases)
-         │             │              AutoReleased   (timeout, anyone triggers)
+         │             │              AutoReleased   (timeout, facilitator poller triggers)
          │             └────────────→ Disputed ──→ Resolved (arbiter splits %)
          └───────────────────────────→ Refunded   (seller voluntary / arbiter)
 ```
@@ -139,16 +139,28 @@ Service types (`src/server/service-types/`) define escrow parameters per use cas
 
 Each service type can implement `adjustParams(params, reputation)` to dynamically adjust escrow parameters (e.g. release window) based on counterparty reputation scores.
 
+### Auto-Release Poller
+
+The facilitator runs a built-in poller (`src/server/services/autoReleasePoller.ts`) that checks escrowed orders every 60 seconds and calls the permissionless `autoRelease()` on EscrowVault when `isReleasable()` returns true. No external automation (Chainlink, cron) needed — the facilitator already pays gas.
+
 ### Xenga Integration Layer
 
-HTTP transport for triggering escrow creation. The contracts can also be called directly.
+HTTP transport for triggering escrow creation. x402-compatible — any x402 agent can pay without Xenga-specific code. The contracts can also be called directly.
 
-1. Client POSTs to a payment-protected endpoint without `X-PAYMENT` header
-2. Middleware returns **402** with `X-PAYMENT-REQUIRED` header (base64 JSON: amount, token, escrow address, order details)
+1. Client POSTs to a payment-protected endpoint without payment header
+2. Middleware returns **402** with `PAYMENT-REQUIRED` header (x402 envelope) and `X-PAYMENT-REQUIRED` header (legacy Xenga format)
 3. Client signs ERC-3009 `ReceiveWithAuthorization` via EIP-712 (USDC gasless transfer to EscrowVault)
-4. Client retries with `X-PAYMENT` header containing the signature
-5. Server verifies signature off-chain (`facilitator/verifier.ts`), submits `createEscrowWithAuth` on-chain (`facilitator/settler.ts`)
-6. Returns **200** with `X-PAYMENT-RESPONSE` header
+4. Client retries with `PAYMENT-SIGNATURE` header (x402 format) or `X-PAYMENT` header (legacy)
+5. Server normalizes payload (`normalizePaymentPayload` handles both formats), verifies signature off-chain, submits `createEscrowWithAuth` on-chain
+6. Returns **200** with `PAYMENT-RESPONSE` header (x402 format) and `X-PAYMENT-RESPONSE` header (legacy)
+
+**x402 compatibility:** The `PAYMENT-REQUIRED` header contains a standard x402 envelope (`{ x402Version: 1, accepts: [{ scheme: "escrow", ... }] }`). Escrow-specific fields (`orderId`, `sellerAddress`, `releaseWindow`, `serviceType`) are in the `extra` object. `extra.primaryType: "ReceiveWithAuthorization"` tells x402 clients which EIP-712 type to sign.
+
+**Key files:**
+- `src/server/middleware/paymentCore.ts` — `processEscrowPayment()`, `normalizePaymentPayload()`, `buildPaymentRequiredResponse()`
+- `src/server/middleware/escrowPayment.ts` — Express adapter
+- `src/shared/types.ts` — `X402PaymentRequirements`, `X402PaymentPayload`, `X402SettlementResponse`
+- `src/client/escrowFetch.ts` — `unwrapPaymentRequired()` (handles x402 + legacy)
 
 ### Seller Dashboard
 
@@ -235,7 +247,6 @@ web/
 - **`@types/express` v5**: `req.params` values are `string | string[]`, cast to `string` when needed
 - **Foundry tests**: default `block.timestamp` is 1 (not 0); use explicit absolute timestamps with `vm.warp()` rather than relative offsets from captured `block.timestamp` (via_ir can change evaluation order)
 - **ABI source of truth**: Foundry artifacts in `contracts/out/` → run `sync-abi` to regenerate `src/shared/abi.ts`
-- **AutomationCompatibleInterface**: defined locally in `contracts/src/interfaces/` (Chainlink repo too large to install)
 - **`disputeWindow` vs `releaseWindow`**: `releaseWindow` is per-escrow (set at creation from service type config). `disputeWindow` is a global owner-set default (applies to all new escrows, stored in each escrow struct at creation). Changing it post-deployment does not affect existing escrows.
 - **Workspaces**: root `package.json` has `"workspaces": ["packages/*", "web"]`; run `bun install` from root to link
 

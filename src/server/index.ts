@@ -30,6 +30,7 @@ import { rateLimit } from "./middleware/rateLimit.js";
 import { logger } from "./services/logger.js";
 import { startWalletMonitor, getLastWalletStatus } from "./services/walletMonitor.js";
 import { startOrderCleanup } from "./services/orderCleanup.js";
+import { startAutoReleasePoller } from "./services/autoReleasePoller.js";
 import { txQueue } from "./facilitator/txQueue.js";
 
 // ──────────── Bootstrap ────────────
@@ -139,6 +140,9 @@ startWalletMonitor();
 
 // Start stuck order cleanup
 startOrderCleanup();
+
+// Start auto-release poller (triggers autoRelease for expired escrows)
+startAutoReleasePoller();
 
 // Graceful shutdown
 function shutdown() {
