@@ -58,6 +58,8 @@ const { response, payment } = await escrowFetch(
 3. Retries the request with the `PAYMENT-SIGNATURE` header
 4. Returns the final response with escrow details
 
+The SDK automatically handles both x402 and legacy Xenga response formats. The `PAYMENT-REQUIRED` header may contain an x402 envelope (`{ x402Version, accepts }`) or a legacy Xenga array — `escrowFetch` detects and unwraps both transparently.
+
 ### Example: abort on low reputation
 
 ```typescript

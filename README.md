@@ -68,7 +68,7 @@ Service types (`src/server/service-types/`) define escrow parameters per use cas
 
 ### Xenga Integration Layer
 
-The xenga protocol provides an HTTP transport layer for triggering escrow creation. When a client requests a payment-protected endpoint without credentials, the server returns HTTP 402 with escrow requirements. The client signs an ERC-3009 authorization, resubmits, and the server settles the escrow on-chain. This is one integration path — the contracts can also be called directly.
+The xenga protocol provides an HTTP transport layer for triggering escrow creation. The protocol is x402-compatible — any x402 agent (Coinbase AgentKit, Circle, Crossmint) can pay for xenga-protected services without Xenga-specific code. When a client requests a payment-protected endpoint without credentials, the server returns HTTP 402 with escrow requirements in a standard x402 envelope. The client signs an ERC-3009 authorization, resubmits, and the server settles the escrow on-chain. The Xenga client SDK is a convenience wrapper — not a requirement.
 
 ## Quick Start
 

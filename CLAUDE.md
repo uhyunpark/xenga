@@ -139,16 +139,28 @@ Service types (`src/server/service-types/`) define escrow parameters per use cas
 
 Each service type can implement `adjustParams(params, reputation)` to dynamically adjust escrow parameters (e.g. release window) based on counterparty reputation scores.
 
+### Auto-Release Poller
+
+The facilitator runs a built-in poller (`src/server/services/autoReleasePoller.ts`) that checks escrowed orders every 60 seconds and calls the permissionless `autoRelease()` on EscrowVault when `isReleasable()` returns true. No external automation (Chainlink, cron) needed — the facilitator already pays gas.
+
 ### Xenga Integration Layer
 
-HTTP transport for triggering escrow creation. The contracts can also be called directly.
+HTTP transport for triggering escrow creation. x402-compatible — any x402 agent can pay without Xenga-specific code. The contracts can also be called directly.
 
-1. Client POSTs to a payment-protected endpoint without `X-PAYMENT` header
-2. Middleware returns **402** with `X-PAYMENT-REQUIRED` header (base64 JSON: amount, token, escrow address, order details)
+1. Client POSTs to a payment-protected endpoint without payment header
+2. Middleware returns **402** with `PAYMENT-REQUIRED` header (x402 envelope) and `X-PAYMENT-REQUIRED` header (legacy Xenga format)
 3. Client signs ERC-3009 `ReceiveWithAuthorization` via EIP-712 (USDC gasless transfer to EscrowVault)
-4. Client retries with `X-PAYMENT` header containing the signature
-5. Server verifies signature off-chain (`facilitator/verifier.ts`), submits `createEscrowWithAuth` on-chain (`facilitator/settler.ts`)
-6. Returns **200** with `X-PAYMENT-RESPONSE` header
+4. Client retries with `PAYMENT-SIGNATURE` header (x402 format) or `X-PAYMENT` header (legacy)
+5. Server normalizes payload (`normalizePaymentPayload` handles both formats), verifies signature off-chain, submits `createEscrowWithAuth` on-chain
+6. Returns **200** with `PAYMENT-RESPONSE` header (x402 format) and `X-PAYMENT-RESPONSE` header (legacy)
+
+**x402 compatibility:** The `PAYMENT-REQUIRED` header contains a standard x402 envelope (`{ x402Version: 1, accepts: [{ scheme: "escrow", ... }] }`). Escrow-specific fields (`orderId`, `sellerAddress`, `releaseWindow`, `serviceType`) are in the `extra` object. `extra.primaryType: "ReceiveWithAuthorization"` tells x402 clients which EIP-712 type to sign.
+
+**Key files:**
+- `src/server/middleware/paymentCore.ts` — `processEscrowPayment()`, `normalizePaymentPayload()`, `buildPaymentRequiredResponse()`
+- `src/server/middleware/escrowPayment.ts` — Express adapter
+- `src/shared/types.ts` — `X402PaymentRequirements`, `X402PaymentPayload`, `X402SettlementResponse`
+- `src/client/escrowFetch.ts` — `unwrapPaymentRequired()` (handles x402 + legacy)
 
 ### Seller Dashboard
 

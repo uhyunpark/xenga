@@ -82,8 +82,8 @@ Pay for an order. This is the core xenga endpoint.
 **Without payment header:** Returns `402` with payment requirements.
 
 **402 Response headers:**
-- `PAYMENT-REQUIRED` — base64 JSON array of payment requirements (xenga standard)
-- `X-PAYMENT-REQUIRED` — base64 JSON single requirement (legacy)
+- `PAYMENT-REQUIRED` — base64 JSON x402 envelope (`{ x402Version: 1, accepts: [...] }`)
+- `X-PAYMENT-REQUIRED` — base64 JSON single requirement (legacy Xenga format)
 
 **402 Response body:**
 ```json
@@ -107,7 +107,37 @@ Pay for an order. This is the core xenga endpoint.
 }
 ```
 
-**With payment header:** Include signed ERC-3009 authorization in `PAYMENT-SIGNATURE` header (base64 JSON).
+The `PAYMENT-REQUIRED` header contains the x402 envelope:
+```json
+{
+  "x402Version": 1,
+  "error": "Payment required",
+  "accepts": [{
+    "scheme": "escrow",
+    "network": "base-sepolia",
+    "maxAmountRequired": "5000000",
+    "resource": "/api/orders/ORDER_ID/pay",
+    "description": "Escrow payment for order",
+    "mimeType": "application/json",
+    "payTo": "0x...",
+    "maxTimeoutSeconds": 60,
+    "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    "extra": {
+      "name": "USDC",
+      "version": "2",
+      "primaryType": "ReceiveWithAuthorization",
+      "orderId": "0x...",
+      "sellerAddress": "0x...",
+      "releaseWindow": 604800,
+      "serviceType": "marketplace",
+      "facilitatorFee": "100000",
+      "sellerReputation": { "score": 85, "confidence": "high", "disputeRate": 0.05 }
+    }
+  }]
+}
+```
+
+**With payment header:** Include signed ERC-3009 authorization in `PAYMENT-SIGNATURE` header (x402 format, base64 JSON) or `X-PAYMENT` header (legacy format).
 
 **200 Response:**
 ```json
@@ -297,13 +327,13 @@ All errors follow the format:
 
 ---
 
-## Xenga Header Reference
+## Header Reference
 
 | Header | Direction | Format | Description |
 |--------|-----------|--------|-------------|
-| `PAYMENT-REQUIRED` | Response (402) | base64 JSON array | Payment requirements (xenga standard) |
-| `X-PAYMENT-REQUIRED` | Response (402) | base64 JSON | Payment requirement (legacy) |
-| `PAYMENT-SIGNATURE` | Request (retry) | base64 JSON | Signed ERC-3009 authorization (xenga standard) |
-| `X-PAYMENT` | Request (retry) | base64 JSON | Signed authorization (legacy) |
-| `PAYMENT-RESPONSE` | Response (200) | base64 JSON | Settlement result (xenga standard) |
-| `X-PAYMENT-RESPONSE` | Response (200) | base64 JSON | Settlement result (legacy) |
+| `PAYMENT-REQUIRED` | Response (402) | base64 JSON | x402 envelope (`{ x402Version, accepts }`) |
+| `X-PAYMENT-REQUIRED` | Response (402) | base64 JSON | Legacy Xenga format (single requirement) |
+| `PAYMENT-SIGNATURE` | Request (retry) | base64 JSON | x402 or Xenga signed ERC-3009 authorization |
+| `X-PAYMENT` | Request (retry) | base64 JSON | Legacy Xenga signed authorization |
+| `PAYMENT-RESPONSE` | Response (200) | base64 JSON | x402 settlement result (`{ transaction, network, payer }`) |
+| `X-PAYMENT-RESPONSE` | Response (200) | base64 JSON | Legacy Xenga settlement result (`{ txHash, escrowId }`) |
