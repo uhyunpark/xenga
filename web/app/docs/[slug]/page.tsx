@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
 import rehypePrettyCode from "rehype-pretty-code";
 import rehypeSlug from "rehype-slug";
+import remarkGfm from "remark-gfm";
 import { mdxComponents } from "@/components/docs/mdx-components";
 
 const DOCS = [
@@ -62,6 +63,7 @@ export default async function DocPage({
         options={{
           mdxOptions: {
             format: "md",
+            remarkPlugins: [remarkGfm],
             rehypePlugins: [
               rehypeSlug,
               [

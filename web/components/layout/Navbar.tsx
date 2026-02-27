@@ -6,9 +6,9 @@ import { usePathname } from "next/navigation";
 import { facilitatorFetch } from "@/lib/api/client";
 
 const NAV_ITEMS = [
-  { href: "/docs", label: "Docs" },
   { href: "/playground", label: "Playground" },
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/docs", label: "Docs" },
 ];
 
 export function Navbar() {
