@@ -10,7 +10,7 @@ Buyers deposit USDC into escrow. Funds are held until delivery is confirmed and 
 
 ```
 None ─→ Active ─→ DeliveryConfirmed ─→ Completed      (buyer releases)
-           │              │              AutoReleased   (timeout, anyone triggers)
+           │              │              AutoReleased   (timeout, facilitator poller triggers)
            │              └───────────→ Disputed ──→ Resolved (arbiter splits %)
            └──────────────────────────→ Refunded   (seller voluntary / arbiter)
 ```

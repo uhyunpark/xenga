@@ -10,7 +10,7 @@ Core escrow contract for USDC payments with gasless deposits (ERC-3009).
 
 ```
 None ─→ Active ─→ DeliveryConfirmed ─→ Completed      (buyer releases)
-           │              │              AutoReleased   (timeout, anyone triggers)
+           │              │              AutoReleased   (timeout, facilitator poller triggers)
            │              └───────────→ Disputed ──→ Resolved (arbiter splits %)
            └──────────────────────────→ Refunded   (seller voluntary / arbiter)
 ```
@@ -30,7 +30,7 @@ None ─→ Active ─→ DeliveryConfirmed ─→ Completed      (buyer release
 | `createEscrow` | buyer | Create escrow via approve+transferFrom |
 | `confirmDelivery` | seller | Confirm delivery, start dispute window |
 | `releaseFunds` | buyer | Release funds to seller (from Active or DeliveryConfirmed) |
-| `autoRelease` | anyone | Release after timeout — see timing below |
+| `autoRelease` | anyone (facilitator poller) | Release after timeout — see timing below |
 | `dispute` | buyer | File dispute within dispute window |
 | `resolveDispute` | arbiter | Split funds by buyer percentage (0-100) |
 | `refund` | seller or arbiter | Full refund to buyer (facilitator absorbs fee) |

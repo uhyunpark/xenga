@@ -53,7 +53,7 @@ Vercel (web/)                    GCP Cloud Run (src/server/)
 ```
 
 **Other layers:**
-- **`contracts/`** — Foundry project: EscrowVault (escrow state machine + stats), SessionEscrow (session micropayments), AutoReleaseKeeper (Chainlink automation), MockUSDC (test token)
+- **`contracts/`** — Foundry project: EscrowVault (escrow state machine + stats), SessionEscrow (session micropayments), MockUSDC (test token)
 - **`src/client/`** — Client SDK: EIP-712 signing, reputation lookup (`getReputation()`), and xenga payment flow (`escrowFetch` with optional `onSellerReputation` callback)
 
 **Shared code** (`src/shared/`): types, constants, EIP-712 domain/types, and auto-generated ABIs (`abi.ts` — never edit manually, use `sync-abi`). The web app imports `@shared/` via webpack alias for types and EIP-712 signing functions (client-safe, no server deps).
@@ -62,7 +62,7 @@ Vercel (web/)                    GCP Cloud Run (src/server/)
 
 ```
 None → Active → DeliveryConfirmed → Completed      (buyer releases)
-         │             │              AutoReleased   (timeout, anyone triggers)
+         │             │              AutoReleased   (timeout, facilitator poller triggers)
          │             └────────────→ Disputed ──→ Resolved (arbiter splits %)
          └───────────────────────────→ Refunded   (seller voluntary / arbiter)
 ```
@@ -235,7 +235,6 @@ web/
 - **`@types/express` v5**: `req.params` values are `string | string[]`, cast to `string` when needed
 - **Foundry tests**: default `block.timestamp` is 1 (not 0); use explicit absolute timestamps with `vm.warp()` rather than relative offsets from captured `block.timestamp` (via_ir can change evaluation order)
 - **ABI source of truth**: Foundry artifacts in `contracts/out/` → run `sync-abi` to regenerate `src/shared/abi.ts`
-- **AutomationCompatibleInterface**: defined locally in `contracts/src/interfaces/` (Chainlink repo too large to install)
 - **`disputeWindow` vs `releaseWindow`**: `releaseWindow` is per-escrow (set at creation from service type config). `disputeWindow` is a global owner-set default (applies to all new escrows, stored in each escrow struct at creation). Changing it post-deployment does not affect existing escrows.
 - **Workspaces**: root `package.json` has `"workspaces": ["packages/*", "web"]`; run `bun install` from root to link
 
