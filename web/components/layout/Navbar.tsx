@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { facilitatorFetch } from "@/lib/api/client";
 
 const NAV_ITEMS = [
+  { href: "/docs", label: "Docs" },
   { href: "/playground", label: "Playground" },
   { href: "/dashboard", label: "Dashboard" },
 ];
@@ -15,22 +16,23 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const isDashboard = pathname.startsWith("/dashboard");
+  const isDocs = pathname.startsWith("/docs");
   const isMockChain = process.env.NEXT_PUBLIC_MOCK_CHAIN === "true";
 
   useEffect(() => {
-    if (isDashboard) return;
+    if (isDashboard || isDocs) return;
     facilitatorFetch("/api/health")
       .then((r) => {
         setHealthOk(r.ok);
       })
       .catch(() => setHealthOk(false));
-  }, [isDashboard]);
+  }, [isDashboard, isDocs]);
 
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
 
-  if (isDashboard) return null;
+  if (isDashboard || isDocs) return null;
 
   const chainLabel = isMockChain ? "Mock Chain Mode" : "Base Sepolia";
   const chainBadgeClass = isMockChain
