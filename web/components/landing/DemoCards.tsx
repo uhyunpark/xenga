@@ -7,9 +7,9 @@ import { isMockChainClient } from "@/lib/env/isMockChainClient";
 
 const demos = [
   {
-    title: "Agent Service Demo",
+    title: "Agent Demo",
     description:
-      "Autonomous machine-to-machine payments with reputation-gated escrow terms.",
+      "Autonomous agent payments with on-chain escrow and reputation scoring. x402 compatible — no SDK needed.",
     href: "/playground/agent",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -20,7 +20,7 @@ const demos = [
       </svg>
     ),
     badge: "Autonomous",
-    highlights: ["Auto-advancing run", "Signed authorization + on-chain settle", "Reputation updated on completion"],
+    highlights: ["Autonomous escrow settlement", "Reputation-driven trust scoring", "x402 compatible — no SDK needed"],
     color: "accent-purple",
   },
   {
@@ -113,9 +113,7 @@ export function DemoCards() {
                       <div key={item} className="flex items-center gap-2 text-xs text-text-secondary">
                         <span className="h-1.5 w-1.5 rounded-full bg-accent" />
                         <span>
-                          {isMockChainClient && item === "Signed authorization + on-chain settle"
-                            ? "Signed authorization + simulated settlement"
-                            : item}
+                          {item}
                         </span>
                       </div>
                     ))}

@@ -93,7 +93,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
 
     try {
       // Step 1: Discover
-      addLine({ type: "dim", text: "$ xenga-agent discover --service weather-api", delay: 0 });
+      addLine({ type: "dim", text: "$ agent discover --service weather-api", delay: 0 });
       await wait(1000);
       addLine({ type: "info", text: "[discover] Found service: Weather API Premium", delay: 0 });
       await wait(500);
@@ -102,7 +102,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
 
       // Step 1.5: Check seller reputation
       addLine({ type: "dim", text: "", delay: 0 });
-      addLine({ type: "dim", text: `$ xenga-agent reputation --check ${operatorAddress.slice(0, 10)}...`, delay: 0 });
+      addLine({ type: "dim", text: `$ agent reputation --check ${operatorAddress.slice(0, 10)}...`, delay: 0 });
       await wait(800);
 
       inspector.addEvent({
@@ -143,7 +143,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
 
       // Step 2: Create order
       addLine({ type: "dim", text: "", delay: 0 });
-      addLine({ type: "dim", text: "$ xenga-agent order --create", delay: 0 });
+      addLine({ type: "dim", text: "$ agent order --create", delay: 0 });
       await wait(500);
 
       inspector.addEvent({
@@ -177,7 +177,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
 
       // Step 3: Payment - 402
       addLine({ type: "dim", text: "", delay: 0 });
-      addLine({ type: "dim", text: `$ xenga-agent pay --order ${orderData.id.slice(0, 8)}...`, delay: 0 });
+      addLine({ type: "dim", text: `$ agent pay --order ${orderData.id.slice(0, 8)}...`, delay: 0 });
       await wait(500);
 
       const { paymentRequired } = await requestPayment(
@@ -214,7 +214,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
       );
       setTxHash(result.payment.txHash);
 
-      addLine({ type: "request", text: `POST /api/orders/${orderData.id.slice(0, 8)}.../pay [X-PAYMENT] → 200 OK`, delay: 0 });
+      addLine({ type: "request", text: `POST /api/orders/${orderData.id.slice(0, 8)}.../pay +PAYMENT-SIGNATURE → 200 OK`, delay: 0 });
       await wait(800);
       addLine({
         type: "success",
@@ -277,7 +277,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
       } else {
         // Step 7: Quality check failure
         addLine({ type: "dim", text: "", delay: 0 });
-        addLine({ type: "dim", text: "$ xenga-agent verify --check-quality", delay: 0 });
+        addLine({ type: "dim", text: "$ agent verify --check-quality", delay: 0 });
         await wait(1200);
         addLine({ type: "error", text: "[verify] QUALITY CHECK FAILED", delay: 0 });
         await wait(500);
@@ -288,7 +288,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
 
         // Step 8: File dispute
         addLine({ type: "dim", text: "", delay: 0 });
-        addLine({ type: "dim", text: `$ xenga-agent dispute --escrow ${result.payment.escrowId}`, delay: 0 });
+        addLine({ type: "dim", text: `$ agent dispute --escrow ${result.payment.escrowId}`, delay: 0 });
         await wait(500);
 
         inspector.addEvent({
@@ -411,7 +411,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
 
       // ── Reputation Update (both paths) ──
       addLine({ type: "dim", text: "", delay: 0 });
-      addLine({ type: "dim", text: "$ xenga-agent reputation --update", delay: 0 });
+      addLine({ type: "dim", text: "$ agent reputation --update", delay: 0 });
       await wait(1000);
 
       let buyerRep: ReputationScore | null = null;
@@ -498,7 +498,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
     const snapshots = simulateRounds(TRUST_BUILDING_ROUNDS);
 
     try {
-      addLine({ type: "dim", text: "$ xenga-agent simulate --scenario trust-building", delay: 0 });
+      addLine({ type: "dim", text: "$ agent simulate --scenario trust-building", delay: 0 });
       await wait(800);
       addLine({ type: "info", text: "[sim] Reputation scoring simulation — 5 rounds", delay: 0 });
       await wait(400);
@@ -516,7 +516,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
         await wait(800);
 
         // Simulated payment
-        addLine({ type: "dim", text: `$ xenga-agent pay --amount ${def.amount.toFixed(2)} USDC`, delay: 0 });
+        addLine({ type: "dim", text: `$ agent pay --amount ${def.amount.toFixed(2)} USDC`, delay: 0 });
         await wait(600);
 
         // Outcome
@@ -648,7 +648,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
       new Promise((resolve) => setTimeout(resolve, ms / speed));
 
     try {
-      addLine({ type: "dim", text: "$ xenga-marketplace screen --service data-api-premium --threshold 50", delay: 0 });
+      addLine({ type: "dim", text: "$ agent screen --service data-api-premium --threshold 50", delay: 0 });
       await wait(800);
       addLine({ type: "info", text: `[screen] Premium Data API — verifying ${SCREENING_AGENTS.length} agents for access`, delay: 0 });
       await wait(400);
@@ -660,7 +660,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
         addLine({ type: "dim", text: `━━━ Agent: ${agent.name} (${agent.address}) ━━━`, delay: 0 });
         await wait(600);
 
-        addLine({ type: "dim", text: `$ xenga-marketplace reputation --check ${agent.address}`, delay: 0 });
+        addLine({ type: "dim", text: `$ agent reputation --check ${agent.address}`, delay: 0 });
         await wait(800);
 
         // Emit inspector event
@@ -958,7 +958,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
           <div className="h-3 w-3 rounded-full bg-warning/60" />
           <div className="h-3 w-3 rounded-full bg-success/60" />
           <span className="ml-2 font-mono text-xs text-text-tertiary">
-            xenga-agent
+            agent
           </span>
           <span className="ml-auto text-[11px] text-text-tertiary">
             stream: protocol-events.log
