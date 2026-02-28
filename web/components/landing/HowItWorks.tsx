@@ -2,6 +2,7 @@
 
 import { motion, useInView } from "framer-motion";
 import { useRef, useState } from "react";
+import { CodeBlock } from "@/components/ui/CodeBlock";
 
 const tabs = [
   {
@@ -87,54 +88,15 @@ export function HowItWorks() {
 
           {/* Code content */}
           <div className="p-4">
-            <div className="mb-2 text-xs text-text-tertiary">
-              {tabs[activeTab].lang}
-            </div>
-            <pre className="overflow-x-auto font-mono text-[13px] leading-relaxed text-text-secondary">
-              {highlightBlock(tabs[activeTab].code)}
-            </pre>
+            <CodeBlock
+              code={tabs[activeTab].code}
+              lang={tabs[activeTab].lang}
+              showDots={false}
+              className="border-0 shadow-none rounded-none p-0"
+            />
           </div>
         </motion.div>
       </div>
     </section>
   );
-}
-
-function highlightBlock(code: string): React.ReactNode {
-  return code.split("\n").map((line, i) => (
-    <div key={i}>
-      {line.split(/(\/\/.*$|"[^"]*"|'[^']*'|\b(?:import|from|const|await|function|export|app|external|async|return)\b|\b(?:string|address|uint256|bytes32|uint8)\b)/gm).map((part, j) => {
-        if (!part) return null;
-        if (part.startsWith("//")) {
-          return (
-            <span key={j} className="text-text-tertiary">
-              {part}
-            </span>
-          );
-        }
-        if (/^["']/.test(part)) {
-          return (
-            <span key={j} className="text-success">
-              {part}
-            </span>
-          );
-        }
-        if (/^(import|from|const|await|function|export|async|return|external|app)$/.test(part)) {
-          return (
-            <span key={j} className="text-accent-purple">
-              {part}
-            </span>
-          );
-        }
-        if (/^(string|address|uint256|bytes32|uint8)$/.test(part)) {
-          return (
-            <span key={j} className="text-accent">
-              {part}
-            </span>
-          );
-        }
-        return <span key={j}>{part}</span>;
-      })}
-    </div>
-  ));
 }

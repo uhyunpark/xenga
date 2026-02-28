@@ -3,18 +3,17 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { isMockChainClient } from "@/lib/env/isMockChainClient";
+import { CodeBlock } from "@/components/ui/CodeBlock";
 
-const codeLines = [
-  'import { escrowFetch } from "xenga";',
-  "",
-  "const { payment } = await escrowFetch(",
-  '  "https://merchant.xyz/api/order/981/pay",',
-  '  { method: "POST", body: JSON.stringify(order) },',
-  "  { walletClient }",
-  ");",
-  "",
-  "// payment.escrowId + payment.txHash",
-];
+const code = `import { escrowFetch } from "xenga";
+
+const { payment } = await escrowFetch(
+  "https://merchant.xyz/api/order/981/pay",
+  { method: "POST", body: JSON.stringify(order) },
+  { walletClient }
+);
+
+// payment.escrowId + payment.txHash`;
 
 export function HeroSection() {
   return (
@@ -23,8 +22,8 @@ export function HeroSection() {
 
       <div className="relative mx-auto grid max-w-6xl gap-10 overflow-hidden lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 30, filter: "blur(8px)" }}
+          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
           transition={{ duration: 0.45 }}
           className="min-w-0"
         >
@@ -72,7 +71,7 @@ export function HeroSection() {
           transition={{ duration: 0.7, delay: 0.12 }}
           className="panel-surface shadow-md rounded-2xl p-4 md:p-5 min-w-0"
         >
-          <CodeSnippet />
+          <CodeBlock code={code} lang="payment.ts" />
           <div className="mt-4 grid grid-cols-2 gap-3">
             <MiniStat label="Buyer Gas Cost" value="$0" />
             <MiniStat label="Reputation" value="On-Chain" />
@@ -83,64 +82,6 @@ export function HeroSection() {
         </motion.div>
       </div>
     </section>
-  );
-}
-
-function CodeSnippet() {
-  return (
-    <div className="code-block overflow-x-auto p-4 text-left">
-      <div className="mb-2 flex items-center gap-1.5">
-        <div className="h-2.5 w-2.5 rounded-full bg-error/60" />
-        <div className="h-2.5 w-2.5 rounded-full bg-warning/60" />
-        <div className="h-2.5 w-2.5 rounded-full bg-success/60" />
-        <span className="ml-2 text-xs text-text-tertiary">payment.ts</span>
-      </div>
-      <pre className="text-xs leading-relaxed text-text-secondary sm:text-[13px]">
-        {codeLines.map((line, i) => (
-          <div key={i}>{highlightCode(line)}</div>
-        ))}
-      </pre>
-    </div>
-  );
-}
-
-function highlightCode(line: string): React.ReactNode {
-  if (!line) return "\u00A0";
-
-  return line.split(/("[^"]*"|'[^']*'|import|from|const|await|{|})/g).map((part, i) => {
-    if (/^["']/.test(part)) {
-      return (
-        <span key={i} className="text-success">
-          {part}
-        </span>
-      );
-    }
-    if (/^(import|from|const|await)$/.test(part)) {
-      return (
-        <span key={i} className="text-accent">
-          {part}
-        </span>
-      );
-    }
-    if (part === "{" || part === "}") {
-      return (
-        <span key={i} className="text-text-secondary">
-          {part}
-        </span>
-      );
-    }
-    return <span key={i}>{part}</span>;
-  });
-}
-
-function TrustMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-border-default bg-bg-secondary px-3 py-2">
-      <div className="text-[10px] uppercase tracking-wide text-text-tertiary">
-        {label}
-      </div>
-      <div className="mt-1 text-sm font-semibold text-text-primary">{value}</div>
-    </div>
   );
 }
 

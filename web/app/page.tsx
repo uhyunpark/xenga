@@ -25,11 +25,17 @@ export default function LandingPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <HeroSection />
-      <ProtocolFlow />
+      <div className="bg-white">
+        <ProtocolFlow />
+      </div>
       <DemoCards />
-      <ReputationSection />
+      <div className="bg-white">
+        <ReputationSection />
+      </div>
       <HowItWorks />
-      <AdaptabilitySection />
+      <div className="bg-white">
+        <AdaptabilitySection />
+      </div>
       <Footer />
     </div>
   );

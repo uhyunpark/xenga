@@ -70,8 +70,8 @@ export function DemoCards() {
           {demos.map((demo, i) => (
             <motion.div
               key={demo.title}
-              initial={{ opacity: 0, y: 20 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
+              initial={{ opacity: 0, x: i === 0 ? -30 : 30 }}
+              animate={isInView ? { opacity: 1, x: 0 } : {}}
               transition={{ delay: 0.2 + i * 0.1 }}
             >
               <Link href={demo.href} className="group block">

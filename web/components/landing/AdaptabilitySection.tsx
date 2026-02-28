@@ -2,6 +2,7 @@
 
 import { motion, useInView } from "framer-motion";
 import { useRef, useState } from "react";
+import { CodeBlock } from "@/components/ui/CodeBlock";
 
 const useCaseCards = [
   {
@@ -182,7 +183,7 @@ export function AdaptabilitySection() {
               key={card.title}
               initial={{ opacity: 0, y: 20 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.4, delay: 0.2 + i * 0.1 }}
+              transition={{ duration: 0.4, delay: 0.2 + i * 0.15 }}
               className="flex flex-col rounded-xl border border-border-default bg-bg-secondary shadow-sm hover:shadow-md transition-shadow p-5"
             >
               <div className="mb-3 flex items-center gap-2">
@@ -240,63 +241,16 @@ export function AdaptabilitySection() {
               ))}
             </div>
             <div className="p-4">
-              <div className="mb-2 text-xs text-text-tertiary">
-                {codeTabs[activeTab].lang}
-              </div>
-              <pre className="overflow-x-auto font-mono text-[13px] leading-relaxed text-text-secondary">
-                {highlightBlock(codeTabs[activeTab].code)}
-              </pre>
+              <CodeBlock
+                code={codeTabs[activeTab].code}
+                lang={codeTabs[activeTab].lang}
+                showDots={false}
+                className="border-0 shadow-none rounded-none p-0"
+              />
             </div>
           </div>
         </motion.div>
       </div>
     </section>
   );
-}
-
-function highlightBlock(code: string): React.ReactNode {
-  return code.split("\n").map((line, i) => (
-    <div key={i}>
-      {line
-        .split(
-          /(\/\/.*$|"[^"]*"|'[^']*'|\b(?:import|from|const|await|function|export|app|external|async|return)\b|\b(?:string|address|uint256|bytes32|uint8)\b)/gm
-        )
-        .map((part, j) => {
-          if (!part) return null;
-          if (part.startsWith("//")) {
-            return (
-              <span key={j} className="text-text-tertiary">
-                {part}
-              </span>
-            );
-          }
-          if (/^["']/.test(part)) {
-            return (
-              <span key={j} className="text-success">
-                {part}
-              </span>
-            );
-          }
-          if (
-            /^(import|from|const|await|function|export|async|return|external|app)$/.test(
-              part
-            )
-          ) {
-            return (
-              <span key={j} className="text-accent-purple">
-                {part}
-              </span>
-            );
-          }
-          if (/^(string|address|uint256|bytes32|uint8)$/.test(part)) {
-            return (
-              <span key={j} className="text-accent">
-                {part}
-              </span>
-            );
-          }
-          return <span key={j}>{part}</span>;
-        })}
-    </div>
-  ));
 }
