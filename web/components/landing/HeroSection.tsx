@@ -21,11 +21,12 @@ export function HeroSection() {
     <section className="relative overflow-hidden px-4 py-12 md:py-20 lg:py-32">
       <div className="bg-grid pointer-events-none absolute inset-0" />
 
-      <div className="relative mx-auto grid max-w-6xl gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+      <div className="relative mx-auto grid max-w-6xl gap-10 overflow-hidden lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45 }}
+          className="min-w-0"
         >
           <span className="inline-flex rounded-full border border-accent-muted bg-accent-light px-3 py-1 text-xs font-semibold uppercase tracking-wide text-accent">
             Escrow + Reputation Protocol
@@ -69,7 +70,7 @@ export function HeroSection() {
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.12 }}
-          className="panel-surface shadow-md rounded-2xl p-4 md:p-5"
+          className="panel-surface shadow-md rounded-2xl p-4 md:p-5 min-w-0"
         >
           <CodeSnippet />
           <div className="mt-4 grid grid-cols-2 gap-3">
