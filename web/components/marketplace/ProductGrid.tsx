@@ -82,12 +82,14 @@ export function ProductGrid({ onSelect, disabled }: ProductGridProps) {
           key={product.id}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          whileHover={{ y: -4, boxShadow: "0 8px 24px rgba(13,148,136,0.12)" }}
+          whileTap={{ scale: 0.98 }}
           transition={{ delay: i * 0.05 }}
           onClick={() => onSelect(product)}
           disabled={disabled}
-          className="group rounded-xl border border-border-default bg-bg-secondary p-4 text-left shadow-sm transition-all hover:shadow-md hover:border-accent hover:scale-[1.01] disabled:pointer-events-none disabled:opacity-50"
+          className="group rounded-xl border border-border-default bg-bg-secondary p-4 text-left shadow-sm transition-colors hover:border-accent disabled:pointer-events-none disabled:opacity-50"
         >
-          <div className="mb-3 inline-flex rounded-lg border border-accent/25 bg-accent/10 p-2.5 text-accent">
+          <div className="mb-3 inline-flex rounded-lg border border-accent/25 bg-accent/10 p-2.5 text-accent transition-shadow group-hover:shadow-[0_0_12px_rgba(13,148,136,0.15)]">
             {iconMap[product.image]}
           </div>
           <h3 className="mb-1 text-sm font-semibold">{product.title}</h3>

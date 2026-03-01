@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { shortenAddress } from "@/lib/utils";
 
 interface OrderData {
@@ -137,47 +138,58 @@ export function OrderTable({ orders, actionSlot }: OrderTableProps) {
               </button>
 
               {/* Inline detail panel */}
-              {expandedId === order.id && (
-                <div className="border-t border-border-default bg-bg-tertiary/30 px-4 py-3 shadow-sm">
-                  <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
-                    <div>
-                      <span className="text-text-tertiary">Escrow ID</span>
-                      <p className="font-mono font-medium">
-                        {order.escrowId ?? "\u2014"}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-text-tertiary">Amount</span>
-                      <p className="font-medium">
-                        ${order.priceUsdc.toFixed(2)} USDC
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-text-tertiary">Tx Hash</span>
-                      <p className="truncate font-mono font-medium">
-                        {order.txHash
-                          ? `${order.txHash.slice(0, 10)}...`
-                          : "\u2014"}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-text-tertiary">Buyer</span>
-                      <p className="font-mono font-medium">
-                        {order.buyerAddress
-                          ? shortenAddress(order.buyerAddress)
-                          : "\u2014"}
-                      </p>
-                    </div>
-                  </div>
+              <AnimatePresence initial={false}>
+                {expandedId === order.id && (
+                  <motion.div
+                    key="detail"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                    style={{ overflow: "hidden" }}
+                  >
+                    <div className="border-t border-border-default bg-bg-tertiary/30 px-4 py-3 shadow-sm">
+                      <div className="grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+                        <div>
+                          <span className="text-text-tertiary">Escrow ID</span>
+                          <p className="font-mono font-medium">
+                            {order.escrowId ?? "\u2014"}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-text-tertiary">Amount</span>
+                          <p className="font-medium">
+                            ${order.priceUsdc.toFixed(2)} USDC
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-text-tertiary">Tx Hash</span>
+                          <p className="truncate font-mono font-medium">
+                            {order.txHash
+                              ? `${order.txHash.slice(0, 10)}...`
+                              : "\u2014"}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-text-tertiary">Buyer</span>
+                          <p className="font-mono font-medium">
+                            {order.buyerAddress
+                              ? shortenAddress(order.buyerAddress)
+                              : "\u2014"}
+                          </p>
+                        </div>
+                      </div>
 
-                  {/* Action slot */}
-                  {actionSlot && (
-                    <div className="mt-3 border-t border-border-default pt-3">
-                      {actionSlot(order)}
+                      {/* Action slot */}
+                      {actionSlot && (
+                        <div className="mt-3 border-t border-border-default pt-3">
+                          {actionSlot(order)}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           ))}
         </div>
