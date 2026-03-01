@@ -23,6 +23,7 @@ interface TrackingStepProps {
   deliveryConfirmed: boolean;
   disputeFiled: boolean;
   loading: boolean;
+  loadingAction?: "release" | "dispute" | null;
   onRelease: () => void;
   onDispute: () => void;
 }
@@ -33,6 +34,7 @@ export function TrackingStep({
   deliveryConfirmed,
   disputeFiled,
   loading,
+  loadingAction,
   onRelease,
   onDispute,
 }: TrackingStepProps) {
@@ -146,17 +148,27 @@ export function TrackingStep({
             <div className="flex gap-2">
               <button
                 onClick={onRelease}
-                disabled={loading}
+                disabled={!!loadingAction}
                 className="flex-1 rounded-lg bg-success px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-success/90 disabled:opacity-50"
               >
-                Release Funds
+                {loadingAction === "release" ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    Releasing...
+                  </span>
+                ) : "Release Funds"}
               </button>
               <button
                 onClick={onDispute}
-                disabled={loading}
+                disabled={!!loadingAction}
                 className="flex-1 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm font-medium text-error transition-colors hover:bg-error/20 disabled:opacity-50"
               >
-                Dispute
+                {loadingAction === "dispute" ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-error border-t-transparent" />
+                    Filing Dispute...
+                  </span>
+                ) : "Dispute"}
               </button>
             </div>
           </motion.div>

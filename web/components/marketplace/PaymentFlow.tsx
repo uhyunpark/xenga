@@ -46,6 +46,7 @@ interface FlowState {
   paymentPayload: PaymentPayload | null;
   completionReputation: ReputationScore | null;
   paySubStep: PaySubStep;
+  loadingAction: "release" | "dispute" | null;
 }
 
 type FlowAction =
@@ -65,7 +66,8 @@ type FlowAction =
   | { type: "DELIVERY_CONFIRMED" }
   | { type: "RELEASE_COMPLETE"; releaseTxHash: string }
   | { type: "RESET" }
-  | { type: "SET_COMPLETION_REPUTATION"; reputation: ReputationScore };
+  | { type: "SET_COMPLETION_REPUTATION"; reputation: ReputationScore }
+  | { type: "SET_LOADING_ACTION"; action: "release" | "dispute" | null };
 
 const initialState: FlowState = {
   step: "browse",
@@ -84,6 +86,7 @@ const initialState: FlowState = {
   paymentPayload: null,
   completionReputation: null,
   paySubStep: "creating_order",
+  loadingAction: null,
 };
 
 function reducer(state: FlowState, action: FlowAction): FlowState {
@@ -127,6 +130,8 @@ function reducer(state: FlowState, action: FlowAction): FlowState {
       return initialState;
     case "SET_COMPLETION_REPUTATION":
       return { ...state, completionReputation: action.reputation };
+    case "SET_LOADING_ACTION":
+      return { ...state, loadingAction: action.action, loading: action.action !== null };
     default:
       return state;
   }
@@ -461,7 +466,7 @@ export function PaymentFlow() {
 
   const handleRelease = useCallback(async () => {
     if (!state.escrowId || !walletClient?.account || !state.paymentRequired) return;
-    dispatch({ type: "SET_LOADING", loading: true });
+    dispatch({ type: "SET_LOADING_ACTION", action: "release" });
 
     try {
       const txHash = await walletClient.writeContract({
@@ -497,13 +502,13 @@ export function PaymentFlow() {
       });
       dispatch({ type: "SET_STEP", step: "complete" });
     } finally {
-      dispatch({ type: "SET_LOADING", loading: false });
+      dispatch({ type: "SET_LOADING_ACTION", action: null });
     }
   }, [state.escrowId, state.paymentRequired, walletClient, publicClient, inspector]);
 
   const handleDispute = useCallback(async () => {
     if (!state.escrowId || !walletClient?.account || !state.paymentRequired || !state.orderId) return;
-    dispatch({ type: "SET_LOADING", loading: true });
+    dispatch({ type: "SET_LOADING_ACTION", action: "dispute" });
 
     try {
       // On-chain dispute call (buyer is msg.sender)
@@ -539,7 +544,7 @@ export function PaymentFlow() {
     } catch (err: any) {
       dispatch({ type: "SET_ERROR", error: err.message });
     } finally {
-      dispatch({ type: "SET_LOADING", loading: false });
+      dispatch({ type: "SET_LOADING_ACTION", action: null });
     }
   }, [state.escrowId, state.paymentRequired, state.orderId, walletClient, publicClient, inspector]);
 
@@ -681,7 +686,12 @@ export function PaymentFlow() {
                         disabled={isFunding}
                         className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
                       >
-                        {isFunding ? "Getting Test USDC..." : "Get Test USDC"}
+                        {isFunding ? (
+                          <span className="flex items-center justify-center gap-2">
+                            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                            Getting Test USDC...
+                          </span>
+                        ) : "Get Test USDC"}
                       </button>
                       {error && (
                         <p className="mt-2 text-xs text-red-400">{error}</p>
@@ -700,7 +710,12 @@ export function PaymentFlow() {
                             disabled={isFunding}
                             className="text-accent hover:underline disabled:opacity-50"
                           >
-                            {isFunding ? "Funding..." : "Get More"}
+                            {isFunding ? (
+                              <span className="flex items-center gap-1.5">
+                                <span className="h-3 w-3 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+                                Funding...
+                              </span>
+                            ) : "Get More"}
                           </button>
                         </div>
                       )}
@@ -738,7 +753,8 @@ export function PaymentFlow() {
                   txHash={state.txHash}
                   deliveryConfirmed={state.deliveryConfirmed}
                   disputeFiled={state.disputeFiled}
-                  loading={state.loading}
+                  loading={!!state.loadingAction}
+                  loadingAction={state.loadingAction}
                   onRelease={handleRelease}
                   onDispute={handleDispute}
                 />
