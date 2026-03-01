@@ -16,6 +16,7 @@ import type { ReputationScore } from "@shared/types";
 import { escrowVaultAbi } from "@shared/abi.js";
 import { baseSepolia } from "viem/chains";
 import { AddressDisplay } from "@/components/ui/AddressDisplay";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { ReputationBadge } from "@/components/ui/ReputationBadge";
 import { TxLink } from "@/components/ui/TxLink";
 import { isMockChainClient } from "@/lib/env/isMockChainClient";
@@ -105,7 +106,7 @@ function reducer(state: FlowState, action: FlowAction): FlowState {
     case "SET_PAYMENT_PAYLOAD":
       return { ...state, paymentPayload: action.paymentPayload };
     case "PAYMENT_COMPLETE":
-      return { ...state, escrowId: action.escrowId, txHash: action.txHash, step: "tracking", error: null };
+      return { ...state, escrowId: action.escrowId, txHash: action.txHash, paySubStep: "locked", error: null };
     case "SET_STEP":
       return { ...state, step: action.step, error: null };
     case "SET_ERROR":
@@ -147,6 +148,7 @@ export function PaymentFlow() {
   const inspector = useInspector();
   const { address: operatorAddress } = useOperatorAddress();
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lockedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ---- Session storage: restore on mount ----
   useEffect(() => {
@@ -190,9 +192,11 @@ export function PaymentFlow() {
               break;
             case "escrowed":
               dispatch({ type: "PAYMENT_COMPLETE", escrowId: found.escrowId, txHash: found.txHash });
+              dispatch({ type: "SET_STEP", step: "tracking" });
               break;
             case "delivery_confirmed":
               dispatch({ type: "PAYMENT_COMPLETE", escrowId: found.escrowId, txHash: found.txHash });
+              dispatch({ type: "SET_STEP", step: "tracking" });
               dispatch({ type: "DELIVERY_CONFIRMED" });
               break;
             case "completed":
@@ -205,11 +209,13 @@ export function PaymentFlow() {
               break;
             case "disputed":
               dispatch({ type: "PAYMENT_COMPLETE", escrowId: found.escrowId, txHash: found.txHash });
+              dispatch({ type: "SET_STEP", step: "tracking" });
               dispatch({ type: "DELIVERY_CONFIRMED" });
               dispatch({ type: "FILE_DISPUTE" });
               break;
             case "resolved":
               dispatch({ type: "PAYMENT_COMPLETE", escrowId: found.escrowId, txHash: found.txHash });
+              dispatch({ type: "SET_STEP", step: "tracking" });
               dispatch({ type: "DELIVERY_CONFIRMED" });
               dispatch({ type: "FILE_DISPUTE" });
               dispatch({ type: "DISPUTE_RESOLVED" });
@@ -414,6 +420,7 @@ export function PaymentFlow() {
           const p = err.data?.payment;
           if (p?.escrowId && p?.txHash) {
             dispatch({ type: "PAYMENT_COMPLETE", escrowId: p.escrowId, txHash: p.txHash });
+            dispatch({ type: "SET_STEP", step: "tracking" });
           } else {
             dispatch({ type: "SET_STEP", step: "tracking" });
           }
@@ -440,6 +447,13 @@ export function PaymentFlow() {
         txHash: result.payment.txHash,
       });
       refreshBalances();
+
+      // "Funds Locked" celebration — 1.5s animation before transitioning
+      await new Promise<void>((resolve) => {
+        lockedTimerRef.current = setTimeout(resolve, 1500);
+      });
+      lockedTimerRef.current = null;
+      dispatch({ type: "SET_STEP", step: "tracking" });
     } catch (err: any) {
       dispatch({ type: "SET_ERROR", error: err.message });
     }
@@ -530,6 +544,10 @@ export function PaymentFlow() {
   }, [state.escrowId, state.paymentRequired, state.orderId, walletClient, publicClient, inspector]);
 
   const handleReset = useCallback(() => {
+    if (lockedTimerRef.current) {
+      clearTimeout(lockedTimerRef.current);
+      lockedTimerRef.current = null;
+    }
     sessionStorage.removeItem(SESSION_KEY);
     inspector.clear();
     dispatch({ type: "RESET" });
@@ -728,83 +746,131 @@ export function PaymentFlow() {
 
               {/* Complete step */}
               {state.step === "complete" && (
-                <motion.div
-                  key="complete"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="rounded-xl border border-success/20 bg-success/5 p-6 text-center"
-                >
-                  <div className="mb-3 text-4xl">{state.disputeResolved ? "\u2696\uFE0F" : "\u{1F389}"}</div>
-                  <h3 className="mb-1 text-lg font-bold text-success">
-                    {state.disputeResolved ? "Dispute Resolved" : "Transaction Complete!"}
-                  </h3>
-                  <p className="mb-4 text-sm text-text-secondary">
-                    {state.disputeResolved
-                      ? "Funds have been returned to the buyer."
-                      : "Funds have been released to the seller."}
-                  </p>
-                  {(state.txHash || state.releaseTxHash) && (
-                    <div className="mx-auto mb-4 max-w-sm space-y-1.5">
-                      {state.txHash && (
-                        <div className="flex items-center justify-between rounded-lg border border-border-default bg-bg-secondary px-3 py-2">
-                          <span className="text-xs text-text-tertiary">Escrow creation</span>
-                          <TxLink hash={state.txHash} className="text-xs" />
-                        </div>
-                      )}
-                      {state.releaseTxHash && (
-                        <div className="flex items-center justify-between rounded-lg border border-border-default bg-bg-secondary px-3 py-2">
-                          <span className="text-xs text-text-tertiary">Funds released</span>
-                          <TxLink hash={state.releaseTxHash} className="text-xs" />
-                        </div>
-                      )}
-                    </div>
+                <div className="relative" style={{ overflow: "visible" }}>
+                  {/* CSS confetti burst */}
+                  {!state.disputeResolved && (
+                    <>
+                      <div
+                        className="pointer-events-none absolute left-1/2 top-8 -translate-x-1/2"
+                        style={{
+                          width: 200,
+                          height: 200,
+                          background: "radial-gradient(circle, rgba(13,148,136,0.3) 0%, rgba(13,148,136,0.15) 20%, transparent 50%), radial-gradient(circle at 30% 40%, rgba(139,92,246,0.2) 0%, transparent 40%), radial-gradient(circle at 70% 30%, rgba(22,163,74,0.2) 0%, transparent 40%)",
+                          animation: "confetti-burst 1.2s ease-out forwards",
+                        }}
+                      />
+                    </>
                   )}
-                  {state.completionReputation && (
-                    <div className="mx-auto mb-4 max-w-sm text-left">
-                      <div className="rounded-lg border border-border-default bg-bg-secondary p-3 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold text-text-primary">Seller Reputation</span>
-                          {operatorAddress && <ReputationBadge address={operatorAddress} size="md" />}
-                        </div>
-                        {state.completionReputation.seller && (
-                          <div className="space-y-1 text-xs">
-                            <div className="flex justify-between">
-                              <span className="text-text-tertiary">Completion Rate</span>
-                              <span className="font-mono">
-                                {(state.completionReputation.seller.completionRate * 100).toFixed(0)}%
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-text-tertiary">Total Escrows</span>
-                              <span className="font-mono">{state.completionReputation.seller.totalEscrows}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-text-tertiary">Confidence</span>
-                              <span className="capitalize">{state.completionReputation.confidence}</span>
-                            </div>
-                          </div>
-                        )}
-                        <p className="text-[11px] text-text-tertiary">
-                          {state.paymentRequired
-                            ? `Release window: ${formatReleaseWindow(state.paymentRequired.releaseWindow)} — ${
-                                state.completionReputation.confidence === "low"
-                                  ? "seller is new, default parameters applied"
-                                  : state.completionReputation.seller && state.completionReputation.seller.score >= 80 && state.completionReputation.confidence === "high"
-                                    ? "high trust seller, shortened release window"
-                                    : "standard parameters based on seller history"
-                              }`
-                            : "This transaction is now part of the seller\u2019s on-chain reputation."}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  <button
-                    onClick={handleReset}
-                    className="rounded-lg border border-border-default px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-bg-tertiary"
+                  <motion.div
+                    key="complete"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="rounded-xl border border-success/20 bg-success/5 p-6 text-center"
                   >
-                    Try Again
-                  </button>
-                </motion.div>
+                    {/* Animated checkmark instead of emoji */}
+                    <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-success/15">
+                      {state.disputeResolved ? (
+                        <svg className="h-7 w-7 text-warning" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 22c5.5 0 10-4.5 10-10S17.5 2 12 2 2 6.5 2 12s4.5 10 10 10z" />
+                          <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                        </svg>
+                      ) : (
+                        <svg className="h-7 w-7 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M5 12l5 5L20 7" className="animate-draw-check" style={{ strokeDasharray: 30, strokeDashoffset: 30 }} />
+                        </svg>
+                      )}
+                    </div>
+                    <h3 className="mb-1 text-lg font-bold text-success">
+                      {state.disputeResolved ? "Dispute Resolved" : "Transaction Complete!"}
+                    </h3>
+                    <p className="mb-4 text-sm text-text-secondary">
+                      {state.disputeResolved
+                        ? "Funds have been returned to the buyer."
+                        : "Funds have been released to the seller."}
+                    </p>
+                    <motion.div
+                      variants={{ show: { transition: { staggerChildren: 0.08 } } }}
+                      initial="hidden"
+                      animate="show"
+                    >
+                      {(state.txHash || state.releaseTxHash) && (
+                        <div className="mx-auto mb-4 max-w-sm space-y-1.5">
+                          {state.txHash && (
+                            <motion.div
+                              variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }}
+                              className="flex items-center justify-between rounded-lg border border-border-default bg-bg-secondary px-3 py-2"
+                            >
+                              <span className="text-xs text-text-tertiary">Escrow creation</span>
+                              <TxLink hash={state.txHash} className="text-xs" />
+                            </motion.div>
+                          )}
+                          {state.releaseTxHash && (
+                            <motion.div
+                              variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }}
+                              className="flex items-center justify-between rounded-lg border border-border-default bg-bg-secondary px-3 py-2"
+                            >
+                              <span className="text-xs text-text-tertiary">Funds released</span>
+                              <TxLink hash={state.releaseTxHash} className="text-xs" />
+                            </motion.div>
+                          )}
+                        </div>
+                      )}
+                      {state.completionReputation && (
+                        <motion.div
+                          variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }}
+                          className="mx-auto mb-4 max-w-sm text-left"
+                        >
+                          <div className="rounded-lg border border-border-default bg-bg-secondary p-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-semibold text-text-primary">Seller Reputation</span>
+                              {operatorAddress && <ReputationBadge address={operatorAddress} size="md" />}
+                            </div>
+                            {state.completionReputation.seller && (
+                              <div className="space-y-1 text-xs">
+                                <div className="flex justify-between">
+                                  <span className="text-text-tertiary">Completion Rate</span>
+                                  <span className="font-mono">
+                                    <AnimatedNumber
+                                      value={state.completionReputation.seller.completionRate * 100}
+                                      format={(n) => `${Math.round(n)}%`}
+                                    />
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-text-tertiary">Total Escrows</span>
+                                  <span className="font-mono">
+                                    <AnimatedNumber value={state.completionReputation.seller.totalEscrows} />
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-text-tertiary">Confidence</span>
+                                  <span className="capitalize">{state.completionReputation.confidence}</span>
+                                </div>
+                              </div>
+                            )}
+                            <p className="text-[11px] text-text-tertiary">
+                              {state.paymentRequired
+                                ? `Release window: ${formatReleaseWindow(state.paymentRequired.releaseWindow)} \u2014 ${
+                                    state.completionReputation.confidence === "low"
+                                      ? "seller is new, default parameters applied"
+                                      : state.completionReputation.seller && state.completionReputation.seller.score >= 80 && state.completionReputation.confidence === "high"
+                                        ? "high trust seller, shortened release window"
+                                        : "standard parameters based on seller history"
+                                  }`
+                                : "This transaction is now part of the seller\u2019s on-chain reputation."}
+                            </p>
+                          </div>
+                        </motion.div>
+                      )}
+                    </motion.div>
+                    <button
+                      onClick={handleReset}
+                      className="rounded-lg border border-border-default px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-bg-tertiary"
+                    >
+                      Try Again
+                    </button>
+                  </motion.div>
+                </div>
               )}
             </AnimatePresence>
 

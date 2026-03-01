@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { useInspector } from "@/lib/protocol-inspector/context";
@@ -33,6 +33,34 @@ interface TerminalLine {
 }
 
 type Scenario = "happy" | "dispute" | "reputation" | "screening";
+
+/** Char-by-char typing effect for terminal $ commands */
+function TypedLine({ text, className }: { text: string; className?: string }) {
+  const [displayed, setDisplayed] = useState("");
+
+  useEffect(() => {
+    let i = 0;
+    setDisplayed("");
+    const interval = setInterval(() => {
+      if (i < text.length) {
+        setDisplayed(text.slice(0, i + 1));
+        i++;
+      } else {
+        clearInterval(interval);
+      }
+    }, 30 + Math.random() * 10);
+    return () => clearInterval(interval);
+  }, [text]);
+
+  return (
+    <span className={className}>
+      {displayed}
+      {displayed.length < text.length && (
+        <span className="inline-block w-[7px] h-[14px] bg-current ml-px translate-y-[2px]" style={{ animation: "blink 1s step-end infinite" }} />
+      )}
+    </span>
+  );
+}
 
 interface AgentTerminalProps {
   speed: number;
@@ -966,7 +994,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
         </div>
         <div
           ref={terminalRef}
-          className="max-h-[500px] overflow-y-auto bg-slate-950 p-4 font-mono text-sm leading-6"
+          className="terminal-crt max-h-[500px] overflow-y-auto bg-slate-950 p-4 font-mono text-sm leading-6 shadow-[inset_0_0_60px_rgba(13,148,136,0.04)]"
         >
           {lines.length === 0 && !isRunning && (
             <div className="text-text-tertiary">
@@ -979,26 +1007,30 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
                 key={line.id}
                 initial={{ opacity: 0, x: -5 }}
                 animate={{ opacity: 1, x: 0 }}
-                className={
+                className={`terminal-line ${
                   line.type === "success"
                     ? "text-success"
                     : line.type === "error"
                       ? "text-error"
                       : line.type === "request"
-                        ? "text-accent"
+                        ? "text-blue-400"
                         : line.type === "reputation"
                           ? "text-violet-400"
                           : line.type === "dim"
                             ? "text-slate-500"
-                            : "text-slate-300"
-                }
+                            : "text-teal-300"
+                }`}
               >
-                {line.text || "\u00A0"}
+                {line.type === "dim" && line.text.startsWith("$") ? (
+                  <TypedLine text={line.text} />
+                ) : (
+                  line.text || "\u00A0"
+                )}
               </motion.div>
             ))}
           </AnimatePresence>
           {isRunning && (
-            <span className="inline-block h-4 w-[2px] animate-pulse bg-text-primary" />
+            <span className="inline-block font-mono text-teal-300 terminal-line" style={{ animation: "blink 1s step-end infinite" }}>_</span>
           )}
         </div>
       </div>

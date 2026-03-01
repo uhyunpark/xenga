@@ -7,6 +7,7 @@ import { authenticatedFetch } from "@/lib/api/wallet-auth";
 import { OrderTable } from "@/components/dashboard/OrderTable";
 import { OrderActions } from "@/components/dashboard/OrderActions";
 import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
+import { OrdersPageSkeleton } from "@/components/dashboard/Skeletons";
 
 interface OrderData {
   id: string;
@@ -51,8 +52,9 @@ export default function OrdersPage() {
 
   if (loading && orders.length === 0) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+      <div className="space-y-6">
+        <DashboardPageHeader title="Orders" subtitle="Manage your escrow orders and confirm deliveries." />
+        <OrdersPageSkeleton />
       </div>
     );
   }

@@ -8,6 +8,7 @@ import { facilitatorFetch } from "@/lib/api/client";
 import { StatsRow } from "@/components/dashboard/StatsRow";
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { DashboardPageHeader } from "@/components/dashboard/DashboardPageHeader";
+import { DashboardOverviewSkeleton } from "@/components/dashboard/Skeletons";
 
 interface OrderData {
   id: string;
@@ -74,8 +75,9 @@ export default function DashboardOverview() {
 
   if (loading && orders.length === 0) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+      <div className="space-y-6">
+        <DashboardPageHeader title="Overview" subtitle="Your escrow activity at a glance." />
+        <DashboardOverviewSkeleton />
       </div>
     );
   }

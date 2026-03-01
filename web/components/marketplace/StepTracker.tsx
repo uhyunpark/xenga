@@ -1,7 +1,7 @@
 "use client";
 
 export type BuyerStep = "browse" | "review_terms" | "paying" | "tracking" | "complete";
-export type PaySubStep = "creating_order" | "requesting_payment" | "signing" | "submitting";
+export type PaySubStep = "creating_order" | "requesting_payment" | "signing" | "submitting" | "locked";
 
 export const BUYER_STEPS: { key: BuyerStep; label: string }[] = [
   { key: "browse", label: "Browse" },

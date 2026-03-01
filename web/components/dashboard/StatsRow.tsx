@@ -1,8 +1,10 @@
 "use client";
 
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
+
 interface StatCardProps {
   label: string;
-  value: string | number;
+  value: React.ReactNode;
   accent?: boolean;
   warn?: boolean;
 }
@@ -39,19 +41,24 @@ export function StatsRow({
   reputationScore,
   confidence,
 }: StatsRowProps) {
-  const repDisplay =
-    reputationScore !== null
-      ? `${reputationScore}/100`
-      : "\u2014";
+  const earningsNum = parseFloat(netEarnings) || 0;
 
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-      <StatCard label="Active Escrows" value={activeEscrows} />
-      <StatCard label="Pending Release" value={pendingRelease} />
-      <StatCard label="Total Revenue" value={`$${netEarnings}`} accent />
+      <StatCard label="Active Escrows" value={<AnimatedNumber value={activeEscrows} />} />
+      <StatCard label="Pending Release" value={<AnimatedNumber value={pendingRelease} />} />
+      <StatCard
+        label="Total Revenue"
+        value={<AnimatedNumber value={earningsNum} format={(n) => `$${n.toFixed(2)}`} />}
+        accent
+      />
       <StatCard
         label={`Reputation${confidence ? ` (${confidence})` : ""}`}
-        value={repDisplay}
+        value={
+          reputationScore !== null
+            ? <><AnimatedNumber value={reputationScore} />/100</>
+            : "\u2014"
+        }
       />
     </div>
   );
