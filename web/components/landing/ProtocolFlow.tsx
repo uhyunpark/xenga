@@ -1,7 +1,7 @@
 "use client";
 
+import React, { useRef } from "react";
 import { motion, useInView } from "framer-motion";
-import { useRef } from "react";
 
 const steps = [
   { label: "Request", icon: "1", desc: "Client sends HTTP request" },
@@ -53,7 +53,7 @@ export function ProtocolFlow() {
           {/* Desktop: 8-col with arrows */}
           <div className="hidden lg:flex lg:items-stretch lg:gap-1 pb-1">
             {steps.map((step, i) => (
-              <div key={step.label} className="flex flex-1 min-w-0 items-center">
+              <React.Fragment key={step.label}>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -85,12 +85,12 @@ export function ProtocolFlow() {
                     initial={{ opacity: 0 }}
                     animate={isInView ? { opacity: 1 } : {}}
                     transition={{ delay: i * 0.08 + 0.04 }}
-                    className="mx-0.5"
+                    className="flex shrink-0 items-center"
                   >
                     <Arrow />
                   </motion.div>
                 )}
-              </div>
+              </React.Fragment>
             ))}
           </div>
 
