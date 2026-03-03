@@ -9,7 +9,7 @@ const demos = [
   {
     title: "Agent Demo",
     description:
-      "Autonomous agent payments with on-chain escrow and reputation scoring. x402 compatible — no SDK needed.",
+      "Autonomous agent payments with on-chain escrow and credit scoring. x402 compatible — no SDK needed.",
     href: "/playground/agent",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -20,7 +20,7 @@ const demos = [
       </svg>
     ),
     badge: "Autonomous",
-    highlights: ["Autonomous escrow settlement", "Reputation-driven trust scoring", "x402 compatible — no SDK needed"],
+    highlights: ["Autonomous escrow settlement", "On-chain credit score building", "x402 compatible — no SDK needed"],
     color: "accent-purple",
   },
   {
@@ -36,7 +36,7 @@ const demos = [
       </svg>
     ),
     badge: "Human-in-the-loop",
-    highlights: ["Manual release/dispute", "Step-by-step protocol view", "On-chain reputation scoring"],
+    highlights: ["Manual release/dispute", "Step-by-step protocol view", "On-chain credit score building"],
     color: "accent",
   },
 ];

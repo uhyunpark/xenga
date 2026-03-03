@@ -43,13 +43,13 @@ export function ReputationBadge({
   const badgeContent = isNew ? "New" : `${rep.overall}/100`;
 
   const tooltipText = isNew
-    ? "New address — fewer than 3 escrows. Default escrow parameters apply."
+    ? "New address — fewer than 3 escrows. Building credit history."
     : `Score ${rep.overall}/100 · ${rep.confidence} confidence. ${
         rep.overall >= 70
-          ? "High trust — may qualify for shorter release windows."
+          ? "High trust — faster settlement and broader protocol access."
           : rep.overall >= 40
-            ? "Moderate trust — standard escrow parameters."
-            : "Low trust — extended release windows may apply."
+            ? "Moderate trust — standard terms. Keep building your score."
+            : "Low trust — extended terms. Improve with successful transactions."
       }`;
 
   const badge = (

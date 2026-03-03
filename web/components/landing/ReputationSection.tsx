@@ -62,7 +62,7 @@ export function ReputationSection() {
           transition={{ duration: 0.4 }}
           className="mb-4 text-center text-3xl font-semibold text-text-primary"
         >
-          On-Chain Reputation System
+          The On-Chain Credit Score
         </motion.h2>
         <motion.p
           initial={{ opacity: 0, y: 20 }}
@@ -70,7 +70,7 @@ export function ReputationSection() {
           transition={{ duration: 0.4, delay: 0.1 }}
           className="mb-10 text-center text-base text-text-secondary max-w-2xl mx-auto"
         >
-          Every escrow outcome builds a permissionless credit score that shapes future transaction terms.
+          Every escrow outcome builds a portable credit score. Today it shapes settlement terms. Tomorrow it unlocks lending, insurance, and priority access across any protocol.
         </motion.p>
 
         <div className="grid gap-6 md:grid-cols-3">
@@ -100,7 +100,7 @@ export function ReputationSection() {
               ))}
             </div>
             <p className="mt-3 text-[11px] text-text-tertiary">
-              Computed from on-chain escrow history. Separate scores for buyers and sellers.
+              Computed from on-chain escrow history. Portable across any protocol that reads the chain.
             </p>
           </motion.div>
 
@@ -151,7 +151,7 @@ export function ReputationSection() {
                   <path d="M10 6v4l2.5 2.5" />
                 </svg>
               </div>
-              <h3 className="text-sm font-semibold">Dynamic Release Windows</h3>
+              <h3 className="text-sm font-semibold">Beyond Settlement</h3>
             </div>
             <div className="space-y-2">
               {windowTiers.map((tier) => (
@@ -167,7 +167,7 @@ export function ReputationSection() {
               ))}
             </div>
             <p className="mt-3 text-[11px] text-text-tertiary">
-              High-trust pairs settle faster. New or risky counterparties get more protection time.
+              Faster settlement today. Lending, insurance, and priority access next.
             </p>
           </motion.div>
         </div>

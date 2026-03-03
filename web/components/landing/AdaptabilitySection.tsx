@@ -53,7 +53,7 @@ const useCaseCards = [
     ),
     items: [
       "Auto-verified delivery for machine-to-machine payments",
-      "Reputation gating screens low-trust counterparties",
+      "Credit-score gating screens low-trust counterparties",
     ],
     footer:
       "1-hour auto-release. Quality checks trigger disputes automatically.",
@@ -83,9 +83,9 @@ const useCaseCards = [
     items: [
       "Define your own release windows and verification logic",
       "Plug custom delivery checks into the escrow lifecycle",
-      "Dynamically adjust terms based on on-chain reputation",
+      "Read on-chain credit scores for lending, gating, or pricing",
     ],
-    footer: "SaaS billing, consulting, rentals \u2014 shape escrow to your domain.",
+    footer: "SaaS billing, lending protocols, insurance \u2014 any system that needs trust.",
   },
 ];
 

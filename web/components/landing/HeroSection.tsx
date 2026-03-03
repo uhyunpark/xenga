@@ -28,18 +28,18 @@ export function HeroSection() {
           className="min-w-0"
         >
           <span className="inline-flex rounded-full border border-accent-muted bg-accent-light px-3 py-1 text-xs font-semibold uppercase tracking-wide text-accent">
-            Escrow + Reputation Protocol
+            On-Chain Credit Score Protocol
           </span>
           <h1
             className="gradient-text mt-5 pb-1 text-3xl font-semibold tracking-tight sm:text-4xl md:text-5xl lg:text-6xl"
             style={{ textWrap: "balance" }}
           >
-            On-chain escrow and reputation for humans and autonomous agents
+            The on-chain credit score for humans and autonomous agents
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-text-secondary md:text-xl">
             {isMockChainClient
-              ? "Simulated escrow settlement and reputation scoring — every transaction builds a permissionless credit history that shapes future terms."
-              : "Escrow settlement and reputation scoring on-chain — every transaction builds a permissionless credit history that shapes future terms."}
+              ? "Every simulated escrow builds a portable credit score — starting with faster settlement, scaling to lending, insurance, and priority access across any protocol."
+              : "Every escrow transaction builds a portable, permissionless credit score — starting with faster settlement, scaling to lending, insurance, and priority access across any protocol."}
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
@@ -74,7 +74,7 @@ export function HeroSection() {
           <CodeBlock code={code} lang="payment.ts" />
           <div className="mt-4 grid grid-cols-2 gap-3">
             <MiniStat label="Buyer Gas Cost" value="$0" />
-            <MiniStat label="Reputation" value="On-Chain" />
+            <MiniStat label="Credit Score" value="Portable" />
             <MiniStat label="Escrow Visibility" value="Realtime" />
             <MiniStat label="Authorization" value="EIP-712" />
             <MiniStat label="Asset" value="USDC" />

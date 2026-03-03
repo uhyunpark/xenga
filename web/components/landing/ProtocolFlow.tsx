@@ -11,7 +11,7 @@ const steps = [
   { label: "Escrow", icon: "5", desc: "Funds locked in smart contract" },
   { label: "Deliver", icon: "6", desc: "Seller confirms delivery" },
   { label: "Release", icon: "7", desc: "Funds released to seller" },
-  { label: "Reputation", icon: "★", desc: "On-chain reputation score updated" },
+  { label: "Credit Score", icon: "★", desc: "Portable on-chain credit score updated" },
 ];
 
 function Arrow() {
@@ -46,7 +46,7 @@ export function ProtocolFlow() {
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           className="mb-12 text-center text-3xl font-semibold text-text-primary"
         >
-          End-to-End Escrow Settlement Flow
+          From Payment to Credit Score
         </motion.h2>
 
         <div className="panel-surface rounded-2xl p-4 md:p-5">

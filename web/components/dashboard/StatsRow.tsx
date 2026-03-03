@@ -53,7 +53,7 @@ export function StatsRow({
         accent
       />
       <StatCard
-        label={`Reputation${confidence ? ` (${confidence})` : ""}`}
+        label={`Credit Score${confidence ? ` (${confidence})` : ""}`}
         value={
           reputationScore !== null
             ? <><AnimatedNumber value={reputationScore} />/100</>
