@@ -38,8 +38,8 @@ export function HeroSection() {
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-text-secondary md:text-xl">
             {isMockChainClient
-              ? "Simulated escrow settlement and reputation scoring — every transaction builds a permissionless credit history that shapes future terms."
-              : "Escrow settlement and reputation scoring on-chain — every transaction builds a permissionless credit history that shapes future terms."}
+              ? "Every simulated escrow builds a portable credit score — starting with faster settlement, scaling to lending, insurance, and priority access across any protocol."
+              : "Every escrow transaction builds a portable, permissionless credit score — starting with faster settlement, scaling to lending, insurance, and priority access across any protocol."}
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
