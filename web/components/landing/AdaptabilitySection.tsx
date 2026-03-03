@@ -27,7 +27,7 @@ const useCaseCards = [
     items: [
       "Buyer-seller escrow with configurable release windows",
       "Delivery confirmation + built-in dispute resolution",
-      "Reputation-adjusted terms shorten windows for trusted pairs",
+      "Credit-adjusted terms shorten windows for trusted pairs",
     ],
     footer: "7-day default. High-trust pairs settle in 3 days.",
   },

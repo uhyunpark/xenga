@@ -26,7 +26,7 @@ const demos = [
   {
     title: "Human Escrow Demo",
     description:
-      "Buyer-driven escrow checkout with delivery confirmation, disputes, and reputation tracking.",
+      "Buyer-driven escrow checkout with delivery confirmation, disputes, and credit scoring.",
     href: "/playground/marketplace",
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">

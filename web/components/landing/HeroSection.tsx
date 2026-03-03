@@ -27,14 +27,11 @@ export function HeroSection() {
           transition={{ duration: 0.45 }}
           className="min-w-0"
         >
-          <span className="inline-flex rounded-full border border-accent-muted bg-accent-light px-3 py-1 text-xs font-semibold uppercase tracking-wide text-accent">
-            Escrow + Reputation Protocol
-          </span>
           <h1
-            className="gradient-text mt-5 pb-1 text-3xl font-semibold tracking-tight sm:text-4xl md:text-5xl lg:text-6xl"
+            className="gradient-text pb-1 text-3xl font-semibold tracking-tight sm:text-4xl md:text-5xl lg:text-6xl"
             style={{ textWrap: "balance" }}
           >
-            On-chain escrow and reputation for humans and autonomous agents
+            On-chain escrow and credit scoring for humans and agents
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-text-secondary md:text-xl">
             {isMockChainClient
@@ -74,7 +71,7 @@ export function HeroSection() {
           <CodeBlock code={code} lang="payment.ts" />
           <div className="mt-4 grid grid-cols-2 gap-3">
             <MiniStat label="Buyer Gas Cost" value="$0" />
-            <MiniStat label="Reputation" value="On-Chain" />
+            <MiniStat label="Credit Score" value="Portable" />
             <MiniStat label="Escrow Visibility" value="Realtime" />
             <MiniStat label="Authorization" value="EIP-712" />
             <MiniStat label="Asset" value="USDC" />

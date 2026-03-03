@@ -53,14 +53,12 @@ export function ProtocolFlow() {
           {/* Desktop: 8-col with arrows */}
           <div className="hidden lg:flex lg:items-stretch lg:gap-1 pb-1">
             {steps.map((step, i) => (
-              <div key={step.label} className="flex items-center">
+              <div key={step.label} className="flex flex-1 min-w-0 items-center">
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={isInView ? { opacity: 1, y: 0 } : {}}
                   transition={{ delay: i * 0.08 }}
-                  className={`flex min-h-[88px] min-w-0 flex-1 rounded-xl border border-border-default bg-bg-secondary p-3 shadow-sm ${
-                    step.icon === "5" ? "glow-teal" : ""
-                  }`}
+                  className="flex min-h-[88px] min-w-0 flex-1 rounded-xl border border-border-default bg-bg-secondary p-3 shadow-sm"
                 >
                   <div className="flex h-full flex-col">
                     <span
@@ -104,9 +102,7 @@ export function ProtocolFlow() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={isInView ? { opacity: 1, y: 0 } : {}}
                 transition={{ delay: i * 0.08 }}
-                className={`flex min-h-[88px] rounded-xl border border-border-default bg-bg-secondary p-3 shadow-sm ${
-                  step.icon === "5" ? "glow-teal" : ""
-                }`}
+                className="flex min-h-[88px] rounded-xl border border-border-default bg-bg-secondary p-3 shadow-sm"
               >
                 <div className="flex h-full flex-col">
                   <span
@@ -139,9 +135,7 @@ export function ProtocolFlow() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={isInView ? { opacity: 1, y: 0 } : {}}
                 transition={{ delay: i * 0.08 }}
-                className={`flex min-h-[88px] rounded-xl border border-border-default bg-bg-secondary p-3 shadow-sm ${
-                  step.icon === "5" ? "glow-teal" : ""
-                }`}
+                className="flex min-h-[88px] rounded-xl border border-border-default bg-bg-secondary p-3 shadow-sm"
               >
                 <div className="flex h-full flex-col">
                   <span
