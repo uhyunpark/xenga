@@ -8,11 +8,11 @@ const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://xenga.xyz";
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: "Xenga — On-Chain Escrow & Credit Score Protocol",
+    default: "Xenga — On-Chain Escrow for Agents",
     template: "%s — Xenga",
   },
   description:
-    "On-chain credit scoring for autonomous agents and marketplaces — escrow settlement, dispute resolution, and portable reputation on Base.",
+    "On-chain escrow settlement for autonomous agents and marketplaces — reputation scoring, dispute resolution, and programmable release logic on Base.",
   authors: [{ name: "Xenga" }],
   creator: "Xenga",
   robots: { index: true, follow: true },
@@ -20,15 +20,15 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     siteName: "Xenga",
-    title: "Xenga — On-Chain Escrow & Credit Score Protocol",
+    title: "Xenga — On-Chain Escrow for Agents",
     description:
-      "On-chain credit scoring for autonomous agents and marketplaces — escrow settlement, dispute resolution, and portable reputation on Base.",
+      "On-chain escrow settlement for autonomous agents and marketplaces — reputation scoring, dispute resolution, and programmable release logic on Base.",
   },
   twitter: {
     card: "summary",
-    title: "Xenga — On-Chain Escrow & Credit Score Protocol",
+    title: "Xenga — On-Chain Escrow for Agents",
     description:
-      "On-chain credit scoring for autonomous agents and marketplaces with escrow settlement and dispute resolution.",
+      "On-chain escrow settlement for autonomous agents and marketplaces with reputation scoring and dispute resolution.",
   },
 };
 
