@@ -47,7 +47,7 @@ export function ReputationSection() {
               </div>
               <h3 className="text-sm font-semibold">Raw On-Chain Data</h3>
             </div>
-            <div className="rounded-lg bg-bg-primary/80 border border-border-default p-3 font-mono text-[11px] leading-relaxed text-text-secondary">
+            <div className="rounded-lg bg-bg-primary/80 border border-border-default p-4 font-mono text-[11px] leading-relaxed text-text-secondary">
               <div className="text-text-tertiary mb-1">{"// Stats struct per address"}</div>
               <div>totalEscrows</div>
               <div>completedCount</div>
@@ -81,7 +81,7 @@ export function ReputationSection() {
               </div>
               <h3 className="text-sm font-semibold">Example: Marketplace Scoring</h3>
             </div>
-            <div className="rounded-lg bg-bg-primary/80 border border-border-default p-3 font-mono text-[11px] leading-relaxed text-text-secondary overflow-x-auto">
+            <div className="rounded-lg bg-bg-primary/80 border border-border-default p-4 font-mono text-[11px] leading-relaxed text-text-secondary overflow-x-auto">
               <div className="text-text-tertiary mb-1">{"// weight completion + disputes"}</div>
               <div>completionRate =</div>
               <div className="pl-2">completed / totalEscrows</div>
@@ -114,7 +114,7 @@ export function ReputationSection() {
               </div>
               <h3 className="text-sm font-semibold">Example: Lending Protocol</h3>
             </div>
-            <div className="rounded-lg bg-bg-primary/80 border border-border-default p-3 font-mono text-[11px] leading-relaxed text-text-secondary overflow-x-auto">
+            <div className="rounded-lg bg-bg-primary/80 border border-border-default p-4 font-mono text-[11px] leading-relaxed text-text-secondary overflow-x-auto">
               <div className="text-text-tertiary mb-1">{"// weight volume + repayment"}</div>
               <div>repaymentRate =</div>
               <div className="pl-2">completedAmount / totalAmount</div>

@@ -32,12 +32,6 @@ function getActiveWindow(rep: ReputationScore | null): string {
   return "default";
 }
 
-function scoreColor(score: number): string {
-  if (score >= 70) return "bg-success";
-  if (score >= 40) return "bg-warning";
-  return "bg-error";
-}
-
 function confidenceBadge(confidence: string) {
   const variant = confidence === "high" ? "success" : confidence === "medium" ? "warning" : "default";
   const label =
@@ -79,7 +73,7 @@ export function ReputationSummary({
     <div className="panel-surface overflow-hidden rounded-xl">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border-default px-5 py-3">
-        <h3 className="text-sm font-semibold text-text-primary">Reputation Impact</h3>
+        <h3 className="text-sm font-semibold text-text-primary">On-Chain Credit Data</h3>
         <Badge variant={badgeVariant}>{badgeLabel}</Badge>
       </div>
 
@@ -281,6 +275,24 @@ export function ReputationSummary({
   );
 }
 
+function exampleScores(data: {
+  score: number;
+  completionRate: number;
+  disputeRate: number;
+  totalVolume: string;
+}) {
+  const marketplace = Math.round(data.completionRate * 70 + (1 - data.disputeRate) * 30);
+  const vol = Number(data.totalVolume) / 1e6;
+  const lending = Math.round(
+    Math.min(Math.log10(vol + 1) / 5, 1) * 50 + data.completionRate * 50
+  );
+  return [
+    { label: "This Facilitator", score: data.score, color: "bg-accent" },
+    { label: "Marketplace Trust", score: marketplace, color: "bg-success" },
+    { label: "Lending Protocol", score: lending, color: "bg-accent-purple" },
+  ];
+}
+
 function PartyStats({
   role,
   address,
@@ -302,34 +314,41 @@ function PartyStats({
   return (
     <div className="bg-bg-secondary p-4 space-y-3">
       {/* Role + address */}
-      <div>
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-text-tertiary">{role}</span>
-        <p className="font-mono text-xs text-text-secondary">{shortenAddress(address)}</p>
+      <div className="flex items-baseline justify-between">
+        <div>
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-text-tertiary">{role}</span>
+          <p className="font-mono text-xs text-text-secondary">{shortenAddress(address)}</p>
+        </div>
+        {data && confidenceBadge(data.confidence)}
       </div>
 
       {data ? (
         <>
-          {/* Score gauge */}
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <div className="h-2 flex-1 overflow-hidden rounded-full bg-bg-tertiary">
-                <div
-                  className={`h-full rounded-full transition-all ${scoreColor(data.score)}`}
-                  style={{ width: `${Math.min(data.score, 100)}%` }}
-                />
-              </div>
-              <span className="font-mono text-sm font-semibold text-text-primary">{data.score}</span>
-            </div>
-            {confidenceBadge(data.confidence)}
-            <p className="text-[9px] text-text-tertiary">Score computed by this facilitator</p>
-          </div>
-
-          {/* Stats grid */}
+          {/* Raw on-chain stats */}
           <div className="grid grid-cols-2 gap-2">
             <StatCell label="Escrows" value={String(data.totalEscrows)} />
             <StatCell label="Completed" value={`${(data.completionRate * 100).toFixed(0)}%`} />
             <StatCell label="Disputes" value={`${(data.disputeRate * 100).toFixed(0)}%`} />
             <StatCell label="Volume" value={`${formatVolume(data.totalVolume)} USDC`} />
+          </div>
+
+          {/* Example scores — same data, different formulas */}
+          <div>
+            <p className="text-[9px] text-text-tertiary mb-1.5">Same data, different scores</p>
+            <div className="space-y-1.5">
+              {exampleScores(data).map((ex) => (
+                <div key={ex.label} className="flex items-center gap-2">
+                  <span className="text-[10px] text-text-tertiary w-[90px] shrink-0 truncate">{ex.label}</span>
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-bg-tertiary">
+                    <div
+                      className={`h-full rounded-full transition-all ${ex.color}`}
+                      style={{ width: `${Math.min(ex.score, 100)}%` }}
+                    />
+                  </div>
+                  <span className="font-mono text-[10px] font-medium text-text-primary w-5 text-right">{ex.score}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </>
       ) : (
