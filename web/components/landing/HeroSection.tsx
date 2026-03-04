@@ -31,12 +31,12 @@ export function HeroSection() {
             className="gradient-text pb-1 text-3xl font-semibold tracking-tight sm:text-4xl md:text-5xl lg:text-6xl"
             style={{ textWrap: "balance" }}
           >
-            On-chain escrow and credit scoring for humans and agents
+            On-chain escrow and open credit data for humans and agents
           </h1>
           <p className="mt-6 max-w-2xl text-lg text-text-secondary md:text-xl">
             {isMockChainClient
-              ? "Every simulated escrow builds a portable credit score — starting with faster settlement, scaling to lending, insurance, and priority access across any protocol."
-              : "Every escrow transaction builds a portable, permissionless credit score — starting with faster settlement, scaling to lending, insurance, and priority access across any protocol."}
+              ? "Every simulated escrow writes open credit data on-chain — permissionless, portable, and readable by any protocol. Build your own scoring model or use ours."
+              : "Every escrow transaction writes open credit data on-chain — permissionless, portable, and readable by any protocol. Build your own scoring model or use ours."}
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
@@ -71,7 +71,7 @@ export function HeroSection() {
           <CodeBlock code={code} lang="payment.ts" />
           <div className="mt-4 grid grid-cols-2 gap-3">
             <MiniStat label="Buyer Gas Cost" value="$0" />
-            <MiniStat label="Credit Score" value="Portable" />
+            <MiniStat label="Credit Data" value="Open" />
             <MiniStat label="Escrow Visibility" value="Realtime" />
             <MiniStat label="Authorization" value="EIP-712" />
             <MiniStat label="Asset" value="USDC" />

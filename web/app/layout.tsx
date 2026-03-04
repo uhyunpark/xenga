@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     template: "%s — Xenga",
   },
   description:
-    "On-chain escrow and credit scoring for agents and marketplaces — settlement, dispute resolution, and programmable release logic on Base.",
+    "On-chain escrow and open credit data for agents and marketplaces — settlement, dispute resolution, and programmable release logic on Base.",
   authors: [{ name: "Xenga" }],
   creator: "Xenga",
   robots: { index: true, follow: true },
@@ -22,13 +22,13 @@ export const metadata: Metadata = {
     siteName: "Xenga",
     title: "Xenga — On-Chain Escrow for Agents",
     description:
-      "On-chain escrow and credit scoring for agents and marketplaces — settlement, dispute resolution, and programmable release logic on Base.",
+      "On-chain escrow and open credit data for agents and marketplaces — settlement, dispute resolution, and programmable release logic on Base.",
   },
   twitter: {
     card: "summary",
     title: "Xenga — On-Chain Escrow for Agents",
     description:
-      "On-chain escrow and credit scoring for agents and marketplaces with settlement and dispute resolution.",
+      "On-chain escrow and open credit data for agents and marketplaces with settlement and dispute resolution.",
   },
 };
 

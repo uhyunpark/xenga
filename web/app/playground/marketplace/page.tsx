@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Marketplace Demo — Xenga",
     description:
-      "Interactive escrow marketplace demo with on-chain settlement, credit scoring, and dispute resolution.",
+      "Interactive escrow marketplace demo with on-chain settlement, on-chain credit data, and dispute resolution.",
   },
   twitter: {
     title: "Marketplace Demo — Xenga",

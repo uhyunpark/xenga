@@ -530,7 +530,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
       await wait(800);
       addLine({ type: "info", text: "[sim] Reputation scoring simulation — 5 rounds", delay: 0 });
       await wait(400);
-      addLine({ type: "info", text: "[sim] Computing scores client-side using on-chain scoring formulas", delay: 0 });
+      addLine({ type: "info", text: "[sim] Computing example scores client-side from on-chain stats", delay: 0 });
       await wait(1200);
 
       for (const snap of snapshots) {
@@ -603,13 +603,13 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
       await wait(300);
       addLine({ type: "info", text: `[summary] Buyer:  0 → ${snapshots.map((s) => s.buyerScore).join(" → ")}`, delay: 0 });
       await wait(600);
-      addLine({ type: "reputation", text: "[takeaway] Completion rate is the strongest scoring factor (40-45% weight)", delay: 0 });
+      addLine({ type: "reputation", text: "[takeaway] Disputes and refunds negatively impact on-chain stats", delay: 0 });
       await wait(400);
       addLine({ type: "reputation", text: "[takeaway] A single dispute dropped the seller score by 21 points", delay: 0 });
       await wait(400);
       addLine({ type: "reputation", text: "[takeaway] Recovery takes multiple clean transactions", delay: 0 });
       await wait(400);
-      addLine({ type: "reputation", text: "[takeaway] Release window adjustments require \"high\" confidence (10+ escrows)", delay: 0 });
+      addLine({ type: "reputation", text: "[takeaway] This facilitator adjusts release windows based on escrow history", delay: 0 });
 
       // Build ReputationScore objects from final snapshot
       const now = Math.floor(Date.now() / 1000);

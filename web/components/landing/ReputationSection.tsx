@@ -3,52 +3,6 @@
 import { motion, useInView } from "framer-motion";
 import { useRef } from "react";
 
-const scoringFactors = [
-  { label: "Completion Rate",    color: "bg-accent" },
-  { label: "Dispute Rate",       color: "bg-warning" },
-  { label: "Refund Rate",        color: "bg-accent-purple" },
-  { label: "Transaction Volume", color: "bg-success" },
-];
-
-const confidenceLevels = [
-  {
-    label: "Low",
-    range: "< 3 escrows",
-    desc: "Default parameters, score not shown",
-    badgeClass: "bg-bg-tertiary text-text-secondary border-border-default",
-  },
-  {
-    label: "Medium",
-    range: "3–9 escrows",
-    desc: "Score visible, history building",
-    badgeClass: "bg-warning/10 text-warning border-warning/25",
-  },
-  {
-    label: "High",
-    range: "10+ escrows",
-    desc: "Full parameter adjustments active",
-    badgeClass: "bg-success/10 text-success border-success/25",
-  },
-];
-
-const windowTiers = [
-  {
-    condition: "High trust (score ≥ 80, high confidence)",
-    window: "Shortened",
-    badgeClass: "text-success",
-  },
-  {
-    condition: "New or moderate trust",
-    window: "Default",
-    badgeClass: "text-text-tertiary",
-  },
-  {
-    condition: "Low trust (score < 40)",
-    window: "Extended",
-    badgeClass: "text-error",
-  },
-];
-
 export function ReputationSection() {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-50px" });
@@ -62,7 +16,7 @@ export function ReputationSection() {
           transition={{ duration: 0.4 }}
           className="mb-4 text-center text-3xl font-semibold text-text-primary"
         >
-          The On-Chain Credit Score
+          Open Credit Data
         </motion.h2>
         <motion.p
           initial={{ opacity: 0, y: 20 }}
@@ -70,11 +24,13 @@ export function ReputationSection() {
           transition={{ duration: 0.4, delay: 0.1 }}
           className="mb-10 text-center text-base text-text-secondary max-w-2xl mx-auto"
         >
-          Every escrow outcome builds a portable credit score. Today it shapes settlement terms. Tomorrow it unlocks lending, insurance, and priority access across any protocol.
+          Every escrow outcome is recorded on-chain as raw stats — permissionless
+          and portable. Any protocol can read the data and compute scores their
+          own way.
         </motion.p>
 
         <div className="grid gap-6 md:grid-cols-3">
-          {/* Card 1: Score Formula */}
+          {/* Card 1: Raw On-Chain Data */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -84,27 +40,32 @@ export function ReputationSection() {
             <div className="mb-3 flex items-center gap-2">
               <div className="rounded-lg bg-accent/10 p-2 text-accent">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="10" width="3" height="7" rx="0.5" />
-                  <rect x="8.5" y="6" width="3" height="11" rx="0.5" />
-                  <rect x="14" y="3" width="3" height="14" rx="0.5" />
+                  <rect x="3" y="3" width="14" height="14" rx="2" />
+                  <path d="M3 7h14" />
+                  <path d="M7 3v14" />
                 </svg>
               </div>
-              <h3 className="text-sm font-semibold">Score Signals</h3>
+              <h3 className="text-sm font-semibold">Raw On-Chain Data</h3>
             </div>
-            <div className="space-y-2">
-              {scoringFactors.map((factor) => (
-                <div key={factor.label} className="flex items-center gap-2.5">
-                  <div className={`h-2.5 w-2.5 shrink-0 rounded-full ${factor.color}`} />
-                  <span className="flex-1 text-xs text-text-secondary">{factor.label}</span>
-                </div>
-              ))}
+            <div className="rounded-lg bg-bg-primary/80 border border-border-default p-3 font-mono text-[11px] leading-relaxed text-text-secondary">
+              <div className="text-text-tertiary mb-1">{"// Stats struct per address"}</div>
+              <div>totalEscrows</div>
+              <div>completedCount</div>
+              <div>completedAmount</div>
+              <div>disputedCount</div>
+              <div>disputedAmount</div>
+              <div>resolvedCount</div>
+              <div>refundedCount</div>
+              <div>refundedAmount</div>
+              <div>totalAmount</div>
             </div>
             <p className="mt-3 text-[11px] text-text-tertiary">
-              Computed from on-chain escrow history. Portable across any protocol that reads the chain.
+              Stored per address in EscrowVault. Readable by anyone
+              — <span className="font-mono">getSellerStats(addr)</span> / <span className="font-mono">getBuyerStats(addr)</span>.
             </p>
           </motion.div>
 
-          {/* Card 2: Confidence Levels */}
+          {/* Card 2: Example — Marketplace Scoring */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -114,30 +75,29 @@ export function ReputationSection() {
             <div className="mb-3 flex items-center gap-2">
               <div className="rounded-lg bg-success/10 p-2 text-success">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M10 2L3 6v5c0 4.4 3 7.5 7 9 4-1.5 7-4.6 7-9V6l-7-4z" />
-                  <path d="M7 10l2 2 4-4" />
+                  <path d="M4 17l4-4m0 0l4-8 4 8m-8 0h8" />
+                  <circle cx="4" cy="17" r="1.5" />
                 </svg>
               </div>
-              <h3 className="text-sm font-semibold">Confidence Levels</h3>
+              <h3 className="text-sm font-semibold">Example: Marketplace Scoring</h3>
             </div>
-            <div className="space-y-3">
-              {confidenceLevels.map((level) => (
-                <div key={level.label} className="flex items-start gap-2.5">
-                  <span
-                    className={`mt-0.5 inline-flex shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium ${level.badgeClass}`}
-                  >
-                    {level.label}
-                  </span>
-                  <div>
-                    <p className="text-xs font-medium text-text-primary">{level.range}</p>
-                    <p className="text-[11px] text-text-tertiary">{level.desc}</p>
-                  </div>
-                </div>
-              ))}
+            <div className="rounded-lg bg-bg-primary/80 border border-border-default p-3 font-mono text-[11px] leading-relaxed text-text-secondary overflow-x-auto">
+              <div className="text-text-tertiary mb-1">{"// weight completion + disputes"}</div>
+              <div>completionRate =</div>
+              <div className="pl-2">completed / totalEscrows</div>
+              <div className="mt-1">disputeRate =</div>
+              <div className="pl-2">disputed / totalEscrows</div>
+              <div className="mt-1">score =</div>
+              <div className="pl-2">completionRate * 0.6</div>
+              <div className="pl-2">+ (1 - disputeRate) * 0.4</div>
             </div>
+            <p className="mt-3 text-[11px] text-text-tertiary">
+              Weight completion and dispute history for buyer-seller trust. One
+              possible interpretation.
+            </p>
           </motion.div>
 
-          {/* Card 3: Dynamic Release Windows */}
+          {/* Card 3: Example — Lending Protocol */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -147,27 +107,26 @@ export function ReputationSection() {
             <div className="mb-3 flex items-center gap-2">
               <div className="rounded-lg bg-accent-purple/10 p-2 text-accent-purple">
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="10" cy="10" r="7" />
-                  <path d="M10 6v4l2.5 2.5" />
+                  <path d="M10 2v3m0 10v3M2 10h3m10 0h3" />
+                  <circle cx="10" cy="10" r="4" />
+                  <path d="M8.5 10h3M10 8.5v3" />
                 </svg>
               </div>
-              <h3 className="text-sm font-semibold">Beyond Settlement</h3>
+              <h3 className="text-sm font-semibold">Example: Lending Protocol</h3>
             </div>
-            <div className="space-y-2">
-              {windowTiers.map((tier) => (
-                <div
-                  key={tier.condition}
-                  className="flex items-center justify-between rounded-lg border border-border-default bg-bg-primary/50 px-3 py-2"
-                >
-                  <span className="text-xs text-text-secondary">{tier.condition}</span>
-                  <span className={`ml-2 shrink-0 font-mono text-xs font-medium ${tier.badgeClass}`}>
-                    {tier.window}
-                  </span>
-                </div>
-              ))}
+            <div className="rounded-lg bg-bg-primary/80 border border-border-default p-3 font-mono text-[11px] leading-relaxed text-text-secondary overflow-x-auto">
+              <div className="text-text-tertiary mb-1">{"// weight volume + repayment"}</div>
+              <div>repaymentRate =</div>
+              <div className="pl-2">completedAmount / totalAmount</div>
+              <div className="mt-1">volumeFactor =</div>
+              <div className="pl-2">log10(totalAmount + 1) / 6</div>
+              <div className="mt-1">score =</div>
+              <div className="pl-2">repaymentRate * 0.7</div>
+              <div className="pl-2">+ volumeFactor * 0.3</div>
             </div>
             <p className="mt-3 text-[11px] text-text-tertiary">
-              Faster settlement today. Lending, insurance, and priority access next.
+              Same on-chain data, different formula. Lenders can weight volume
+              and repayment differently.
             </p>
           </motion.div>
         </div>

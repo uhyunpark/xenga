@@ -12,7 +12,7 @@ export default function LandingPage() {
     "@type": "WebApplication",
     name: "Xenga",
     description:
-      "On-chain escrow and credit scoring for agents and marketplaces — settlement, dispute resolution, and portable credit scoring on Base.",
+      "On-chain escrow and open credit data for agents and marketplaces — settlement, dispute resolution, and portable open credit data on Base.",
     url: process.env.NEXT_PUBLIC_BASE_URL || "https://xenga.xyz",
     applicationCategory: "DeveloperApplication",
     operatingSystem: "Web",

@@ -43,13 +43,13 @@ export function ReputationBadge({
   const badgeContent = isNew ? "New" : `${rep.overall}/100`;
 
   const tooltipText = isNew
-    ? "New address — fewer than 3 escrows. Building credit history."
+    ? "New address — fewer than 3 escrows. On-chain credit data building."
     : `Score ${rep.overall}/100 · ${rep.confidence} confidence. ${
         rep.overall >= 70
-          ? "High trust — faster settlement and broader protocol access."
+          ? "High trust — faster settlement on this service."
           : rep.overall >= 40
-            ? "Moderate trust — standard terms. Keep building your score."
-            : "Low trust — extended terms. Improve with successful transactions."
+            ? "Moderate trust — standard terms."
+            : "Low trust — extended terms."
       }`;
 
   const badge = (

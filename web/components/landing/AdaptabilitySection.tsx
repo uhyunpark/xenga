@@ -27,7 +27,7 @@ const useCaseCards = [
     items: [
       "Buyer-seller escrow with configurable release windows",
       "Delivery confirmation + built-in dispute resolution",
-      "Credit-adjusted terms shorten windows for trusted pairs",
+      "On-chain credit data shortens windows for trusted pairs",
     ],
     footer: "7-day default. High-trust pairs settle in 3 days.",
   },
@@ -53,7 +53,7 @@ const useCaseCards = [
     ),
     items: [
       "Auto-verified delivery for machine-to-machine payments",
-      "Credit-score gating screens low-trust counterparties",
+      "On-chain stats enable reputation gating",
     ],
     footer:
       "1-hour auto-release. Quality checks trigger disputes automatically.",
@@ -83,7 +83,7 @@ const useCaseCards = [
     items: [
       "Define your own release windows and verification logic",
       "Plug custom delivery checks into the escrow lifecycle",
-      "Read on-chain credit scores for lending, gating, or pricing",
+      "Read raw on-chain stats — build your own scoring for lending, gating, or pricing",
     ],
     footer: "SaaS billing, lending protocols, insurance \u2014 any system that needs trust.",
   },
@@ -126,6 +126,7 @@ registerServiceType({
   name: "consulting",
   releaseWindow: 14 * 24 * 60 * 60,
   autoVerify: false,
+  // Your scoring logic — read raw stats, set your rules
   adjustParams(params, rep) {
     if (rep.sellerScore >= 80)
       return { ...params, releaseWindow: 7 * 24 * 60 * 60 };

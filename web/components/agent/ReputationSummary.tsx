@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type { ReputationScore } from "@shared/types";
 import type { RoundSnapshot, ScreeningAgentProfile } from "@/lib/reputation/client-scoring";
 import { SCREENING_THRESHOLD } from "@/lib/reputation/client-scoring";
@@ -18,21 +17,6 @@ interface ReputationSummaryProps {
   progression?: RoundSnapshot[];
   screeningResults?: ScreeningAgentProfile[];
 }
-
-const BUYER_FORMULA = [
-  { label: "Completion", weight: 45, color: "bg-accent" },
-  { label: "Non-Dispute", weight: 25, color: "bg-warning" },
-  { label: "Non-Frivolous", weight: 20, color: "bg-violet" },
-  { label: "Volume", weight: 10, color: "bg-success" },
-];
-
-const SELLER_FORMULA = [
-  { label: "Completion", weight: 40, color: "bg-accent" },
-  { label: "Non-Dispute", weight: 25, color: "bg-warning" },
-  { label: "Non-Refund", weight: 15, color: "bg-error/60" },
-  { label: "Fairness", weight: 10, color: "bg-violet" },
-  { label: "Volume", weight: 10, color: "bg-success" },
-];
 
 const RELEASE_WINDOWS = [
   { condition: "Score ≥80 + high confidence", window: "30 min", id: "high" },
@@ -74,7 +58,6 @@ export function ReputationSummary({
   progression,
   screeningResults,
 }: ReputationSummaryProps) {
-  const [showFormula, setShowFormula] = useState(false);
   const hasBuyerData = !!buyerRep?.buyer;
   const hasSellerData = !!sellerRep?.seller;
   const hasAnyData = hasBuyerData || hasSellerData;
@@ -178,7 +161,7 @@ export function ReputationSummary({
           {!hasAnyData && isMockChainClient && scenario !== "reputation" && (
             <div className="mx-5 mt-4 flex items-start gap-2 rounded-lg border border-warning/20 bg-warning/5 px-3 py-2">
               <span className="text-xs text-warning">
-                Simulation mode — on-chain stats are not updated in mock chain mode. The scoring formula and parameter table below show how the system works with real transactions.
+                Simulation mode — on-chain stats are not updated in mock chain mode. The stats and parameter table below show how the system works with real transactions.
               </span>
             </div>
           )}
@@ -215,29 +198,10 @@ export function ReputationSummary({
         </>
       )}
 
-      {/* Section: Scoring formula (collapsible) */}
-      <div className="border-t border-border-default px-5 py-4">
-        <button
-          onClick={() => setShowFormula((v) => !v)}
-          className="flex w-full items-center justify-between text-xs font-semibold uppercase tracking-wide text-text-tertiary hover:text-text-secondary transition-colors"
-        >
-          <span>How Scores Are Computed</span>
-          <span className="text-[10px] normal-case font-normal text-text-tertiary">
-            {showFormula ? "Hide ▴" : "Show ▾"}
-          </span>
-        </button>
-        {showFormula && (
-          <div className="mt-3 space-y-4">
-            <FormulaBar label="Buyer Formula" segments={BUYER_FORMULA} />
-            <FormulaBar label="Seller Formula" segments={SELLER_FORMULA} />
-          </div>
-        )}
-      </div>
-
       {/* Section: Release window impact */}
       <div className="border-t border-border-default px-5 py-4">
         <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-text-tertiary">
-          How Reputation Affects Parameters
+          How This Facilitator Uses Credit Data
         </h4>
         <div className="overflow-hidden rounded-lg border border-border-default">
           {RELEASE_WINDOWS.map((row) => (
@@ -305,13 +269,12 @@ export function ReputationSummary({
       <div className="border-t border-border-default px-5 py-3">
         <p className="text-[11px] leading-relaxed text-text-tertiary">
           {scenario === "happy"
-            ? "Escrow created but not yet released — completion stats update after the 1-hour auto-release window. Repeating transactions builds confidence and unlocks shorter release windows."
+            ? "Escrow created but not yet released — completion stats update after the 1-hour auto-release window. Raw data is permissionless — any protocol can read it and compute scores differently."
             : scenario === "dispute"
-              ? "Dispute recorded in on-chain stats. Both buyer's dispute rate and seller's dispute rate are now tracked. Resolution fairness (arbiter rulings) shapes long-term reputation scores."
+              ? "Dispute recorded in on-chain stats. Both buyer's dispute rate and seller's dispute rate are now tracked. Any protocol can read this data and weight it according to their own model."
               : scenario === "reputation"
-                ? "Simulated using the same scoring formulas applied to on-chain data. The dispute in round 3 dropped the seller score by 21 points, but two subsequent completions restored trust. In production, these scores drive release window adjustments once confidence reaches \"high\" (10+ escrows)."
-                : "Reputation is a portable on-chain credential. Services set their own thresholds — agents rejected here can build history elsewhere and re-apply. High-trust agents earn faster settlement (30 min vs 1 hour) as a tangible incentive."}
-          {" "}Confidence thresholds: Low (&lt;3 escrows), Medium (3-9), High (10+). Parameter adjustments activate at Medium confidence.
+                ? "Simulated using one example scoring formula applied to on-chain stats. The dispute in round 3 dropped the seller score by 21 points, but two subsequent completions restored trust. In production, these scores drive release window adjustments once confidence reaches \"high\" (10+ escrows)."
+                : "On-chain credit data is portable and permissionless. Each service sets its own thresholds and scoring logic — agents rejected here can build history elsewhere and re-apply. High-trust agents earn faster settlement (30 min vs 1 hour) as a tangible incentive."}
         </p>
       </div>
     </div>
@@ -358,6 +321,7 @@ function PartyStats({
               <span className="font-mono text-sm font-semibold text-text-primary">{data.score}</span>
             </div>
             {confidenceBadge(data.confidence)}
+            <p className="text-[9px] text-text-tertiary">Score computed by this facilitator</p>
           </div>
 
           {/* Stats grid */}
@@ -380,45 +344,6 @@ function StatCell({ label, value }: { label: string; value: string }) {
     <div className="rounded-lg bg-bg-tertiary/60 px-2 py-1.5">
       <p className="text-[10px] text-text-tertiary">{label}</p>
       <p className="font-mono text-xs font-medium text-text-primary">{value}</p>
-    </div>
-  );
-}
-
-function FormulaBar({
-  label,
-  segments,
-}: {
-  label: string;
-  segments: { label: string; weight: number; color: string }[];
-}) {
-  const total = segments.reduce((sum, s) => sum + s.weight, 0);
-
-  return (
-    <div>
-      <p className="mb-1.5 text-xs text-text-secondary">{label}</p>
-      {/* Stacked bar */}
-      <div className="flex h-3 overflow-hidden rounded-full">
-        {segments.map((seg) => (
-          <div
-            key={seg.label}
-            className={`${seg.color} transition-all`}
-            style={{ width: `${(seg.weight / total) * 100}%` }}
-          />
-        ))}
-      </div>
-      {/* Labels */}
-      <div className="mt-1 flex">
-        {segments.map((seg) => (
-          <div
-            key={seg.label}
-            className="overflow-hidden text-center"
-            style={{ width: `${(seg.weight / total) * 100}%` }}
-          >
-            <p className="truncate text-[9px] text-text-tertiary">{seg.label}</p>
-            <p className="text-[9px] font-medium text-text-secondary">&times;{seg.weight}</p>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
