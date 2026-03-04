@@ -838,7 +838,7 @@ export function PaymentFlow() {
                         >
                           <div className="rounded-lg border border-border-default bg-bg-secondary p-3 space-y-2">
                             <div className="flex items-center justify-between">
-                              <span className="text-xs font-semibold text-text-primary">Seller Reputation</span>
+                              <span className="text-xs font-semibold text-text-primary">Seller On-Chain Stats</span>
                               {operatorAddress && <ReputationBadge address={operatorAddress} size="md" />}
                             </div>
                             {state.completionReputation.seller && (
@@ -870,7 +870,7 @@ export function PaymentFlow() {
                                     state.completionReputation.confidence === "low"
                                       ? "seller is new, default parameters applied"
                                       : state.completionReputation.seller && state.completionReputation.seller.score >= 80 && state.completionReputation.confidence === "high"
-                                        ? "high trust seller, shortened release window"
+                                        ? "trusted seller on this service, shortened release window"
                                         : "standard parameters based on seller history"
                                   }`
                                 : "This transaction is now part of the seller\u2019s on-chain reputation."}

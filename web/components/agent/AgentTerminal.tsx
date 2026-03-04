@@ -680,7 +680,7 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
       await wait(800);
       addLine({ type: "info", text: `[screen] Premium Data API — verifying ${SCREENING_AGENTS.length} agents for access`, delay: 0 });
       await wait(400);
-      addLine({ type: "info", text: `[screen] Minimum reputation score: ${SCREENING_THRESHOLD}/100`, delay: 0 });
+      addLine({ type: "info", text: `[screen] Service minimum score: ${SCREENING_THRESHOLD}/100 (this service's threshold)`, delay: 0 });
       await wait(1200);
 
       for (const agent of SCREENING_AGENTS) {

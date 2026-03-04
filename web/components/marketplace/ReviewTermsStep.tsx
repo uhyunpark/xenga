@@ -119,11 +119,11 @@ export function ReviewTermsStep({
       {operatorAddress && (
         <div className="mb-4 rounded-lg border border-border-default bg-bg-secondary/50 p-3">
           <div className="mb-1.5 flex items-center gap-2">
-            <span className="text-xs font-semibold text-text-primary">Seller Trust Score</span>
+            <span className="text-xs font-semibold text-text-primary">Seller On-Chain History</span>
             <ReputationBadge address={operatorAddress} size="md" />
           </div>
           <p className="text-[11px] text-text-tertiary">
-            Based on the seller&apos;s on-chain escrow history: completion rate, dispute frequency, and transaction volume.
+            On-chain escrow stats for this seller. Each service interprets this data with its own scoring model.
           </p>
         </div>
       )}
