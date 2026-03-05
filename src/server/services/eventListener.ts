@@ -180,7 +180,23 @@ function syncOrderStatus(orderId: `0x${string}`, status: OrderStatus) {
 
 function getEscrowOrderId(escrowId: number): Hash | undefined {
   const db = getDb();
-  const row = db.prepare("SELECT order_id FROM orders WHERE escrow_id = ?").get(escrowId) as any;
+  // Look up the orderId from the EscrowCreated event first — this is authoritative
+  // because the event carries the orderId directly from the contract.
+  // Falling back to the orders table can return stale rows if escrowIds are reused
+  // across redeployments (escrow_id is not unique).
+  const eventRow = db.prepare(
+    "SELECT data FROM events WHERE escrow_id = ? AND event_name = 'EscrowCreated' ORDER BY id DESC LIMIT 1"
+  ).get(escrowId) as any;
+  if (eventRow?.data) {
+    try {
+      const parsed = JSON.parse(eventRow.data);
+      if (parsed.orderId) return parsed.orderId as Hash;
+    } catch {}
+  }
+  // Fallback: query orders table (most recent match)
+  const row = db.prepare(
+    "SELECT order_id FROM orders WHERE escrow_id = ? ORDER BY updated_at DESC LIMIT 1"
+  ).get(escrowId) as any;
   return row?.order_id;
 }
 

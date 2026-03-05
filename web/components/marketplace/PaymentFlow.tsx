@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducer, useCallback, useEffect, useRef } from "react";
+import { useState, useReducer, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { useInspector } from "@/lib/protocol-inspector/context";
@@ -915,7 +915,8 @@ export function PaymentFlow() {
               <div className="mt-3 space-y-2">
                 <MetaRow
                   label="Order"
-                  value={state.orderId ? `${state.orderId.slice(0, 8)}...` : "Not created"}
+                  value={state.orderId ? <CopyableId value={state.orderId} /> : "Not created"}
+                  mono
                 />
                 <MetaRow
                   label="Escrow"
@@ -959,6 +960,36 @@ export function PaymentFlow() {
         </div>
       </div>
     </div>
+  );
+}
+
+function CopyableId({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span>{value.slice(0, 8)}...</span>
+      <button
+        onClick={copy}
+        className="text-text-tertiary transition-colors hover:text-text-primary"
+        title="Copy full ID"
+      >
+        {copied ? (
+          <svg className="h-3 w-3 text-success" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M4 8l3 3 5-5" />
+          </svg>
+        ) : (
+          <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <rect x="5" y="5" width="8" height="8" rx="1" />
+            <path d="M3 11V3h8" />
+          </svg>
+        )}
+      </button>
+    </span>
   );
 }
 
