@@ -213,6 +213,13 @@ function scheduleAutoVerify(escrowId: number, orderId: `0x${string}`) {
     // Auto-confirm delivery after a short delay (simulating service completion)
     setTimeout(async () => {
       try {
+        // Re-check order status — may have been confirmed already via API
+        const freshOrder = getOrderByOrderId(orderId as Hash);
+        if (freshOrder && freshOrder.status !== "escrowed") {
+          logger.info("events", `Skipping auto-verify for escrow ${escrowId}: order already ${freshOrder.status}`);
+          return;
+        }
+
         if (serviceType.verifyDelivery) {
           const verified = await serviceType.verifyDelivery(escrowId, order.id);
           if (!verified) {
@@ -222,6 +229,10 @@ function scheduleAutoVerify(escrowId: number, orderId: `0x${string}`) {
         }
 
         const txHash = await confirmDeliveryOnChain(escrowId);
+        if (!txHash) {
+          logger.info("events", `Auto-verify skipped for escrow ${escrowId}: already confirmed on-chain`);
+          return;
+        }
         logger.info("events", `Auto-verified delivery for escrow ${escrowId}: ${txHash}`);
       } catch (err) {
         logger.error("events", `Auto-verify tx failed for escrow ${escrowId}: ${(err as Error).message}`);

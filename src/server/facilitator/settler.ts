@@ -9,6 +9,7 @@ import { escrowVaultAbi } from "../../shared/abi.js";
 import { USDC_DECIMALS } from "../../shared/constants.js";
 import type { EscrowPaymentPayload } from "../../shared/types.js";
 import { config } from "../config.js";
+import { logger } from "../services/logger.js";
 import { txQueue, getPublicClient } from "./txQueue.js";
 
 /**
@@ -101,7 +102,15 @@ export async function getEscrowOnChain(escrowId: number) {
   });
 }
 
-export async function confirmDeliveryOnChain(escrowId: number): Promise<Hash> {
+export async function confirmDeliveryOnChain(escrowId: number): Promise<Hash | null> {
+  // Check on-chain state first — avoid reverts from duplicate calls
+  const escrow = await getEscrowOnChain(escrowId);
+  const state = Number((escrow as any).state);
+  if (state !== 1) { // 1 = Active — the only valid state for confirmDelivery
+    logger.info("settler", `Skipping confirmDelivery for escrow ${escrowId}: on-chain state is ${state}, not Active`);
+    return null;
+  }
+
   const txHash = await txQueue.writeContract("confirmDelivery", {
     address: config.escrowVaultAddress,
     abi: escrowVaultAbi,

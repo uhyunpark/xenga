@@ -126,16 +126,21 @@ router.post("/:id/confirm-delivery", apiKeyOrSessionAuth(), async (req: Authenti
     return res.status(403).json({ error: "Only the seller can confirm delivery" });
   }
 
+  if (order.status === "delivery_confirmed") {
+    return res.json({ message: "Delivery already confirmed" });
+  }
+
   if (order.status !== "escrowed" || order.escrowId === undefined) {
     return res.status(400).json({ error: "Order is not in escrowed state or missing escrowId" });
   }
 
   try {
     const txHash = await confirmDeliveryOnChain(order.escrowId);
+    // Sync DB even if already confirmed on-chain (txHash === null)
     updateOrderStatus(order.id, { status: "delivery_confirmed" });
 
     res.json({
-      message: "Delivery confirmed on-chain",
+      message: txHash ? "Delivery confirmed on-chain" : "Delivery already confirmed on-chain, synced DB",
       txHash,
     });
   } catch (err) {
