@@ -52,6 +52,7 @@ contract EscrowVault is Ownable2Step, Pausable {
 
     IERC20 public immutable usdc;
     address public arbiter;
+    address public facilitator;
     address public feeRecipient;
     uint256 public feeBps;
     uint256 public flatFee;
@@ -99,6 +100,7 @@ contract EscrowVault is Ownable2Step, Pausable {
     event DisputeResolved(uint256 indexed escrowId, uint256 buyerAmount, uint256 sellerAmount, uint256 feeAmount);
     event EscrowRefunded(uint256 indexed escrowId, uint256 buyerAmount);
     event ArbiterChanged(address indexed oldArbiter, address indexed newArbiter);
+    event FacilitatorChanged(address indexed oldFacilitator, address indexed newFacilitator);
     event FeeConfigUpdated(address indexed feeRecipient, uint256 feeBps, uint256 flatFee);
     event DisputeWindowUpdated(uint256 oldWindow, uint256 newWindow);
 
@@ -108,7 +110,6 @@ contract EscrowVault is Ownable2Step, Pausable {
     error InvalidAddress();
     error InvalidState(EscrowState current, EscrowState expected);
     error NotBuyer();
-    error NotSeller();
     error NotArbiter();
     error NotAuthorized();
     error ReleaseWindowNotPassed();
@@ -138,11 +139,6 @@ contract EscrowVault is Ownable2Step, Pausable {
 
     modifier onlyBuyer(uint256 escrowId) {
         if (msg.sender != escrows[escrowId].buyer) revert NotBuyer();
-        _;
-    }
-
-    modifier onlySeller(uint256 escrowId) {
-        if (msg.sender != escrows[escrowId].seller) revert NotSeller();
         _;
     }
 
@@ -249,10 +245,11 @@ contract EscrowVault is Ownable2Step, Pausable {
     // ──────────────────────── Lifecycle ────────────────────────────
 
     /**
-     * @notice Seller confirms delivery — starts dispute window
+     * @notice Seller or facilitator confirms delivery — starts dispute window
      */
-    function confirmDelivery(uint256 escrowId) external onlySeller(escrowId) inState(escrowId, EscrowState.Active) {
+    function confirmDelivery(uint256 escrowId) external inState(escrowId, EscrowState.Active) {
         Escrow storage e = escrows[escrowId];
+        if (msg.sender != e.seller && msg.sender != facilitator) revert NotAuthorized();
         e.state = EscrowState.DeliveryConfirmed;
         e.deliveryConfirmedAt = block.timestamp;
 
@@ -408,11 +405,11 @@ contract EscrowVault is Ownable2Step, Pausable {
     }
 
     /**
-     * @notice Refund buyer — seller voluntarily or arbiter-initiated
+     * @notice Refund buyer — seller, facilitator, or arbiter-initiated
      */
     function refund(uint256 escrowId) external {
         Escrow storage e = escrows[escrowId];
-        if (msg.sender != e.seller && msg.sender != arbiter) revert NotAuthorized();
+        if (msg.sender != e.seller && msg.sender != arbiter && msg.sender != facilitator) revert NotAuthorized();
         if (e.state != EscrowState.Active && e.state != EscrowState.DeliveryConfirmed && e.state != EscrowState.Disputed) {
             revert InvalidState(e.state, EscrowState.Active);
         }
@@ -486,6 +483,12 @@ contract EscrowVault is Ownable2Step, Pausable {
         address oldArbiter = arbiter;
         arbiter = _arbiter;
         emit ArbiterChanged(oldArbiter, _arbiter);
+    }
+
+    function setFacilitator(address _facilitator) external onlyOwner {
+        address oldFacilitator = facilitator;
+        facilitator = _facilitator;
+        emit FacilitatorChanged(oldFacilitator, _facilitator);
     }
 
     function setDisputeWindow(uint256 newWindow) external onlyOwner {

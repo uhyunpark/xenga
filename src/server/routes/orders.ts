@@ -12,7 +12,7 @@ import { getServiceType } from "../service-types/index.js";
 import { escrowPaymentMiddleware, type EscrowPaymentRequest } from "../middleware/escrowPayment.js";
 import { apiKeyAuth, apiKeyOrSessionAuth, sessionAuth } from "../middleware/auth.js";
 import type { AuthenticatedRequest } from "../middleware/auth.js";
-import { confirmDeliveryOnChain } from "../facilitator/settler.js";
+import { confirmDeliveryOnChain, refundOnChain } from "../facilitator/settler.js";
 
 const router = Router();
 
@@ -141,6 +141,36 @@ router.post("/:id/confirm-delivery", apiKeyOrSessionAuth(), async (req: Authenti
   } catch (err) {
     res.status(500).json({
       error: "Failed to confirm delivery on-chain",
+      details: err instanceof Error ? err.message : String(err),
+    });
+  }
+});
+
+// ──────────── Refund (operator/seller) ────────────
+router.post("/:id/refund", apiKeyOrSessionAuth(), async (req: AuthenticatedRequest, res) => {
+  const order = getOrderById(req.params.id as string);
+  if (!order) return res.status(404).json({ error: "Order not found" });
+
+  // If wallet auth was used, verify signer is the seller
+  if (req.callerAddress && req.callerAddress.toLowerCase() !== order.sellerAddress.toLowerCase()) {
+    return res.status(403).json({ error: "Only the seller can initiate a refund" });
+  }
+
+  if (!["escrowed", "delivery_confirmed"].includes(order.status) || order.escrowId === undefined) {
+    return res.status(400).json({ error: "Order is not in a refundable state or missing escrowId" });
+  }
+
+  try {
+    const txHash = await refundOnChain(order.escrowId);
+    updateOrderStatus(order.id, { status: "refunded" });
+
+    res.json({
+      message: "Refund processed on-chain",
+      txHash,
+    });
+  } catch (err) {
+    res.status(500).json({
+      error: "Failed to process refund on-chain",
       details: err instanceof Error ? err.message : String(err),
     });
   }

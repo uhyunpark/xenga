@@ -67,8 +67,8 @@ None → Active → DeliveryConfirmed → Completed      (buyer releases)
          └───────────────────────────→ Refunded   (seller voluntary / arbiter)
 ```
 
-- **Active**: escrow created, USDC locked. Buyer can release anytime, seller can confirm delivery or refund.
-- **DeliveryConfirmed**: seller confirmed delivery, dispute window starts. Buyer can release or dispute.
+- **Active**: escrow created, USDC locked. Buyer can release anytime, seller/facilitator can confirm delivery or refund.
+- **DeliveryConfirmed**: seller/facilitator confirmed delivery, dispute window starts. Buyer can release or dispute.
 - **AutoRelease timing**: From Active state, requires `releaseWindow + disputeWindow`. From DeliveryConfirmed, requires `releaseWindow` from creation AND `disputeWindow` from delivery confirmation.
 - **Dispute timing**: From DeliveryConfirmed, within `disputeWindow` of confirmation. From Active, between `releaseWindow - disputeWindow` and `releaseWindow + disputeWindow` from creation.
 - **disputeWindow**: Owner-settable global default (default: 3 days, bounds: 1 hour–30 days). Set via `EscrowVault.setDisputeWindow()`. Stored per-escrow at creation — existing escrows keep their original value.
@@ -126,7 +126,7 @@ All owner-callable setters. Ownership uses `Ownable2Step` — transfer requires 
 | Fee config | EscrowVault | `setFeeConfig(recipient, bps, flat)` | 0 | max 10% + 50 USDC |
 | Dispute window | EscrowVault | `setDisputeWindow(uint256)` | 3 days | 1 hour – 30 days |
 | Pause / unpause | EscrowVault, SessionEscrow | `pause()` / `unpause()` | unpaused | — |
-| Facilitator address | SessionEscrow | `setFacilitator(address)` | — | — |
+| Facilitator address | EscrowVault, SessionEscrow | `setFacilitator(address)` | address(0) | — |
 
 **Design note — why `releaseWindow` is per-escrow but `disputeWindow` is a global default:**
 `releaseWindow` is a business timing parameter that must vary by service type (1h for agent-service, 7d for marketplace). It is computed by the server per-escrow from service types + reputation and stored in the escrow struct. `disputeWindow` is a consumer protection parameter — a uniform "cooling off period" — set globally by the owner so it cannot be manipulated by the facilitator on a per-escrow basis.
@@ -171,11 +171,11 @@ Self-service dashboard at `/dashboard` for sellers to manage orders, profile, an
 - `src/server/middleware/auth.ts` — `apiKeyOrWalletAuth()` combined middleware accepts either API key or wallet signature. `walletAuth()` uses `req.originalUrl` (not `req.path`) for routeId to match client signatures correctly on mounted routers
 - `src/server/db/schema.ts` — `seller_api_keys` table (id, seller_address, key_hash, key_prefix, name, timestamps)
 - `src/server/routes/sellers.ts` — POST uses upsert (`ON CONFLICT...DO UPDATE`) for register + profile update in one endpoint
-- `src/server/routes/orders.ts` — GET `?seller=` with wallet headers verifies signer matches seller param; confirm-delivery uses `apiKeyOrWalletAuth` with seller identity check
+- `src/server/routes/orders.ts` — GET `?seller=` with wallet headers verifies signer matches seller param; confirm-delivery and refund use `apiKeyOrSessionAuth` with seller identity check (facilitator pays gas)
 
 **Frontend (`web/`):**
 - `/dashboard` — Overview: stats row (active, pending, revenue, reputation), activity feed, quick actions
-- `/dashboard/orders` — Order table with filter tabs (All/Active/Completed/Disputed), inline expand with escrow details, on-chain confirm delivery + refund via `walletClient.writeContract`
+- `/dashboard/orders` — Order table with filter tabs (All/Active/Completed/Disputed), inline expand with escrow details, confirm delivery + refund via facilitator API (gas-free for sellers)
 - `/dashboard/settings` — Seller profile registration/update (name, payout address display)
 - `/dashboard/api-keys` — Create, list, revoke API keys with copy-once-on-create pattern
 - Layout: `DashboardSidebar` (responsive with mobile hamburger) + `WalletGate` (connect prompt when disconnected)

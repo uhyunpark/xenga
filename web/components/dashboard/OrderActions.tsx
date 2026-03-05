@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useWallet } from "@/lib/wallet/WalletProvider";
-import { escrowVaultAbi } from "@shared/abi.js";
-import { facilitatorFetch } from "@/lib/api/client";
+import { useSessionToken } from "@/components/dashboard/WalletGate";
+import { authenticatedFetch } from "@/lib/api/wallet-auth";
 
 interface OrderData {
   id: string;
@@ -16,30 +16,12 @@ interface OrderActionsProps {
   onComplete: () => void;
 }
 
-// Module-level cache for escrow contract address (fetched once from /api/health)
-let cachedEscrowAddress: `0x${string}` | null = null;
-
 export function OrderActions({ order, onComplete }: OrderActionsProps) {
-  const { walletClient, address, publicClient } = useWallet();
+  const { address } = useWallet();
+  const token = useSessionToken();
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<string | null>(null);
-  const [escrowVaultAddress, setEscrowVaultAddress] = useState<`0x${string}` | null>(cachedEscrowAddress);
-
-  useEffect(() => {
-    if (cachedEscrowAddress) return;
-    facilitatorFetch("/api/health")
-      .then(async (res) => {
-        if (res.ok) {
-          const data = await res.json();
-          if (data.escrowContract) {
-            cachedEscrowAddress = data.escrowContract as `0x${string}`;
-            setEscrowVaultAddress(cachedEscrowAddress);
-          }
-        }
-      })
-      .catch(() => {});
-  }, []);
 
   const canConfirmDelivery = order.status === "escrowed" && order.escrowId != null;
   const canRefund =
@@ -47,7 +29,7 @@ export function OrderActions({ order, onComplete }: OrderActionsProps) {
     order.escrowId != null;
 
   if (!canConfirmDelivery && !canRefund) return null;
-  if (!walletClient || !address || !escrowVaultAddress) return null;
+  if (!address) return null;
 
   const executeAction = async (action: "confirmDelivery" | "refund") => {
     if (!order.escrowId) return;
@@ -56,20 +38,22 @@ export function OrderActions({ order, onComplete }: OrderActionsProps) {
     setConfirmDialog(null);
 
     try {
-      const hash = await walletClient.writeContract({
-        address: escrowVaultAddress,
-        abi: escrowVaultAbi,
-        functionName: action,
-        args: [BigInt(order.escrowId)],
-        account: address,
-        chain: publicClient.chain,
+      const endpoint = action === "confirmDelivery"
+        ? `/api/orders/${order.id}/confirm-delivery`
+        : `/api/orders/${order.id}/refund`;
+
+      const res = await authenticatedFetch(endpoint, token, {
+        method: "POST",
       });
 
-      // Wait for tx confirmation
-      await publicClient.waitForTransactionReceipt({ hash });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || `Request failed with status ${res.status}`);
+      }
+
       onComplete();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Transaction failed";
+      const message = err instanceof Error ? err.message : "Request failed";
       setError(message.length > 100 ? message.slice(0, 100) + "..." : message);
     } finally {
       setPending(null);
@@ -98,7 +82,7 @@ export function OrderActions({ order, onComplete }: OrderActionsProps) {
               disabled={!!pending}
               className="rounded-md bg-accent px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
             >
-              {pending ? "Signing..." : "Confirm"}
+              {pending ? "Processing..." : "Confirm"}
             </button>
             <button
               onClick={() => setConfirmDialog(null)}
@@ -118,7 +102,7 @@ export function OrderActions({ order, onComplete }: OrderActionsProps) {
               disabled={!!pending}
               className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
             >
-              {pending === "confirmDelivery" ? "Signing..." : "Confirm Delivery"}
+              {pending === "confirmDelivery" ? "Processing..." : "Confirm Delivery"}
             </button>
           )}
           {canRefund && (
@@ -127,7 +111,7 @@ export function OrderActions({ order, onComplete }: OrderActionsProps) {
               disabled={!!pending}
               className="rounded-md border border-border-default px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-bg-tertiary disabled:opacity-50"
             >
-              {pending === "refund" ? "Signing..." : "Refund"}
+              {pending === "refund" ? "Processing..." : "Refund"}
             </button>
           )}
         </div>

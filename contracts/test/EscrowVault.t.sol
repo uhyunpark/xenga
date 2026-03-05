@@ -11,6 +11,7 @@ contract EscrowVaultTest is Test {
     MockUSDC public usdc;
 
     address public arbiter = makeAddr("arbiter");
+    address public facilitator = makeAddr("facilitator");
     address public operator = makeAddr("operator");
     address public feeRecipient = makeAddr("feeRecipient");
 
@@ -30,6 +31,8 @@ contract EscrowVaultTest is Test {
     function setUp() public {
         usdc = new MockUSDC();
         vault = new EscrowVault(address(usdc), arbiter, feeRecipient, FEE_BPS, FLAT_FEE);
+
+        vault.setFacilitator(facilitator);
 
         // Mint USDC to buyer
         usdc.mint(buyer, 100_000_000); // 100 USDC
@@ -271,12 +274,67 @@ contract EscrowVaultTest is Test {
         vault.releaseFunds(escrowId);
     }
 
-    function test_onlySellerCanConfirmDelivery() public {
+    function test_onlySellerOrFacilitatorCanConfirmDelivery() public {
         uint256 escrowId = _createStandardEscrow();
 
         vm.prank(buyer);
-        vm.expectRevert(EscrowVault.NotSeller.selector);
+        vm.expectRevert(EscrowVault.NotAuthorized.selector);
         vault.confirmDelivery(escrowId);
+
+        vm.prank(operator);
+        vm.expectRevert(EscrowVault.NotAuthorized.selector);
+        vault.confirmDelivery(escrowId);
+    }
+
+    function test_facilitatorCanConfirmDelivery() public {
+        uint256 escrowId = _createStandardEscrow();
+
+        vm.prank(facilitator);
+        vault.confirmDelivery(escrowId);
+
+        EscrowVault.Escrow memory e = vault.getEscrow(escrowId);
+        assertEq(uint256(e.state), uint256(EscrowVault.EscrowState.DeliveryConfirmed));
+    }
+
+    function test_facilitatorRefund() public {
+        uint256 escrowId = _createStandardEscrow();
+        uint256 buyerBalBefore = usdc.balanceOf(buyer);
+
+        vm.prank(facilitator);
+        vault.refund(escrowId);
+
+        EscrowVault.Escrow memory e = vault.getEscrow(escrowId);
+        assertEq(uint256(e.state), uint256(EscrowVault.EscrowState.Refunded));
+        assertEq(usdc.balanceOf(buyer), buyerBalBefore + AMOUNT);
+    }
+
+    function test_setFacilitator() public {
+        address newFacilitator = makeAddr("newFacilitator");
+        vault.setFacilitator(newFacilitator);
+        assertEq(vault.facilitator(), newFacilitator);
+    }
+
+    function test_setFacilitatorNotOwner() public {
+        address nonOwner = makeAddr("nonOwner");
+        vm.prank(nonOwner);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonOwner));
+        vault.setFacilitator(makeAddr("newFacilitator"));
+    }
+
+    function test_facilitatorConfirmThenDispute() public {
+        uint256 escrowId = _createStandardEscrow();
+
+        vm.prank(facilitator);
+        vault.confirmDelivery(escrowId);
+
+        vm.prank(buyer);
+        vault.dispute(escrowId);
+
+        vm.prank(arbiter);
+        vault.resolveDispute(escrowId, 70);
+
+        EscrowVault.Escrow memory e = vault.getEscrow(escrowId);
+        assertEq(uint256(e.state), uint256(EscrowVault.EscrowState.Resolved));
     }
 
     function test_onlyBuyerCanDispute() public {
