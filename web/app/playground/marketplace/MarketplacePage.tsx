@@ -9,7 +9,7 @@ import { PlaygroundTabs } from "@/components/playground/PlaygroundTabs";
 import { isMockChainClient } from "@/lib/env/isMockChainClient";
 
 export default function MarketplacePage() {
-  const [mode, setMode] = useState<"demo" | "live">("demo");
+  const [mode, setMode] = useState<"demo" | "live">("live");
 
   return (
     <InspectorProvider>

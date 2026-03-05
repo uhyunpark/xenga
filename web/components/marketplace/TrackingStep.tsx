@@ -126,7 +126,7 @@ export function TrackingStep({
       </div>
 
       {/* Action buttons after delivery confirmed */}
-      {deliveryConfirmed && !disputeFiled && (
+      {deliveryConfirmed && !disputeFiled && visibleEvents >= TRACKING_EVENTS.length && (
         <AnimatePresence>
           <motion.div
             initial={{ opacity: 0, y: 8 }}
