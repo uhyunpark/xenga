@@ -118,7 +118,7 @@ Self-service dashboard with sidebar layout and wallet gate. Pages:
 Key components in `components/dashboard/`:
 - `WalletGate` — renders connect prompt when no wallet connected
 - `DashboardSidebar` — responsive sidebar with mobile hamburger overlay
-- `OrderActions` — fetches escrow vault address from `/api/health`, calls `confirmDelivery`/`refund` directly on-chain
+- `OrderActions` — calls facilitator API for `confirmDelivery`/`refund` (gas-free for sellers, uses session JWT auth)
 - `OrderTable` — reusable table with filter tabs and `actionSlot` render prop
 
 ## Facilitator API Routes (called from frontend)
@@ -129,7 +129,8 @@ Key components in `components/dashboard/`:
 | `/api/orders` | GET | apiKey or wallet† | List orders (`?seller=` for dashboard, `?status=` for filtering) |
 | `/api/orders` | POST | apiKey | Create order |
 | `/api/orders/:id/pay` | POST | escrow | Xenga payment flow (402 or 200) |
-| `/api/orders/:id/confirm-delivery` | POST | apiKey or wallet | Confirm delivery on-chain (wallet: seller only) |
+| `/api/orders/:id/confirm-delivery` | POST | apiKey or session | Confirm delivery on-chain (session: seller only) |
+| `/api/orders/:id/refund` | POST | apiKey or session | Refund buyer on-chain (session: seller only) |
 | `/api/disputes/:orderId` | POST | wallet | File a dispute |
 | `/api/disputes/:id/resolve` | POST | wallet | Resolve dispute (arbiter) |
 | `/api/escrows/:escrowId` | GET | — | On-chain escrow state |

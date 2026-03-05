@@ -55,6 +55,7 @@ contract Deploy is Script {
         vm.startBroadcast(deployerKey);
 
         EscrowVault vault = new EscrowVault(usdc, arbiter, feeRecipient, feeBps, flatFee);
+        vault.setFacilitator(facilitator);
         console2.log("EscrowVault:       ", address(vault));
 
         SessionEscrow session = new SessionEscrow(usdc, facilitator);
@@ -66,6 +67,6 @@ contract Deploy is Script {
         console2.log("Next steps:");
         console2.log("  1. Add to .env:  ESCROW_VAULT_ADDRESS=", address(vault));
         console2.log("  2. Run:          bun run sync-abi");
-        console2.log("  3. Call setFacilitator() on SessionEscrow if facilitator changes");
+        console2.log("  3. Call setFacilitator() on SessionEscrow/EscrowVault if facilitator changes");
     }
 }
