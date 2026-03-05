@@ -87,12 +87,12 @@ export function HowItWorks() {
           </div>
 
           {/* Code content */}
-          <div className="p-4">
+          <div>
             <CodeBlock
               code={tabs[activeTab].code}
               lang={tabs[activeTab].lang}
               showDots={false}
-              className="border-0 shadow-none rounded-none p-0"
+              className="border-0 shadow-none rounded-none"
             />
           </div>
         </motion.div>

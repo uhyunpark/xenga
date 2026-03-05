@@ -241,12 +241,12 @@ export function AdaptabilitySection() {
                 </button>
               ))}
             </div>
-            <div className="p-4">
+            <div>
               <CodeBlock
                 code={codeTabs[activeTab].code}
                 lang={codeTabs[activeTab].lang}
                 showDots={false}
-                className="border-0 shadow-none rounded-none p-0"
+                className="border-0 shadow-none rounded-none"
               />
             </div>
           </div>
