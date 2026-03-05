@@ -15,8 +15,11 @@ if [[ ! "$COMMAND" =~ ^git\ push ]]; then
 fi
 
 # Extract commit range from push output (e.g. "abc123..def456  main -> main")
+# git push writes progress to stderr, not stdout
 STDOUT=$(echo "$INPUT" | jq -r '.tool_response.stdout // ""')
-RANGE=$(echo "$STDOUT" | grep -oE '[0-9a-f]+\.\.[0-9a-f]+' | head -1 || true)
+STDERR=$(echo "$INPUT" | jq -r '.tool_response.stderr // ""')
+ALL_OUTPUT="${STDOUT}${STDERR}"
+RANGE=$(echo "$ALL_OUTPUT" | grep -oE '[0-9a-f]+\.\.[0-9a-f]+' | head -1 || true)
 
 if [[ -z "$RANGE" ]]; then
   # No range found — might be "Everything up-to-date" or forced push
