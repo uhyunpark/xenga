@@ -38,10 +38,10 @@ On-chain escrow and reputation system on Base Sepolia using USDC (ERC-3009 gasle
 
 **Split deployment:**
 - **`web/`** — Next.js 15 frontend deployed on **Vercel**. Pure client-side: pages, wallet management, EIP-712 signing, Protocol Inspector. Calls the facilitator API via `NEXT_PUBLIC_FACILITATOR_URL`.
-- **`src/server/`** — Express facilitator deployed on **GCP Cloud Run**. Handles all chain interaction: settlement, event listening, reputation, order management, SQLite DB. Runs with `PRIVATE_KEY` for gas.
+- **`src/server/`** — Express facilitator deployed on **Fly.io**. Handles all chain interaction: settlement, event listening, reputation, order management, SQLite DB. Runs with `PRIVATE_KEY` for gas.
 
 ```
-Vercel (web/)                    GCP Cloud Run (src/server/)
+Vercel (web/)                    Fly.io (src/server/)
 ┌──────────────────┐             ┌──────────────────────────┐
 │ Next.js Frontend │   fetch     │ Express Facilitator      │
 │ Pages + Signing  │────────────>│ REST API + Chain + SQLite│
