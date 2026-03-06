@@ -26,12 +26,26 @@ From traditional commerce to the agentic web, Xenga is the standard layer for se
 
 ## v3 — Trimmed (~140 words, ~60s)
 
-I’m Uhyun Park, and I’m building Xenga — an escrow and reputation protocol for stablecoin payments on Base.
+I’m Uhyun Park, and I’m building Xenga — an onchain escrow and credit protocol for stablecoin payments on Base.
 
-For stablecoin payments to finally hit the mainstream, I think we require one final, mandatory layer: Trust. Currently, paying with stablecoins is like wiring cash to a stranger. No chargebacks, no buyer protection. Merchants won’t accept it, buyers won’t risk it. And AI agents buying and selling services autonomously have the exact same problem — no trust.
+For stablecoin payments to finally hit the mainstream, I think we require one final, mandatory layer: Trust. Currently, paying with stablecoins is like wiring cash to a stranger. No chargebacks, no buyer protection. Traditional merchants won’t accept it, buyers won’t risk it. Even Agents buying and selling services autonomously have the exact same problem — no trust.
 
 Xenga solves this. When a payment comes in — from a shopper or an AI agent — USDC gets locked in escrow. Seller delivers, funds release. Something goes wrong? There’s dispute resolution built into the protocol.
 
 But escrow is just where we start. Every transaction builds an on-chain reputation score — a portable credit history for wallets and agents. High reputation means faster settlement today, but later it could unlock undercollateralized lending, lower insurance premiums, or priority access across any protocol. We're building the on-chain credit score.
 
 Traditional commerce. Agent commerce. Same trust layer. Xenga starts with escrow — and scales to everywhere trust matters.
+
+---
+
+## v4 — 60s (~130 words)
+
+Hey, I'm Uhyun. I'm building Xenga — onchain escrow and credit for stablecoin payments on Base.
+
+So here's the thing, paying with stablecoins right now is basically wiring cash to a stranger. No chargebacks, no protection, nothing. And agents buying and selling on their own? Same exact problem. Nobody trusts anybody.
+
+Xenga fixes that. You pay, USDC gets locked in escrow. Seller delivers, money releases. Something goes wrong? Dispute resolution comes in.
+
+Every transaction also builds an on-chain credit score. Other protocols can plug into it — lending, insurance, access control. We're building the credit layer for onchain commerce.
+
+It's Xenga. Escrow you can trust, reputation you can build on. Thank you.
