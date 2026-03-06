@@ -597,7 +597,7 @@ export function PaymentFlow() {
           {state.step !== "browse" && (
             <button
               onClick={handleReset}
-              className="mt-3 w-full rounded-md border border-border-default px-3 py-1.5 text-xs text-text-tertiary transition-colors hover:border-border-active hover:text-text-primary"
+              className="mt-3 w-full rounded-md border border-accent/30 bg-accent/5 px-3 py-1.5 text-xs text-accent transition-colors hover:bg-accent/10 hover:border-accent/50"
             >
               Start Over
             </button>
