@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { facilitatorFetch, facilitatorUrl } from "@/lib/api/client";
 import {
@@ -30,6 +31,32 @@ type Step =
   | "submitting"
   | "complete"
   | "error";
+
+const CHECKOUT_STEPS = [
+  { key: "wallet", label: "Creating wallet" },
+  { key: "funding", label: "Funding wallet" },
+  { key: "order", label: "Creating order" },
+  { key: "chain", label: "Submitting to chain" },
+] as const;
+
+type CheckoutStepKey = (typeof CHECKOUT_STEPS)[number]["key"];
+
+function mapStepToCheckoutStep(step: Step): CheckoutStepKey | null {
+  switch (step) {
+    case "creating_wallet":
+      return "wallet";
+    case "funding":
+      return "funding";
+    case "creating_order":
+    case "requesting":
+    case "signing":
+      return "order";
+    case "submitting":
+      return "chain";
+    default:
+      return null;
+  }
+}
 
 export function PaymentLinkCheckout({ linkId }: { linkId: string }) {
   const {
@@ -151,25 +178,40 @@ export function PaymentLinkCheckout({ linkId }: { linkId: string }) {
     }
   }, [flowStarted, address, walletClient, step, continueAfterWallet]);
 
-  const stepLabels: Record<Step, string> = {
-    loading: "Loading...",
-    details: "",
-    creating_wallet: "Step 1/4: Creating wallet...",
-    funding: "Step 2/4: Funding wallet...",
-    creating_order: "Step 3/4: Creating order...",
-    requesting: "Step 3/4: Requesting payment...",
-    signing: "Step 3/4: Signing payment...",
-    submitting: "Step 4/4: Submitting to chain...",
-    complete: "",
-    error: "",
-  };
+  const currentCheckoutStep = mapStepToCheckoutStep(step);
+  const isInProgress =
+    step !== "loading" &&
+    step !== "details" &&
+    step !== "complete" &&
+    step !== "error";
 
+  // Loading skeleton
   if (step === "loading") {
     return (
       <div className="w-full max-w-md rounded-2xl border border-border-default bg-bg-secondary p-8 shadow-lg">
-        <div className="flex items-center justify-center">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
-          <span className="ml-3 text-sm text-text-secondary">Loading...</span>
+        {/* Header skeleton */}
+        <div className="flex items-center justify-center gap-2">
+          <div className="skeleton h-4 w-4 rounded" />
+          <div className="skeleton h-3 w-28" />
+        </div>
+        {/* Product card skeleton */}
+        <div className="mt-6 rounded-xl border border-border-default bg-bg-primary p-5">
+          <div className="skeleton h-5 w-3/4" />
+          <div className="skeleton mt-2 h-4 w-full" />
+          <div className="mt-4 border-t border-border-default pt-3">
+            <div className="flex items-baseline justify-between">
+              <div className="skeleton h-3 w-10" />
+              <div className="skeleton h-6 w-24" />
+            </div>
+            <div className="mt-2 flex items-baseline justify-between">
+              <div className="skeleton h-3 w-10" />
+              <div className="skeleton h-3 w-28" />
+            </div>
+          </div>
+        </div>
+        {/* Button skeleton */}
+        <div className="mt-6">
+          <div className="skeleton h-11 w-full rounded-xl" />
         </div>
       </div>
     );
@@ -203,7 +245,7 @@ export function PaymentLinkCheckout({ linkId }: { linkId: string }) {
 
       {/* Product card */}
       {link && (
-        <div className="mt-6 rounded-xl border border-border-default bg-bg-primary p-5">
+        <div className="mt-6 rounded-xl border border-border-default bg-bg-primary p-5 shadow-md">
           <h2 className="text-lg font-semibold">{link.title}</h2>
           {link.description && (
             <p className="mt-1 text-sm text-text-secondary">{link.description}</p>
@@ -223,68 +265,142 @@ export function PaymentLinkCheckout({ linkId }: { linkId: string }) {
 
       {/* Action area */}
       <div className="mt-6">
-        {step === "details" && (
-          <button
-            onClick={handlePay}
-            className="w-full rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
-          >
-            Create Wallet &amp; Pay
-          </button>
-        )}
-
-        {step !== "details" && step !== "complete" && step !== "error" && (
-          <div className="flex items-center gap-3 rounded-xl border border-accent-muted bg-accent-light px-4 py-3">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
-            <span className="text-sm text-accent">{stepLabels[step]}</span>
-          </div>
-        )}
-
-        {step === "complete" && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
-              <svg className="h-5 w-5 text-green-600" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-              </svg>
-              <span className="text-sm font-medium text-green-700">Payment complete!</span>
-            </div>
-            {txHash && (
-              <div className="text-center">
-                <a
-                  href={`https://sepolia.basescan.org/tx/${txHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-accent hover:underline"
-                >
-                  View on BaseScan
-                </a>
-              </div>
-            )}
-          </div>
-        )}
-
-        {step === "error" && error && (
-          <div className="space-y-3">
-            <div className="rounded-xl border border-error/20 bg-error/5 px-4 py-3">
-              <p className="text-sm text-error">{error}</p>
-            </div>
-            <button
-              onClick={() => {
-                setError(null);
-                setStep("details");
-                setFlowStarted(false);
-              }}
-              className="w-full rounded-xl border border-border-default px-4 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:bg-bg-tertiary"
+        <AnimatePresence mode="wait">
+          {step === "details" && (
+            <motion.div
+              key="details"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
             >
-              Try Again
-            </button>
-          </div>
-        )}
+              <button
+                onClick={handlePay}
+                className="w-full rounded-xl bg-accent px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-hover"
+              >
+                Create Wallet &amp; Pay
+              </button>
+            </motion.div>
+          )}
+
+          {isInProgress && (
+            <motion.div
+              key="progress"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              className="space-y-2.5 rounded-xl border border-accent-muted bg-accent-light px-4 py-4"
+            >
+              {CHECKOUT_STEPS.map((cs) => {
+                const isPast =
+                  currentCheckoutStep !== null &&
+                  CHECKOUT_STEPS.findIndex((s) => s.key === currentCheckoutStep) >
+                    CHECKOUT_STEPS.findIndex((s) => s.key === cs.key);
+                const isCurrent = cs.key === currentCheckoutStep;
+
+                return (
+                  <div key={cs.key} className="flex items-center gap-3">
+                    {/* Step indicator */}
+                    <div className="flex h-5 w-5 shrink-0 items-center justify-center">
+                      {isPast ? (
+                        <svg className="h-5 w-5 text-success" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path className="animate-draw-check" d="M4 10l4 4 8-8" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      ) : isCurrent ? (
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+                      ) : (
+                        <div className="h-1.5 w-1.5 rounded-full bg-text-tertiary/40" />
+                      )}
+                    </div>
+                    {/* Label */}
+                    <span
+                      className={`text-sm ${
+                        isPast
+                          ? "text-success"
+                          : isCurrent
+                            ? "font-medium text-accent"
+                            : "text-text-tertiary"
+                      }`}
+                    >
+                      {cs.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </motion.div>
+          )}
+
+          {step === "complete" && (
+            <motion.div
+              key="complete"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="space-y-3"
+            >
+              <div className="relative flex items-center gap-3 overflow-hidden rounded-xl border border-success/20 bg-success/5 px-4 py-3">
+                {/* Confetti burst */}
+                <div
+                  className="pointer-events-none absolute inset-0 rounded-xl"
+                  style={{
+                    background: "radial-gradient(circle at center, rgba(34,197,94,0.15) 0%, transparent 70%)",
+                    animation: "confetti-burst 0.8s ease-out forwards",
+                  }}
+                />
+                <svg className="relative h-5 w-5 text-success" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path className="animate-draw-check" d="M4 10l4 4 8-8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span className="relative text-sm font-medium text-success">Payment complete!</span>
+              </div>
+              {txHash && (
+                <div className="text-center">
+                  <a
+                    href={`https://sepolia.basescan.org/tx/${txHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-accent hover:underline"
+                  >
+                    View on BaseScan
+                  </a>
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {step === "error" && error && (
+            <motion.div
+              key="error"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              className="space-y-3"
+            >
+              <div className="rounded-xl border border-error/20 bg-error/5 px-4 py-3">
+                <p className="text-sm text-error">{error}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setError(null);
+                  setStep("details");
+                  setFlowStarted(false);
+                }}
+                className="w-full rounded-xl border border-border-default px-4 py-2.5 text-sm font-medium text-text-secondary transition-colors hover:bg-bg-tertiary"
+              >
+                Try Again
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Footer */}
-      <p className="mt-6 text-center text-[10px] text-text-tertiary">
-        Powered by Xenga &middot; Base Sepolia
-      </p>
+      <div className="mt-6 flex items-center justify-center gap-1.5 text-text-tertiary">
+        <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <rect x="2.5" y="5" width="7" height="5.5" rx="1" />
+          <path d="M4 5V3.5a2 2 0 014 0V5" />
+        </svg>
+        <p className="text-[10px]">
+          Powered by Xenga &middot; Base Sepolia
+        </p>
+      </div>
     </div>
   );
 }

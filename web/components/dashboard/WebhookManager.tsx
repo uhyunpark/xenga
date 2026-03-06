@@ -26,12 +26,28 @@ export function WebhookManager() {
   const { address } = useWallet();
   const token = useSessionToken();
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
+  const [loading, setLoading] = useState(true);
   const [url, setUrl] = useState("");
   const [secret, setSecret] = useState("");
   const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set(ALL_EVENT_TYPES));
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [justCreated, setJustCreated] = useState(false);
+  const [justDeleted, setJustDeleted] = useState(false);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    if (!justCreated) return;
+    const timer = setTimeout(() => setJustCreated(false), 3000);
+    return () => clearTimeout(timer);
+  }, [justCreated]);
+
+  useEffect(() => {
+    if (!justDeleted) return;
+    const timer = setTimeout(() => setJustDeleted(false), 2000);
+    return () => clearTimeout(timer);
+  }, [justDeleted]);
 
   const fetchWebhooks = useCallback(async () => {
     if (!address) return;
@@ -43,6 +59,8 @@ export function WebhookManager() {
       }
     } catch {
       // Silently handle
+    } finally {
+      setLoading(false);
     }
   }, [address, token]);
 
@@ -91,6 +109,7 @@ export function WebhookManager() {
         setUrl("");
         setSecret("");
         setSelectedEvents(new Set(ALL_EVENT_TYPES));
+        setJustCreated(true);
         fetchWebhooks();
       } else {
         const data = await res.json().catch(() => ({}));
@@ -114,6 +133,7 @@ export function WebhookManager() {
       });
 
       if (res.ok) {
+        setJustDeleted(true);
         fetchWebhooks();
       } else {
         const data = await res.json().catch(() => ({}));
@@ -176,13 +196,17 @@ export function WebhookManager() {
               {ALL_EVENT_TYPES.map((event) => (
                 <label
                   key={event}
-                  className="flex items-center gap-2 rounded-lg border border-border-default px-3 py-2 text-sm transition-colors hover:bg-bg-tertiary cursor-pointer"
+                  className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors hover:bg-bg-tertiary ${
+                    selectedEvents.has(event)
+                      ? "border-accent/30 bg-accent/5"
+                      : "border-border-default"
+                  }`}
                 >
                   <input
                     type="checkbox"
                     checked={selectedEvents.has(event)}
                     onChange={() => toggleEvent(event)}
-                    className="h-3.5 w-3.5 rounded border-border-default text-accent focus:ring-accent/20"
+                    className="h-3.5 w-3.5 rounded border-border-default accent-accent focus:ring-accent/20"
                   />
                   <span className="font-mono text-xs">{event}</span>
                 </label>
@@ -202,20 +226,50 @@ export function WebhookManager() {
         </div>
       </div>
 
+      {/* Success feedback */}
+      {justCreated && (
+        <div className="rounded-lg border border-accent-muted bg-accent-light px-4 py-2.5">
+          <p className="text-xs font-medium text-accent">
+            Webhook registered successfully.
+          </p>
+        </div>
+      )}
+
       {/* Existing webhooks */}
       <div className="rounded-xl border border-border-default bg-bg-secondary shadow-sm">
         <div className="border-b border-border-default px-4 py-3">
           <h3 className="text-sm font-semibold">Your Webhooks</h3>
         </div>
 
-        {webhooks.length === 0 ? (
+        {/* Delete feedback */}
+        {justDeleted && (
+          <div className="border-b border-accent-muted bg-accent-light px-4 py-2.5">
+            <p className="text-xs font-medium text-accent">Webhook deleted.</p>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="divide-y divide-border-default">
+            {[0, 1].map((i) => (
+              <div key={i} className="px-4 py-3">
+                <div className="skeleton h-4 w-3/4" />
+                <div className="mt-2 flex gap-1">
+                  <div className="skeleton h-4 w-20 rounded-full" />
+                  <div className="skeleton h-4 w-20 rounded-full" />
+                  <div className="skeleton h-4 w-20 rounded-full" />
+                </div>
+                <div className="skeleton mt-2 h-3 w-32" />
+              </div>
+            ))}
+          </div>
+        ) : webhooks.length === 0 ? (
           <div className="p-6 text-center text-sm text-text-secondary">
             No webhooks registered yet.
           </div>
         ) : (
           <div className="divide-y divide-border-default">
             {webhooks.map((webhook) => (
-              <div key={webhook.id} className="px-4 py-3">
+              <div key={webhook.id} className="px-4 py-3 transition-colors hover:bg-bg-tertiary/50">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-mono text-sm">{webhook.url}</p>

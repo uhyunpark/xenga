@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { isAddress } from "viem";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { useSessionToken } from "@/components/dashboard/WalletGate";
 import { facilitatorFetch } from "@/lib/api/client";
@@ -17,6 +19,13 @@ export function SellerProfile() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // Cleanup success timeout on unmount
+  useEffect(() => {
+    if (!success) return;
+    const timer = setTimeout(() => setSuccess(false), 3000);
+    return () => clearTimeout(timer);
+  }, [success]);
 
   // Fetch existing profile
   useEffect(() => {
@@ -35,6 +44,12 @@ export function SellerProfile() {
       })
       .catch(() => {});
   }, [address]);
+
+  const isValidPayout = !payoutAddress.trim() || isAddress(payoutAddress.trim());
+  const hasUnsavedChanges =
+    name.trim() !== (savedName || "") ||
+    payoutAddress.trim() !== (savedPayoutAddress || "");
+  const noChanges = isRegistered && !hasUnsavedChanges;
 
   const handleSave = async () => {
     if (!address) return;
@@ -58,7 +73,6 @@ export function SellerProfile() {
         setSavedPayoutAddress(seller.payoutAddress || null);
         setIsRegistered(true);
         setSuccess(true);
-        setTimeout(() => setSuccess(false), 3000);
       } else {
         const data = await res.json().catch(() => ({}));
         setError(data.error || "Failed to save profile");
@@ -72,7 +86,12 @@ export function SellerProfile() {
 
   return (
     <div className="rounded-xl border border-border-default bg-bg-secondary p-6 shadow-sm">
-      <h3 className="text-sm font-semibold">Seller Profile</h3>
+      <div className="flex items-center gap-2">
+        <h3 className="text-sm font-semibold">Seller Profile</h3>
+        {hasUnsavedChanges && (
+          <span className="h-1.5 w-1.5 rounded-full bg-warning" />
+        )}
+      </div>
 
       <div className="mt-4 space-y-4">
         <div>
@@ -98,23 +117,45 @@ export function SellerProfile() {
             value={payoutAddress}
             onChange={(e) => setPayoutAddress(e.target.value)}
             placeholder={address || "0x..."}
-            className="mt-1 w-full rounded-lg border border-border-default bg-bg-primary px-3 py-2 font-mono text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent/20"
+            className={`mt-1 w-full rounded-lg border bg-bg-primary px-3 py-2 font-mono text-sm outline-none transition-colors focus:ring-1 ${
+              !isValidPayout
+                ? "border-error focus:border-error focus:ring-error/20"
+                : "border-border-default focus:border-accent focus:ring-accent/20"
+            }`}
           />
-          <p className="mt-1 text-xs text-text-tertiary">
-            Leave empty to use your connected wallet ({address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "\u2014"}).
-          </p>
+          {!isValidPayout ? (
+            <p className="mt-1 text-xs text-error">Invalid Ethereum address.</p>
+          ) : (
+            <p className="mt-1 text-xs text-text-tertiary">
+              Leave empty to use your connected wallet ({address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "\u2014"}).
+            </p>
+          )}
         </div>
 
         {error && (
           <p className="text-xs text-error">{error}</p>
         )}
-        {success && (
-          <p className="rounded-lg border border-accent-muted bg-accent-light px-3 py-2 text-xs text-accent">Profile saved successfully.</p>
+
+        <AnimatePresence>
+          {success && (
+            <motion.p
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              className="rounded-lg border border-accent-muted bg-accent-light px-3 py-2 text-xs text-accent"
+            >
+              Profile saved successfully.
+            </motion.p>
+          )}
+        </AnimatePresence>
+
+        {hasUnsavedChanges && (
+          <p className="text-xs text-warning">You have unsaved changes.</p>
         )}
 
         <button
           onClick={handleSave}
-          disabled={saving || (isRegistered && name.trim() === (savedName || "") && payoutAddress.trim() === (savedPayoutAddress || ""))}
+          disabled={saving || noChanges || !isValidPayout}
           className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
         >
           {saving ? "Saving..." : isRegistered ? "Update Profile" : "Register as Seller"}

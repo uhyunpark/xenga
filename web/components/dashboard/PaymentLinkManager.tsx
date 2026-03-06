@@ -19,6 +19,7 @@ export function PaymentLinkManager() {
   const { address } = useWallet();
   const token = useSessionToken();
   const [links, setLinks] = useState<PaymentLink[]>([]);
+  const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
@@ -27,6 +28,20 @@ export function PaymentLinkManager() {
   const [deactivating, setDeactivating] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [justCreated, setJustCreated] = useState(false);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    if (!justCreated) return;
+    const timer = setTimeout(() => setJustCreated(false), 3000);
+    return () => clearTimeout(timer);
+  }, [justCreated]);
+
+  useEffect(() => {
+    if (!copiedId) return;
+    const timer = setTimeout(() => setCopiedId(null), 2000);
+    return () => clearTimeout(timer);
+  }, [copiedId]);
 
   const fetchLinks = useCallback(async () => {
     if (!address) return;
@@ -38,6 +53,8 @@ export function PaymentLinkManager() {
       }
     } catch {
       // Silently handle
+    } finally {
+      setLoading(false);
     }
   }, [address, token]);
 
@@ -66,6 +83,7 @@ export function PaymentLinkManager() {
         setDescription("");
         setPrice("");
         setServiceType("marketplace");
+        setJustCreated(true);
         fetchLinks();
       } else {
         const data = await res.json().catch(() => ({}));
@@ -105,11 +123,16 @@ export function PaymentLinkManager() {
     const url = `${window.location.origin}/pay/${id}`;
     navigator.clipboard.writeText(url);
     setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
   };
 
   const priceNum = parseFloat(price);
   const canCreate = title.trim() && price && !isNaN(priceNum) && priceNum > 0;
+
+  const formatPrice = (p: string) =>
+    parseFloat(p).toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
 
   return (
     <div className="space-y-6">
@@ -141,7 +164,7 @@ export function PaymentLinkManager() {
               placeholder="Brief description (optional)"
               maxLength={2000}
               rows={2}
-              className="mt-1 w-full rounded-lg border border-border-default bg-bg-primary px-3 py-2 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent/20 resize-none"
+              className="mt-1 w-full resize-none rounded-lg border border-border-default bg-bg-primary px-3 py-2 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent/20"
             />
           </div>
 
@@ -184,23 +207,51 @@ export function PaymentLinkManager() {
         </div>
       </div>
 
+      {/* Success feedback */}
+      {justCreated && (
+        <div className="rounded-lg border border-accent-muted bg-accent-light px-4 py-2.5">
+          <p className="text-xs font-medium text-accent">
+            Payment link created successfully.
+          </p>
+        </div>
+      )}
+
       {/* Existing links */}
       <div className="rounded-xl border border-border-default bg-bg-secondary shadow-sm">
         <div className="border-b border-border-default px-4 py-3">
           <h3 className="text-sm font-semibold">Your Payment Links</h3>
         </div>
 
-        {links.length === 0 ? (
+        {loading ? (
+          <div className="divide-y divide-border-default">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <div className="skeleton h-4 w-1/3" />
+                  <div className="skeleton h-4 w-16 rounded-full" />
+                </div>
+                <div className="skeleton mt-2 h-3 w-2/3" />
+                <div className="skeleton mt-2 h-4 w-20" />
+              </div>
+            ))}
+          </div>
+        ) : links.length === 0 ? (
           <div className="p-6 text-center text-sm text-text-secondary">
             No payment links yet.
           </div>
         ) : (
           <div className="divide-y divide-border-default">
             {links.map((link) => (
-              <div key={link.id} className="px-4 py-3">
+              <div
+                key={link.id}
+                className={`px-4 py-3 transition-colors hover:bg-bg-tertiary/50 ${!link.active ? "opacity-60" : ""}`}
+              >
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
+                      {link.active && (
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-success" />
+                      )}
                       <p className="text-sm font-medium">{link.title}</p>
                       <span className="rounded-full bg-bg-tertiary px-2 py-0.5 text-[10px] font-medium text-text-tertiary">
                         {link.serviceType}
@@ -212,12 +263,12 @@ export function PaymentLinkManager() {
                       )}
                     </div>
                     {link.description && (
-                      <p className="mt-0.5 text-xs text-text-tertiary line-clamp-1">
+                      <p className="mt-0.5 line-clamp-1 text-xs text-text-tertiary">
                         {link.description}
                       </p>
                     )}
                     <div className="mt-1 flex items-center gap-3">
-                      <span className="text-sm font-medium">{link.price} USDC</span>
+                      <span className="text-sm font-medium">{formatPrice(link.price)} USDC</span>
                       <span className="text-xs text-text-tertiary">
                         Created {new Date(link.createdAt * 1000).toLocaleDateString()}
                       </span>
@@ -228,7 +279,11 @@ export function PaymentLinkManager() {
                       <>
                         <button
                           onClick={() => copyUrl(link.id)}
-                          className="rounded-md border border-border-default px-2.5 py-1 text-xs text-text-secondary hover:bg-bg-tertiary"
+                          className={`rounded-md border px-2.5 py-1 text-xs transition-colors ${
+                            copiedId === link.id
+                              ? "border-accent/30 bg-accent/10 text-accent"
+                              : "border-border-default text-text-secondary hover:bg-bg-tertiary"
+                          }`}
                         >
                           {copiedId === link.id ? "Copied!" : "Copy URL"}
                         </button>
