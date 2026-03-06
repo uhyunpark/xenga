@@ -19,6 +19,9 @@ contracts/lib/
 # OS
 .DS_Store
 
+# Large media
+*.mov
+
 # IDE
 .vscode/
 .idea/
