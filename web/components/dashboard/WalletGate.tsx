@@ -22,6 +22,7 @@ export function WalletGate({ children }: { children: React.ReactNode }) {
     connectBrowser,
     disconnect,
     isConnecting,
+    isAutoConnecting,
     error: walletError,
   } = useWallet();
   const {
@@ -37,6 +38,15 @@ export function WalletGate({ children }: { children: React.ReactNode }) {
       <SessionContext.Provider value={token}>
         {children}
       </SessionContext.Provider>
+    );
+  }
+
+  // Loading state while browser wallet auto-reconnects
+  if (isAutoConnecting) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-bg-primary">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-border-default border-t-accent" />
+      </div>
     );
   }
 

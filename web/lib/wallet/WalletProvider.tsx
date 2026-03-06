@@ -32,6 +32,7 @@ interface WalletState {
   walletClient: WalletClient | null;
   publicClient: AnyPublicClient;
   isConnecting: boolean;
+  isAutoConnecting: boolean;
   isFunding: boolean;
   usdcBalance: string | null;
   ethBalance: string | null;
@@ -67,6 +68,7 @@ export function WalletProvider({ children, mode }: WalletProviderProps) {
   const [address, setAddress] = useState<Address | null>(null);
   const [walletClient, setWalletClient] = useState<WalletClient | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isAutoConnecting, setIsAutoConnecting] = useState(false);
   const [isFunding, setIsFunding] = useState(false);
   const [usdcBalance, setUsdcBalance] = useState<string | null>(null);
   const [ethBalance, setEthBalance] = useState<string | null>(null);
@@ -290,6 +292,7 @@ export function WalletProvider({ children, mode }: WalletProviderProps) {
     if (sessionStorage.getItem(DISCONNECT_KEY) === "true") return;
     if (sessionStorage.getItem(DEMO_KEY_STORAGE)) return; // Demo wallet takes priority
 
+    setIsAutoConnecting(true);
     window.ethereum
       .request({ method: "eth_accounts" })
       .then((accounts: string[]) => {
@@ -299,15 +302,21 @@ export function WalletProvider({ children, mode }: WalletProviderProps) {
       })
       .catch(() => {
         // Silent fail on auto-connect
-      });
+      })
+      .finally(() => setIsAutoConnecting(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Listen for account and chain changes
   useEffect(() => {
     if (typeof window === "undefined" || !window.ethereum) return;
 
-    const handleAccountsChanged = (accounts: string[]) => {
+    const handleAccountsChanged = async (accounts: string[]) => {
       if (accounts.length === 0) {
+        // MetaMask can transiently report empty accounts — verify before resetting
+        try {
+          const recheck = await window.ethereum!.request({ method: "eth_accounts" }) as string[];
+          if (recheck.length > 0) return; // transient — ignore
+        } catch {}
         resetWallet();
         return;
       }
@@ -349,6 +358,7 @@ export function WalletProvider({ children, mode }: WalletProviderProps) {
         walletClient,
         publicClient,
         isConnecting,
+        isAutoConnecting,
         isFunding,
         usdcBalance,
         ethBalance,

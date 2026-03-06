@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWallet } from "@/lib/wallet/WalletProvider";
-import { facilitatorFetch, facilitatorUrl } from "@/lib/api/client";
+import { facilitatorFetch } from "@/lib/api/client";
 import {
   requestPayment,
   signPayment,
@@ -62,6 +62,7 @@ export function PaymentLinkCheckout({ linkId }: { linkId: string }) {
   const {
     address,
     walletClient,
+    publicClient,
     connectDemo,
     fundDemoWallet,
     isFunding,
@@ -121,8 +122,25 @@ export function PaymentLinkCheckout({ linkId }: { linkId: string }) {
       if (balance < parseFloat(link.price)) {
         setStep("funding");
         await fundDemoWallet();
-        // Wait for balance refresh
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        // Poll on-chain balance until funds arrive (up to 15s)
+        const usdcAddr = "0x036CbD53842c5426634e7929541eC2318f3dCF7e" as const;
+        const erc20BalanceOf = [{
+          inputs: [{ name: "account", type: "address" }],
+          name: "balanceOf",
+          outputs: [{ name: "", type: "uint256" }],
+          stateMutability: "view",
+          type: "function",
+        }] as const;
+        for (let i = 0; i < 15; i++) {
+          const bal = await publicClient.readContract({
+            address: usdcAddr,
+            abi: erc20BalanceOf,
+            functionName: "balanceOf",
+            args: [address],
+          }) as bigint;
+          if (Number(bal) / 1e6 >= parseFloat(link.price)) break;
+          await new Promise(r => setTimeout(r, 1000));
+        }
       }
 
       // Step 3: Create order from payment link
@@ -162,7 +180,7 @@ export function PaymentLinkCheckout({ linkId }: { linkId: string }) {
       setError(err instanceof Error ? err.message : "Payment failed");
       setStep("error");
     }
-  }, [link, walletClient, address, usdcBalance, fundDemoWallet, linkId]);
+  }, [link, walletClient, address, publicClient, usdcBalance, fundDemoWallet, linkId]);
 
   // Chain: runPaymentFlow creates wallet → once address + walletClient ready, continue
   const [flowStarted, setFlowStarted] = useState(false);
