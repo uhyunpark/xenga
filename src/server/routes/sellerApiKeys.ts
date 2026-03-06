@@ -5,6 +5,11 @@ import { getDb } from "../db/index.js";
 
 const router = Router();
 
+/** SHA256 hash an API key string. Used by both key creation and auth validation. */
+export function hashApiKey(key: string): string {
+  return crypto.createHash("sha256").update(key).digest("hex");
+}
+
 // Generate a new API key
 router.post("/", sessionAuth(), (req: AuthenticatedRequest, res) => {
   const db = getDb();
@@ -13,7 +18,7 @@ router.post("/", sessionAuth(), (req: AuthenticatedRequest, res) => {
 
   // Generate a random API key: "xng_" + 32 random hex chars
   const rawKey = `xng_${crypto.randomBytes(16).toString("hex")}`;
-  const keyHash = crypto.createHash("sha256").update(rawKey).digest("hex");
+  const keyHash = hashApiKey(rawKey);
   const keyPrefix = rawKey.slice(0, 12); // "xng_" + 8 chars
   const id = crypto.randomUUID();
   const now = Math.floor(Date.now() / 1000);

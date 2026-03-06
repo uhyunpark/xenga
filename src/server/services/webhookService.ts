@@ -45,27 +45,36 @@ export interface WebhookEvent {
 export function registerWebhook(
   url: string,
   secret: string,
-  eventTypes: WebhookEventType[]
+  eventTypes: WebhookEventType[],
+  sellerAddress?: string
 ): Webhook {
   const db = getDb();
   const id = randomUUID();
   const now = Math.floor(Date.now() / 1000);
 
   db.prepare(
-    `INSERT INTO webhooks (id, url, secret, event_types, created_at) VALUES (?, ?, ?, ?, ?)`
-  ).run(id, url, secret, JSON.stringify(eventTypes), now);
+    `INSERT INTO webhooks (id, url, secret, event_types, seller_address, created_at) VALUES (?, ?, ?, ?, ?, ?)`
+  ).run(id, url, secret, JSON.stringify(eventTypes), sellerAddress || null, now);
 
   return { id, url, secret, eventTypes, createdAt: now };
 }
 
-export function listWebhooks(): Webhook[] {
+export function listWebhooks(sellerAddress?: string): Webhook[] {
   const db = getDb();
+  if (sellerAddress) {
+    const rows = db.prepare("SELECT * FROM webhooks WHERE seller_address = ? ORDER BY created_at DESC").all(sellerAddress) as any[];
+    return rows.map(toWebhook);
+  }
   const rows = db.prepare("SELECT * FROM webhooks ORDER BY created_at DESC").all() as any[];
   return rows.map(toWebhook);
 }
 
-export function deleteWebhook(id: string): boolean {
+export function deleteWebhook(id: string, sellerAddress?: string): boolean {
   const db = getDb();
+  if (sellerAddress) {
+    const result = db.prepare("DELETE FROM webhooks WHERE id = ? AND seller_address = ?").run(id, sellerAddress);
+    return result.changes > 0;
+  }
   const result = db.prepare("DELETE FROM webhooks WHERE id = ?").run(id);
   return result.changes > 0;
 }

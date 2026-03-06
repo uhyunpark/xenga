@@ -167,23 +167,26 @@ HTTP transport for triggering escrow creation. x402-compatible — any x402 agen
 Self-service dashboard at `/dashboard` for sellers to manage orders, profile, and API keys.
 
 **Backend:**
-- `src/server/routes/sellerApiKeys.ts` — CRUD for self-service API keys (POST create, GET list, DELETE revoke), all behind `walletAuth()`
-- `src/server/middleware/auth.ts` — `apiKeyOrWalletAuth()` combined middleware accepts either API key or wallet signature. `walletAuth()` uses `req.originalUrl` (not `req.path`) for routeId to match client signatures correctly on mounted routers
-- `src/server/db/schema.ts` — `seller_api_keys` table (id, seller_address, key_hash, key_prefix, name, timestamps)
-- `src/server/routes/sellers.ts` — POST uses upsert (`ON CONFLICT...DO UPDATE`) for register + profile update in one endpoint
+- `src/server/routes/sellerApiKeys.ts` — CRUD for self-service API keys (POST create, GET list, DELETE revoke), all behind `sessionAuth()`. Exports `hashApiKey()` utility used by auth middleware.
+- `src/server/middleware/auth.ts` — `apiKeyAuth()` checks env var keys first, then falls back to `seller_api_keys` DB table (SHA256 hash lookup). `apiKeyOrSessionAuth()` combined middleware accepts API key or session JWT. `walletAuth()` uses `req.originalUrl` (not `req.path`) for routeId to match client signatures correctly on mounted routers.
+- `src/server/db/schema.ts` — `seller_api_keys` table (id, seller_address, key_hash, key_prefix, name, timestamps), `sellers` table (with `payout_address`), `webhooks` table (with `seller_address`), `payment_links` table
+- `src/server/routes/sellers.ts` — POST uses upsert (`ON CONFLICT...DO UPDATE`) for register + profile update in one endpoint. Accepts `payoutAddress` for custom USDC payout destination.
 - `src/server/routes/orders.ts` — GET `?seller=` with wallet headers verifies signer matches seller param; confirm-delivery and refund use `apiKeyOrSessionAuth` with seller identity check (facilitator pays gas)
+- `src/server/routes/webhooks.ts` — CRUD for webhook endpoints, scoped per seller via `apiKeyOrSessionAuth()`. Seller can only see/manage their own webhooks.
+- `src/server/routes/paymentLinks.ts` — CRUD for payment links (sessionAuth), plus public details and checkout endpoints (no auth, rate limited). Checkout creates orders from link data, resolving seller payout address.
 
 **Frontend (`web/`):**
 - `/dashboard` — Overview: stats row (active, pending, revenue, reputation), activity feed, quick actions
 - `/dashboard/orders` — Order table with filter tabs (All/Active/Completed/Disputed), inline expand with escrow details, confirm delivery + refund via facilitator API (gas-free for sellers)
-- `/dashboard/settings` — Seller profile registration/update (name, payout address display)
+- `/dashboard/settings` — Seller profile registration/update (name, editable payout address)
 - `/dashboard/api-keys` — Create, list, revoke API keys with copy-once-on-create pattern
+- `/dashboard/webhooks` — Register, list, delete webhook endpoints with event type selection and secret generation
+- `/dashboard/payment-links` — Create, list, deactivate payment links with copy URL
+- `/pay/[id]` — Public checkout page for payment links (standalone, uses demo wallet)
 - Layout: `DashboardSidebar` (responsive with mobile hamburger) + `WalletGate` (connect prompt when disconnected)
-- `web/lib/api/wallet-auth.ts` — `authenticatedFetch()` adds wallet auth headers (address, signature, timestamp) to facilitator API calls
+- `web/lib/api/wallet-auth.ts` — `authenticatedFetch()` adds session JWT to facilitator API calls
 
 **Auth flow:** Client signs `xenga-auth:{path}:{timestamp}` via `walletClient.signMessage()`. Server verifies via `verifyMessage()` with 5-minute replay window. Addresses normalized to lowercase for storage/comparison.
-
-**Note:** Self-service API keys have CRUD management but no auth middleware to validate them yet — the existing `apiKeyAuth` middleware only checks `config.apiKeys` (env var). A future middleware will look up keys in the `seller_api_keys` table.
 
 ## Web (`web/`)
 
@@ -207,12 +210,16 @@ web/
       orders/page.tsx        # Order management with on-chain actions
       settings/page.tsx      # Seller profile registration
       api-keys/page.tsx      # API key self-service
+      webhooks/page.tsx      # Webhook management
+      payment-links/page.tsx # Payment link management
+    pay/[id]/page.tsx        # Public payment link checkout
     seller/page.tsx          # Redirects to /dashboard
   components/
     landing/                 # Hero, ProtocolFlow, DemoCards, HowItWorks, Footer
     marketplace/             # PaymentFlow, ProductGrid, StepTracker, SellerPanel
     agent/                   # AgentTerminal
-    dashboard/               # WalletGate, DashboardSidebar, StatsRow, ActivityFeed, OrderTable, OrderActions, SellerProfile, ApiKeyManager
+    dashboard/               # WalletGate, DashboardSidebar, StatsRow, ActivityFeed, OrderTable, OrderActions, SellerProfile, ApiKeyManager, WebhookManager, PaymentLinkManager
+    payment-links/           # PaymentLinkCheckout (public checkout component)
     protocol-inspector/      # InspectorPanel + 4 tab components
     ui/                      # Badge, AddressDisplay, TxLink, UsdcAmount, JsonViewer, ReputationBadge
     layout/                  # Navbar

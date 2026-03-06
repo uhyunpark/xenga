@@ -25,3 +25,23 @@ Scenario descriptions:
 - Screening: "See agents gated by reputation threshold"
 
 **Depends on:** Nothing — standalone change.
+
+## 3. Buyer dispute management UI
+
+**What:** Build a buyer-facing UI for filing disputes on escrowed orders.
+
+**Why:** Disputes are filed by buyers, not sellers. The current seller dashboard can't support this — a separate buyer surface is needed.
+
+**Context:** Backend is complete (`POST /api/disputes/:orderId` for filing, `POST /api/disputes/:disputeId/resolve` for arbiter resolution). Filing route uses `apiKeyAuth()` — needs `apiKeyOrSessionAuth()` when a buyer surface is built.
+
+**Depends on:** Decision on buyer interaction surface (buyer dashboard vs marketplace playground vs standalone page).
+
+## 4. Webhook per-seller event filtering
+
+**What:** Filter webhook dispatch to only send events for a seller's own escrows.
+
+**Why:** Currently webhook dispatch sends ALL escrow events to all registered webhooks. After adding seller scoping to CRUD, a seller manages their own webhooks but still receives events for all sellers' escrows.
+
+**Context:** Fix requires matching `event.escrowId → order.seller_address → webhook.seller_address` in `webhookService.ts:dispatchWebhookEvent()`.
+
+**Depends on:** Webhook seller scoping (completed).

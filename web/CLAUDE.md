@@ -112,14 +112,22 @@ Scripted auto-advancing terminal UI that plays through the agent-service flow au
 Self-service dashboard with sidebar layout and wallet gate. Pages:
 - **Overview** (`page.tsx`): Stats row (active escrows, pending release, total revenue, reputation), activity feed, quick action cards
 - **Orders** (`orders/page.tsx`): Filter tabs (All/Active/Completed/Disputed), expandable rows with escrow details, on-chain Confirm Delivery + Refund buttons via `walletClient.writeContract`
-- **Settings** (`settings/page.tsx`): Seller profile registration/update (display name + payout address)
-- **API Keys** (`api-keys/page.tsx`): Create, list, revoke API keys. Raw key shown once on creation
+- **Settings** (`settings/page.tsx`): Seller profile registration/update (display name + editable payout address)
+- **API Keys** (`api-keys/page.tsx`): Create, list, revoke API keys. Raw key shown once on creation. Keys are validated in `apiKeyAuth()` middleware.
+- **Webhooks** (`webhooks/page.tsx`): Register, list, delete webhook endpoints. Event type selection, editable secret with Generate button.
+- **Payment Links** (`payment-links/page.tsx`): Create, list, deactivate payment links. Copy URL to share with buyers.
+
+### Payment Link Checkout (`app/pay/[id]/`)
+
+Public standalone checkout page for payment links. Uses `WalletProvider mode="demo"` — buyers get an ephemeral demo wallet, funded automatically, and pay through the standard xenga flow. No dashboard layout, no wallet gate. Component: `PaymentLinkCheckout`.
 
 Key components in `components/dashboard/`:
 - `WalletGate` — renders connect prompt when no wallet connected
 - `DashboardSidebar` — responsive sidebar with mobile hamburger overlay
 - `OrderActions` — calls facilitator API for `confirmDelivery`/`refund` (gas-free for sellers, uses session JWT auth)
 - `OrderTable` — reusable table with filter tabs and `actionSlot` render prop
+- `WebhookManager` — CRUD for webhook endpoints with event type checkboxes
+- `PaymentLinkManager` — CRUD for payment links with copy URL and deactivate
 
 ## Facilitator API Routes (called from frontend)
 
@@ -140,6 +148,14 @@ Key components in `components/dashboard/`:
 | `/api/seller-api-keys` | POST | wallet | Create API key |
 | `/api/seller-api-keys` | GET | wallet | List active API keys |
 | `/api/seller-api-keys/:id` | DELETE | wallet | Revoke API key |
+| `/api/webhooks` | POST | apiKey or session | Register webhook endpoint |
+| `/api/webhooks` | GET | apiKey or session | List seller's webhooks |
+| `/api/webhooks/:id` | DELETE | apiKey or session | Delete webhook |
+| `/api/payment-links` | POST | session | Create payment link |
+| `/api/payment-links` | GET | session | List seller's payment links |
+| `/api/payment-links/:id/deactivate` | POST | session | Deactivate payment link |
+| `/api/payment-links/:id/details` | GET | — | Public payment link details |
+| `/api/payment-links/:id/checkout` | POST | — (rate limited) | Create order from payment link |
 | `/api/demo/fund` | POST | — | Faucet (10 USDC + 0.005 ETH) |
 
 †`GET /api/orders?seller=` with wallet headers verifies signer matches the seller param. Without wallet headers, allowed in open mode (no API keys configured).

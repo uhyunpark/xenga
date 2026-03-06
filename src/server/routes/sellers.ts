@@ -8,6 +8,7 @@ const router = Router();
 interface Seller {
   address: string;
   name: string | null;
+  payoutAddress: string | null;
   registeredAt: number;
 }
 
@@ -15,6 +16,7 @@ function toSeller(row: any): Seller {
   return {
     address: row.address,
     name: row.name,
+    payoutAddress: row.payout_address || null,
     registeredAt: row.registered_at,
   };
 }
@@ -31,20 +33,25 @@ router.post(
   sessionAuth(),
   (req: AuthenticatedRequest, res) => {
     const address = req.callerAddress!.toLowerCase();
-    const { name } = req.body as { name?: string };
+    const { name, payoutAddress } = req.body as { name?: string; payoutAddress?: string };
 
     if (name !== undefined && (typeof name !== "string" || name.length > 100)) {
       return res.status(400).json({ error: "Name must be a string under 100 characters" });
     }
 
+    if (payoutAddress !== undefined && payoutAddress !== "" && !isAddress(payoutAddress)) {
+      return res.status(400).json({ error: "Invalid payout address" });
+    }
+
     const db = getDb();
     const now = Math.floor(Date.now() / 1000);
+    const normalizedPayout = payoutAddress ? payoutAddress.toLowerCase() : null;
 
     db.prepare(
-      `INSERT INTO sellers (address, name, registered_at)
-       VALUES (?, ?, ?)
-       ON CONFLICT(address) DO UPDATE SET name = excluded.name`
-    ).run(address, name?.trim() || null, now);
+      `INSERT INTO sellers (address, name, payout_address, registered_at)
+       VALUES (?, ?, ?, ?)
+       ON CONFLICT(address) DO UPDATE SET name = excluded.name, payout_address = excluded.payout_address`
+    ).run(address, name?.trim() || null, normalizedPayout, now);
 
     const seller = db.prepare("SELECT * FROM sellers WHERE address = ?").get(address);
 

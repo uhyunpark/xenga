@@ -2,6 +2,8 @@ import type { Request, Response, NextFunction } from "express";
 import { verifyMessage, type Address } from "viem";
 import { jwtVerify } from "jose";
 import { config } from "../config.js";
+import { hashApiKey } from "../routes/sellerApiKeys.js";
+import { getDb } from "../db/index.js";
 
 export interface AuthenticatedRequest extends Request {
   callerAddress?: Address;
@@ -9,21 +11,48 @@ export interface AuthenticatedRequest extends Request {
 
 /**
  * API key authentication middleware.
- * Checks `X-API-KEY` header against configured API_KEYS.
- * If no API_KEYS are configured, all requests pass through (open access).
+ * Checks `X-API-KEY` header against configured API_KEYS (env var, operator keys),
+ * then falls back to `seller_api_keys` DB table (self-service keys).
+ * If no API_KEYS are configured and no header is sent, requests pass through (open access).
  */
 export function apiKeyAuth() {
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (config.apiKeys.length === 0) return next();
-
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const apiKey = req.headers["x-api-key"] as string | undefined;
+
+    // Open mode: no env keys configured and no header sent → pass through
+    if (config.apiKeys.length === 0 && !apiKey) return next();
+
     if (!apiKey) {
       return res.status(401).json({ error: "Missing X-API-KEY header" });
     }
-    if (!config.apiKeys.includes(apiKey)) {
-      return res.status(403).json({ error: "Invalid API key" });
+
+    // Fast path: check env var keys first (operator keys, no callerAddress)
+    if (config.apiKeys.includes(apiKey)) {
+      return next();
     }
-    next();
+
+    // Fallback: check seller_api_keys DB table
+    try {
+      const keyHash = hashApiKey(apiKey);
+      const row = getDb()
+        .prepare(
+          `SELECT seller_address FROM seller_api_keys WHERE key_hash = ? AND revoked_at IS NULL`
+        )
+        .get(keyHash) as { seller_address: string } | undefined;
+
+      if (row) {
+        req.callerAddress = row.seller_address as Address;
+        // Fire-and-forget: update last_used_at
+        getDb()
+          .prepare(`UPDATE seller_api_keys SET last_used_at = ? WHERE key_hash = ?`)
+          .run(Math.floor(Date.now() / 1000), keyHash);
+        return next();
+      }
+    } catch (err) {
+      return res.status(500).json({ error: "Internal error during API key validation" });
+    }
+
+    return res.status(403).json({ error: "Invalid API key" });
   };
 }
 

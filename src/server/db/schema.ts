@@ -69,6 +69,7 @@ export const SCHEMA = `
   CREATE TABLE IF NOT EXISTS sellers (
     address TEXT PRIMARY KEY,
     name TEXT,
+    payout_address TEXT,
     registered_at INTEGER NOT NULL
   );
 
@@ -83,6 +84,20 @@ export const SCHEMA = `
     revoked_at INTEGER
   );
   CREATE INDEX IF NOT EXISTS idx_seller_api_keys_address ON seller_api_keys(seller_address);
+  CREATE INDEX IF NOT EXISTS idx_seller_api_keys_hash ON seller_api_keys(key_hash);
+
+  CREATE TABLE IF NOT EXISTS payment_links (
+    id TEXT PRIMARY KEY,
+    seller_address TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    price TEXT NOT NULL,
+    service_type TEXT NOT NULL DEFAULT 'marketplace',
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_payment_links_seller ON payment_links(seller_address);
 
   CREATE INDEX IF NOT EXISTS idx_events_escrow ON events(escrow_id);
   CREATE INDEX IF NOT EXISTS idx_events_block_number ON events(block_number);

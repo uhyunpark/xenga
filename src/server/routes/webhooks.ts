@@ -6,15 +6,15 @@ import {
   ALL_EVENT_TYPES,
   type WebhookEventType,
 } from "../services/webhookService.js";
-import { apiKeyAuth } from "../middleware/auth.js";
+import { apiKeyOrSessionAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 
 const router = Router();
 
-// All webhook management endpoints require API key auth
-router.use(apiKeyAuth());
+// All webhook management endpoints require API key or session auth
+router.use(apiKeyOrSessionAuth());
 
 // ──────────── Register webhook ────────────
-router.post("/", (req, res) => {
+router.post("/", (req: AuthenticatedRequest, res) => {
   const { url, secret, eventTypes } = req.body as {
     url?: string;
     secret?: string;
@@ -46,7 +46,8 @@ router.post("/", (req, res) => {
     });
   }
 
-  const webhook = registerWebhook(url, secret, types);
+  const sellerAddress = req.callerAddress?.toLowerCase();
+  const webhook = registerWebhook(url, secret, types, sellerAddress);
 
   res.status(201).json({
     id: webhook.id,
@@ -58,8 +59,9 @@ router.post("/", (req, res) => {
 });
 
 // ──────────── List webhooks ────────────
-router.get("/", (_req, res) => {
-  const webhooks = listWebhooks().map((w) => ({
+router.get("/", (req: AuthenticatedRequest, res) => {
+  const sellerAddress = req.callerAddress?.toLowerCase();
+  const webhooks = listWebhooks(sellerAddress).map((w) => ({
     id: w.id,
     url: w.url,
     eventTypes: w.eventTypes,
@@ -70,8 +72,9 @@ router.get("/", (_req, res) => {
 });
 
 // ──────────── Delete webhook ────────────
-router.delete("/:id", (req, res) => {
-  const deleted = deleteWebhook(req.params.id as string);
+router.delete("/:id", (req: AuthenticatedRequest, res) => {
+  const sellerAddress = req.callerAddress?.toLowerCase();
+  const deleted = deleteWebhook(req.params.id as string, sellerAddress);
   if (!deleted) return res.status(404).json({ error: "Webhook not found" });
   res.json({ message: "Webhook deleted" });
 });

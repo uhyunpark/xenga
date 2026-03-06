@@ -24,6 +24,7 @@ import paymentIntentsRouter from "./routes/paymentIntents.js";
 import sellersRouter from "./routes/sellers.js";
 import sellerApiKeysRouter from "./routes/sellerApiKeys.js";
 import authRouter from "./routes/auth.js";
+import paymentLinksRouter from "./routes/paymentLinks.js";
 import { startEventListener } from "./services/eventListener.js";
 import { getDisputeWindow } from "./services/escrowService.js";
 import { rateLimit } from "./middleware/rateLimit.js";
@@ -111,6 +112,7 @@ app.use("/api/webhooks", generalLimiter, webhooksRouter);
 app.use("/api/payment-intents", paymentLimiter, paymentIntentsRouter);
 app.use("/api/sellers", generalLimiter, sellersRouter);
 app.use("/api/seller-api-keys", generalLimiter, sellerApiKeysRouter);
+app.use("/api/payment-links", generalLimiter, paymentLinksRouter);
 app.use("/api/demo", generalLimiter, demoRouter);
 app.use("/api/auth", generalLimiter, authRouter);
 

@@ -11,16 +11,13 @@ import { shortenAddress } from "@/lib/utils";
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Overview", icon: "home" },
   { href: "/dashboard/orders", label: "Orders", icon: "orders" },
+  { href: "/dashboard/payment-links", label: "Payment Links", icon: "link" },
 ];
 
 const SETTINGS_ITEMS = [
   { href: "/dashboard/settings", label: "Settings", icon: "settings" },
   { href: "/dashboard/api-keys", label: "API Keys", icon: "key" },
-];
-
-const COMING_SOON = [
-  { label: "Payment Links", icon: "link" },
-  { label: "Webhooks", icon: "webhook" },
+  { href: "/dashboard/webhooks", label: "Webhooks", icon: "webhook" },
 ];
 
 const ICONS: Record<string, React.ReactNode> = {
@@ -119,23 +116,6 @@ export function DashboardSidebar() {
           <SidebarLink key={item.href} href={item.href} active={isActive(item.href)} icon={item.icon} onClick={() => setMobileOpen(false)}>
             {item.label}
           </SidebarLink>
-        ))}
-
-        <p className="px-3 pb-1 pt-5 text-[11px] font-medium uppercase tracking-wider text-text-tertiary">
-          Coming Soon
-        </p>
-
-        {COMING_SOON.map((item) => (
-          <div
-            key={item.label}
-            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-text-tertiary"
-          >
-            {ICONS[item.icon]}
-            <span>{item.label}</span>
-            <span className="ml-auto rounded-full bg-bg-tertiary px-1.5 py-0.5 text-[10px] text-text-tertiary">
-              Soon
-            </span>
-          </div>
         ))}
       </nav>
 
