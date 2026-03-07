@@ -61,7 +61,7 @@ router.post("/:disputeId/resolve", walletAuth(() => getArbiterAddress()), async 
   const db = getDb();
   const dispute = db
     .prepare("SELECT * FROM disputes WHERE id = ?")
-    .get(req.params.disputeId) as any;
+    .get(req.params.disputeId as string) as any;
 
   if (!dispute) return res.status(404).json({ error: "Dispute not found" });
   if (dispute.status !== "open") {

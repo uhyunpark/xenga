@@ -148,14 +148,18 @@ function saveEvent(eventName: string, escrowId: number, log: any) {
       JSON.stringify(log.args ?? {})
     );
 
-    // Dispatch webhook for this event (non-blocking)
+    // Dispatch webhook for this event (non-blocking, scoped to seller)
     const webhookType = chainEventToWebhookType(eventName);
     if (webhookType) {
       const orderId = getEscrowOrderId(escrowId);
+      const sellerAddress = eventName === "EscrowCreated"
+        ? (log.args?.seller as string | undefined)?.toLowerCase()
+        : getEscrowSellerAddress(escrowId);
       dispatchWebhookEvent({
         type: webhookType,
         escrowId,
         orderId: orderId ?? undefined,
+        sellerAddress,
         txHash: log.transactionHash,
         data: log.args ?? {},
         timestamp: Math.floor(Date.now() / 1000),
@@ -176,6 +180,25 @@ function syncOrderStatus(orderId: `0x${string}`, status: OrderStatus) {
   } catch (err) {
     logger.error("events", `Failed to sync order status: ${(err as Error).message}`);
   }
+}
+
+function getEscrowSellerAddress(escrowId: number): string | undefined {
+  const db = getDb();
+  // Look up seller from EscrowCreated event first (authoritative)
+  const eventRow = db.prepare(
+    "SELECT data FROM events WHERE escrow_id = ? AND event_name = 'EscrowCreated' ORDER BY id DESC LIMIT 1"
+  ).get(escrowId) as any;
+  if (eventRow?.data) {
+    try {
+      const parsed = JSON.parse(eventRow.data);
+      if (parsed.seller) return (parsed.seller as string).toLowerCase();
+    } catch {}
+  }
+  // Fallback: query orders table
+  const row = db.prepare(
+    "SELECT seller_address FROM orders WHERE escrow_id = ? ORDER BY updated_at DESC LIMIT 1"
+  ).get(escrowId) as any;
+  return row?.seller_address?.toLowerCase();
 }
 
 function getEscrowOrderId(escrowId: number): Hash | undefined {

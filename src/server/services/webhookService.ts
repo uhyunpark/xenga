@@ -35,6 +35,7 @@ export interface WebhookEvent {
   type: WebhookEventType;
   escrowId: number;
   orderId?: string;
+  sellerAddress?: string;
   txHash?: string;
   data?: Record<string, unknown>;
   timestamp: number;
@@ -100,8 +101,13 @@ const RETRY_DELAYS = [1000, 5000, 25000]; // 1s, 5s, 25s
  */
 export function dispatchWebhookEvent(event: WebhookEvent): void {
   try {
+    if (!event.sellerAddress) {
+      logger.warn("webhooks", `Skipping dispatch for ${event.type} (escrow ${event.escrowId}): no sellerAddress`);
+      return;
+    }
+
     const db = getDb();
-    const rows = db.prepare("SELECT * FROM webhooks").all() as any[];
+    const rows = db.prepare("SELECT * FROM webhooks WHERE seller_address = ?").all(event.sellerAddress) as any[];
     const webhooks = rows.map(toWebhook);
 
     for (const webhook of webhooks) {

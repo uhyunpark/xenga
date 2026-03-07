@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { useSessionToken } from "@/components/dashboard/WalletGate";
 import { authenticatedFetch } from "@/lib/api/wallet-auth";
+import { shortenAddress } from "@/lib/utils";
 
 const ALL_EVENT_TYPES = [
   "escrow.created",
@@ -154,6 +155,11 @@ export function WebhookManager() {
         <p className="mt-1 text-xs text-text-tertiary">
           Configure an endpoint to receive HTTP POST notifications when escrow events occur.
         </p>
+        {address && (
+          <p className="mt-1 text-xs text-text-tertiary">
+            Events will be scoped to your wallet: <span className="font-mono">{shortenAddress(address)}</span>
+          </p>
+        )}
 
         <div className="mt-4 space-y-3">
           <div>
