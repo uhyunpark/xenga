@@ -1158,4 +1158,106 @@ contract EscrowVaultTest is Test {
         EscrowVault.Escrow memory eAfter = vault.getEscrow(escrowId);
         assertEq(eAfter.disputeWindow, 3 days);
     }
+
+    // ──────────── Test: Batch auto-release ────────────
+
+    function _createEscrowAt(uint256 time, bytes32 orderId) internal returns (uint256) {
+        vm.warp(time);
+        usdc.mint(buyer, AMOUNT);
+        vm.startPrank(buyer);
+        usdc.approve(address(vault), AMOUNT);
+        uint256 escrowId = vault.createEscrow(orderId, seller, AMOUNT, "marketplace", RELEASE_WINDOW);
+        vm.stopPrank();
+        return escrowId;
+    }
+
+    function test_batchAutoRelease() public {
+        uint256 id1 = _createEscrowAt(1000, keccak256("batch-1"));
+        uint256 id2 = _createEscrowAt(1001, keccak256("batch-2"));
+        uint256 id3 = _createEscrowAt(1002, keccak256("batch-3"));
+
+        // Warp past all release+dispute windows
+        vm.warp(1002 + RELEASE_WINDOW + DISPUTE_WINDOW + 1);
+
+        uint256[] memory ids = new uint256[](3);
+        ids[0] = id1;
+        ids[1] = id2;
+        ids[2] = id3;
+
+        uint256 released = vault.batchAutoRelease(ids);
+        assertEq(released, 3);
+
+        assertEq(uint256(vault.getEscrow(id1).state), uint256(EscrowVault.EscrowState.AutoReleased));
+        assertEq(uint256(vault.getEscrow(id2).state), uint256(EscrowVault.EscrowState.AutoReleased));
+        assertEq(uint256(vault.getEscrow(id3).state), uint256(EscrowVault.EscrowState.AutoReleased));
+
+        // Seller should have received funds from all 3
+        assertEq(usdc.balanceOf(seller), 3 * (AMOUNT - FEE));
+        assertEq(usdc.balanceOf(feeRecipient), 3 * FEE);
+    }
+
+    function test_batchAutoRelease_partialFailure() public {
+        uint256 id1 = _createEscrowAt(1000, keccak256("batch-p1"));
+        uint256 id2 = _createEscrowAt(1001, keccak256("batch-p2"));
+
+        // Refund id2 so it can't be auto-released
+        vm.prank(seller);
+        vault.refund(id2);
+
+        // Warp past release window
+        vm.warp(1001 + RELEASE_WINDOW + DISPUTE_WINDOW + 1);
+
+        uint256[] memory ids = new uint256[](2);
+        ids[0] = id1;
+        ids[1] = id2;
+
+        uint256 released = vault.batchAutoRelease(ids);
+        assertEq(released, 1); // Only id1 should succeed
+
+        assertEq(uint256(vault.getEscrow(id1).state), uint256(EscrowVault.EscrowState.AutoReleased));
+        assertEq(uint256(vault.getEscrow(id2).state), uint256(EscrowVault.EscrowState.Refunded));
+    }
+
+    function test_batchAutoRelease_emptyArray() public {
+        uint256[] memory ids = new uint256[](0);
+        uint256 released = vault.batchAutoRelease(ids);
+        assertEq(released, 0);
+    }
+
+    function test_batchAutoRelease_paused() public {
+        uint256 id1 = _createEscrowAt(1000, keccak256("batch-pause"));
+        vm.warp(1000 + RELEASE_WINDOW + DISPUTE_WINDOW + 1);
+
+        vault.pause();
+
+        uint256[] memory ids = new uint256[](1);
+        ids[0] = id1;
+
+        vm.expectRevert(); // EnforcedPause
+        vault.batchAutoRelease(ids);
+    }
+
+    // ──────────── Test: Batch isReleasable ────────────
+
+    function test_batchIsReleasable() public {
+        uint256 id1 = _createEscrowAt(1000, keccak256("batch-r1"));
+        uint256 id2 = _createEscrowAt(1001, keccak256("batch-r2"));
+
+        // Only warp past id1's window, not id2's
+        vm.warp(1000 + RELEASE_WINDOW + DISPUTE_WINDOW + 1);
+
+        uint256[] memory ids = new uint256[](2);
+        ids[0] = id1;
+        ids[1] = id2;
+
+        bool[] memory results = vault.batchIsReleasable(ids);
+        assertTrue(results[0]);
+        assertFalse(results[1]); // id2 was created 1s later, needs 1 more second
+
+        // Warp 1 more second — both should be releasable
+        vm.warp(1001 + RELEASE_WINDOW + DISPUTE_WINDOW + 1);
+        results = vault.batchIsReleasable(ids);
+        assertTrue(results[0]);
+        assertTrue(results[1]);
+    }
 }

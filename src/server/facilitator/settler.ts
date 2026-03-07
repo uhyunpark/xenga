@@ -132,6 +132,21 @@ export async function autoReleaseOnChain(escrowId: number): Promise<Hash> {
   return txHash;
 }
 
+export async function batchAutoReleaseOnChain(escrowIds: number[]): Promise<{ txHash: Hash; released: number }> {
+  const txHash = await txQueue.writeContract("batchAutoRelease", {
+    address: config.escrowVaultAddress,
+    abi: escrowVaultAbi,
+    functionName: "batchAutoRelease",
+    args: [escrowIds.map((id) => BigInt(id))],
+  });
+  const receipt = await getPublicClient().waitForTransactionReceipt({ hash: txHash });
+  // Count EscrowAutoReleased events to determine how many were released
+  const released = receipt.logs.filter(
+    (log) => log.address.toLowerCase() === config.escrowVaultAddress.toLowerCase()
+  ).length;
+  return { txHash, released };
+}
+
 const erc20TransferAbi = [
   {
     type: "function",

@@ -53,3 +53,12 @@ export async function isReleasable(escrowId: number): Promise<boolean> {
     args: [BigInt(escrowId)],
   }) as Promise<boolean>;
 }
+
+export async function batchIsReleasable(escrowIds: number[]): Promise<boolean[]> {
+  return getPublicClient().readContract({
+    address: config.escrowVaultAddress,
+    abi: escrowVaultAbi,
+    functionName: "batchIsReleasable",
+    args: [escrowIds.map((id) => BigInt(id))],
+  }) as Promise<boolean[]>;
+}

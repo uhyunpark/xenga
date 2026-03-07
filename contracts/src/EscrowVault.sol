@@ -333,6 +333,22 @@ contract EscrowVault is Ownable2Step, Pausable {
     }
 
     /**
+     * @notice Batch auto-release multiple escrows in a single transaction
+     * @dev Skips individual escrows that fail (e.g. state changed between check and tx).
+     *      Each successful release emits its own EscrowAutoReleased event.
+     * @return released Number of escrows successfully released
+     */
+    function batchAutoRelease(uint256[] calldata escrowIds) external whenNotPaused returns (uint256 released) {
+        for (uint256 i = 0; i < escrowIds.length; i++) {
+            try this.autoRelease(escrowIds[i]) {
+                released++;
+            } catch {
+                // Skip failures — escrow may have been disputed/released since isReleasable check
+            }
+        }
+    }
+
+    /**
      * @notice Buyer disputes — allowed from both Active and DeliveryConfirmed states
      * @dev For DeliveryConfirmed: must be within disputeWindow of delivery confirmation.
      *      For Active: must be within the extended window period (releaseWindow - disputeWindow to releaseWindow + disputeWindow).
@@ -446,6 +462,20 @@ contract EscrowVault is Ownable2Step, Pausable {
     }
 
     function isReleasable(uint256 escrowId) external view returns (bool) {
+        return _isReleasable(escrowId);
+    }
+
+    /**
+     * @notice Check multiple escrows for releasability in a single call
+     */
+    function batchIsReleasable(uint256[] calldata escrowIds) external view returns (bool[] memory results) {
+        results = new bool[](escrowIds.length);
+        for (uint256 i = 0; i < escrowIds.length; i++) {
+            results[i] = _isReleasable(escrowIds[i]);
+        }
+    }
+
+    function _isReleasable(uint256 escrowId) internal view returns (bool) {
         Escrow storage e = escrows[escrowId];
         if (e.state == EscrowState.Active) {
             // For Active state, require releaseWindow + disputeWindow
