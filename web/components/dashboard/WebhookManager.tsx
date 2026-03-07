@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { Trash2, Check, X } from "lucide-react";
 import { useWallet } from "@/lib/wallet/WalletProvider";
 import { useSessionToken } from "@/components/dashboard/WalletGate";
 import { authenticatedFetch } from "@/lib/api/wallet-auth";
@@ -33,6 +34,7 @@ export function WebhookManager() {
   const [selectedEvents, setSelectedEvents] = useState<Set<string>>(new Set(ALL_EVENT_TYPES));
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [justCreated, setJustCreated] = useState(false);
   const [justDeleted, setJustDeleted] = useState(false);
@@ -293,13 +295,32 @@ export function WebhookManager() {
                       Created {new Date(webhook.createdAt * 1000).toLocaleDateString()}
                     </p>
                   </div>
-                  <button
-                    onClick={() => handleDelete(webhook.id)}
-                    disabled={deleting === webhook.id}
-                    className="shrink-0 rounded-md border border-error/30 px-2.5 py-1 text-xs text-error hover:bg-error/10 disabled:opacity-50"
-                  >
-                    {deleting === webhook.id ? "Deleting..." : "Delete"}
-                  </button>
+                  {deleting === webhook.id ? (
+                    <span className="shrink-0 text-xs text-text-tertiary">Deleting…</span>
+                  ) : confirmingDelete === webhook.id ? (
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <span className="text-xs text-error">Delete?</span>
+                      <button
+                        onClick={() => { setConfirmingDelete(null); handleDelete(webhook.id); }}
+                        className="rounded-md p-1 text-error hover:bg-error/10"
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={() => setConfirmingDelete(null)}
+                        className="rounded-md p-1 text-text-tertiary hover:bg-bg-tertiary"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmingDelete(webhook.id)}
+                      className="shrink-0 rounded-md p-1.5 text-error hover:bg-error/10"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

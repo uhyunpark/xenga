@@ -41,7 +41,7 @@ interface WalletState {
   connectBrowser: () => Promise<void>;
   disconnect: () => void;
   fundDemoWallet: () => Promise<void>;
-  refreshBalances: () => Promise<void>;
+  refreshBalances: () => Promise<{ usdc: string | null; eth: string | null }>;
 }
 
 const WalletContext = createContext<WalletState | null>(null);
@@ -82,19 +82,20 @@ export function WalletProvider({ children, mode }: WalletProviderProps) {
     prevAddressRef.current = address;
   }, [address]);
 
-  const refreshBalances = useCallback(async () => {
-    if (!address) return;
+  const refreshBalances = useCallback(async (): Promise<{ usdc: string | null; eth: string | null }> => {
+    if (!address) return { usdc: null, eth: null };
 
     // In mock mode, return hardcoded balances (no RPC needed)
     if (process.env.NEXT_PUBLIC_MOCK_CHAIN === "true") {
       setEthBalance("1.0000");
       setUsdcBalance("1000.00");
-      return;
+      return { usdc: "1000.00", eth: "1.0000" };
     }
 
     try {
       const eth = await publicClient.getBalance({ address });
-      setEthBalance((Number(eth) / 1e18).toFixed(4));
+      const ethStr = (Number(eth) / 1e18).toFixed(4);
+      setEthBalance(ethStr);
 
       // Read USDC balance
       // Base Sepolia USDC — matches USDC_ADDRESS in src/shared/constants.ts
@@ -113,9 +114,12 @@ export function WalletProvider({ children, mode }: WalletProviderProps) {
         functionName: "balanceOf",
         args: [address],
       })) as bigint;
-      setUsdcBalance((Number(balance) / 1e6).toFixed(2));
+      const usdcStr = (Number(balance) / 1e6).toFixed(2);
+      setUsdcBalance(usdcStr);
+      return { usdc: usdcStr, eth: ethStr };
     } catch {
       // Silently fail on balance check
+      return { usdc: null, eth: null };
     }
   }, [address]);
 
@@ -260,7 +264,12 @@ export function WalletProvider({ children, mode }: WalletProviderProps) {
         const data = await res.json();
         throw new Error(data.error || "Funding failed");
       }
-      await refreshBalances();
+      // Poll until public RPC reflects the funded balance (may lag behind facilitator's RPC)
+      for (let i = 0; i < 8; i++) {
+        const { usdc } = await refreshBalances();
+        if (usdc && parseFloat(usdc) > 0) break;
+        await new Promise((r) => setTimeout(r, 2000));
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Funding failed");
     } finally {
