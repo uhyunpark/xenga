@@ -46,6 +46,9 @@ class TxQueue {
    * Serialize nonce acquisition + tx submission.
    * The submitFn receives the nonce, sends the tx, and returns the hash.
    * Receipt waiting happens outside the lock (callers do it after getting the hash).
+   *
+   * On "nonce too low" errors (stale cache from external txs), automatically
+   * re-fetches the nonce from the network and retries once.
    */
   private withSerializedNonce(label: string, submitFn: (nonce: number) => Promise<Hash>): Promise<Hash> {
     return new Promise<Hash>((resolve, reject) => {
@@ -53,17 +56,28 @@ class TxQueue {
       this.submitQueue = this.submitQueue.then(async () => {
         try {
           if (this.pendingNonce === null) {
-            this.pendingNonce = await getPublicClient().getTransactionCount({
-              address: getAccount().address,
-              blockTag: "pending",
-            });
-            logger.info("txQueue", `Fetched initial nonce: ${this.pendingNonce}`);
+            this.pendingNonce = await this.fetchNonce();
           }
 
           const nonce = this.pendingNonce;
           logger.info("txQueue", `Submitting ${label} with nonce ${nonce}`, { queueDepth: this._queueDepth });
 
-          const hash = await submitFn(nonce);
+          let hash: Hash;
+          try {
+            hash = await submitFn(nonce);
+          } catch (err) {
+            // Retry once on stale nonce — RPC rejects pre-send so no gas is burned
+            if (this.isNonceTooLow(err)) {
+              const freshNonce = await this.fetchNonce();
+              logger.warn("txQueue", `Nonce too low (had ${nonce}, chain at ${freshNonce}). Retrying ${label} with fresh nonce ${freshNonce}`);
+              hash = await submitFn(freshNonce);
+              this.pendingNonce = freshNonce + 1;
+              resolve(hash);
+              return;
+            }
+            throw err;
+          }
+
           this.pendingNonce = nonce + 1;
           resolve(hash);
         } catch (err) {
@@ -76,6 +90,21 @@ class TxQueue {
         }
       });
     });
+  }
+
+  private async fetchNonce(): Promise<number> {
+    const nonce = await getPublicClient().getTransactionCount({
+      address: getAccount().address,
+      blockTag: "pending",
+    });
+    logger.info("txQueue", `Fetched nonce: ${nonce}`);
+    return nonce;
+  }
+
+  private isNonceTooLow(err: unknown): boolean {
+    if (!(err instanceof Error)) return false;
+    const msg = err.message.toLowerCase();
+    return msg.includes("nonce too low") || msg.includes("nonce has already been used");
   }
 
   async writeContract(label: string, args: {
