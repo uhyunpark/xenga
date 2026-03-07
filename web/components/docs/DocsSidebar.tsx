@@ -23,6 +23,7 @@ const SECTIONS = [
     title: "Reference",
     items: [
       { href: "/docs/api-reference", label: "API Reference" },
+      { href: "/docs/agent-skills", label: "Agent Skills" },
       { href: "/docs/erc-8004-comparison", label: "ERC-8004 Comparison" },
     ],
   },
@@ -38,19 +39,13 @@ export function DocsSidebar() {
 
   const sidebar = (
     <div className="flex h-full flex-col">
-      <div className="px-4 pt-4 pb-2">
+      <div className="border-b border-border-default px-4 pt-4 pb-3">
         <Link
           href="/"
           className="font-semibold text-accent hover:text-accent/80"
         >
-          Xenga
+          Xenga <span className="text-text-primary">Docs</span>
         </Link>
-      </div>
-
-      <div className="border-b border-border-default px-3 pb-3">
-        <p className="px-3 py-2 text-sm font-semibold text-text-primary">
-          Documentation
-        </p>
       </div>
 
       <nav className="flex-1 space-y-1 px-2 py-2">
@@ -110,9 +105,8 @@ export function DocsSidebar() {
           href="/"
           className="ml-3 font-semibold text-accent hover:text-accent/80"
         >
-          Xenga
+          Xenga <span className="text-text-primary">Docs</span>
         </Link>
-        <span className="ml-auto text-sm text-text-secondary">Docs</span>
       </div>
 
       {/* Mobile overlay */}

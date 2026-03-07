@@ -8,7 +8,8 @@ import { facilitatorFetch } from "@/lib/api/client";
 const NAV_ITEMS = [
   { href: "/playground", label: "Playground" },
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/docs", label: "Docs" },
+  { href: "/docs/agent-skills", label: "Agent Skills" },
+  { href: "/docs", label: "Docs", external: true },
 ];
 
 export function Navbar() {
@@ -57,6 +58,7 @@ export function Navbar() {
                   key={item.href}
                   href={item.href}
                   active={pathname.startsWith(item.href)}
+                  external={item.external}
                 >
                   {item.label}
                 </NavLink>
@@ -124,6 +126,7 @@ export function Navbar() {
                   key={item.href}
                   href={item.href}
                   active={pathname.startsWith(item.href)}
+                  external={item.external}
                   mobile
                 >
                   {item.label}
@@ -142,21 +145,35 @@ function NavLink({
   children,
   active,
   mobile,
+  external,
 }: {
   href: string;
   children: React.ReactNode;
   active?: boolean;
   mobile?: boolean;
+  external?: boolean;
 }) {
+  const className = `relative px-3 py-2 text-sm font-medium transition-colors ${
+    active
+      ? "text-accent"
+      : "text-text-secondary hover:text-text-primary"
+  } ${mobile ? "block w-full rounded-lg hover:bg-bg-tertiary" : ""}`;
+
+  if (external) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={className}
+      >
+        {children}
+      </a>
+    );
+  }
+
   return (
-    <Link
-      href={href}
-      className={`relative px-3 py-2 text-sm font-medium transition-colors ${
-        active
-          ? "text-accent"
-          : "text-text-secondary hover:text-text-primary"
-      } ${mobile ? "block w-full rounded-lg hover:bg-bg-tertiary" : ""}`}
-    >
+    <Link href={href} className={className}>
       {children}
       {active && !mobile && (
         <span className="absolute bottom-0 left-3 right-3 h-0.5 rounded-full bg-accent" />
