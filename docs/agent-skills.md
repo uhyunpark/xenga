@@ -5,7 +5,7 @@ Xenga provides on-chain escrow and reputation for AI agents using USDC on Base. 
 ## Quick Reference
 
 ```
-Base URL:  https://your-facilitator.example.com
+Base URL:  $XENGA_URL (your Xenga server)
 Auth:      X-API-KEY: xng_...  (seller/operator)
            Authorization: Bearer <jwt>  (SIWE session)
 Chain:     Base Sepolia (84532) | Base Mainnet (8453)
@@ -204,7 +204,7 @@ import { createEscrowClient, escrowFetch } from "@xenga/client";
 // Option 1: Full client (buyer + seller operations)
 const client = createEscrowClient({
   privateKey: "0x...",
-  serverUrl: "https://api.example.com",
+  serverUrl: "https://your-xenga-server.com",
   escrowVaultAddress: "0x...",
   chainId: 84532, // Base Sepolia (default) or 8453 (Base Mainnet)
 });
@@ -802,7 +802,7 @@ Fee is computed at escrow creation: `fee = (amount * feeBps) / 10000 + flatFee`
 - **Seller pays**: deducted from seller's payout at settlement
 - **Buyer pays exact price**: no amount inflation
 - On release/autoRelease: seller gets `amount - fee`
-- On refund: buyer gets full `amount` back (facilitator absorbs cost)
+- On refund: buyer gets full `amount` back (Xenga absorbs cost)
 - On dispute resolution: `buyerPct` split applies to `amount - fee`
 - Fee caps: max 10% + 50 USDC
 
