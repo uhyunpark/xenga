@@ -79,11 +79,12 @@ function StepIndicator({ current }: { current: 1 | 2 | 3 }) {
 /* ── Main component ──────────────────────────────────────────────────── */
 
 export function DemoWalletSetup() {
-  const { address, usdcBalance, ethBalance, connectDemo, fundDemoWallet, isFunding, error } =
+  const { address, usdcBalance, ethBalance, connectDemo, fundDemoWallet, isFunding, isBalanceLoading, error } =
     useWallet();
 
   const isWalletCreated = address !== null;
   const isFunded = usdcBalance !== null && parseFloat(usdcBalance) > 0;
+  const isLoadingInitialBalance = isWalletCreated && isBalanceLoading && usdcBalance === null;
   const currentStep: 1 | 2 | 3 = !isWalletCreated ? 1 : !isFunded ? 2 : 3;
 
   return (
@@ -117,34 +118,45 @@ export function DemoWalletSetup() {
         </div>
       )}
 
-      {/* Step 2 — Fund Wallet */}
+      {/* Step 2 — Fund Wallet (or loading balance) */}
       {currentStep === 2 && (
         <div className="flex flex-col items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10 text-accent">
-            <CoinIcon />
-          </div>
-          <div>
-            <p className="text-sm font-medium">Fund with Test USDC</p>
-            <p className="mt-1 text-xs text-text-secondary">
-              Get free testnet USDC to try the demos.
-            </p>
-          </div>
-          <AddressDisplay address={address!} />
-          <button
-            onClick={fundDemoWallet}
-            disabled={isFunding}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
-          >
-            {isFunding ? (
-              <span className="flex items-center gap-2">
-                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                Funding…
-              </span>
-            ) : (
-              "Get Test USDC"
-            )}
-          </button>
-          {error && <p className="text-xs text-error">{error}</p>}
+          {isLoadingInitialBalance ? (
+            <>
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10 text-accent">
+                <span className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-accent/30 border-t-accent" />
+              </div>
+              <p className="text-sm text-text-secondary">Loading balance…</p>
+            </>
+          ) : (
+            <>
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10 text-accent">
+                <CoinIcon />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Fund with Test USDC</p>
+                <p className="mt-1 text-xs text-text-secondary">
+                  Get free testnet USDC to try the demos.
+                </p>
+              </div>
+              <AddressDisplay address={address!} />
+              <button
+                onClick={fundDemoWallet}
+                disabled={isFunding}
+                className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
+              >
+                {isFunding ? (
+                  <span className="flex items-center gap-2">
+                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    Funding…
+                  </span>
+                ) : (
+                  "Get Test USDC"
+                )}
+              </button>
+              {error && <p className="text-xs text-error">{error}</p>}
+            </>
+          )}
         </div>
       )}
 

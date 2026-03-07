@@ -33,6 +33,7 @@ interface WalletState {
   publicClient: AnyPublicClient;
   isConnecting: boolean;
   isAutoConnecting: boolean;
+  isBalanceLoading: boolean;
   isFunding: boolean;
   usdcBalance: string | null;
   ethBalance: string | null;
@@ -69,6 +70,7 @@ export function WalletProvider({ children, mode }: WalletProviderProps) {
   const [walletClient, setWalletClient] = useState<WalletClient | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isAutoConnecting, setIsAutoConnecting] = useState(false);
+  const [isBalanceLoading, setIsBalanceLoading] = useState(false);
   const [isFunding, setIsFunding] = useState(false);
   const [usdcBalance, setUsdcBalance] = useState<string | null>(null);
   const [ethBalance, setEthBalance] = useState<string | null>(null);
@@ -85,10 +87,13 @@ export function WalletProvider({ children, mode }: WalletProviderProps) {
   const refreshBalances = useCallback(async (): Promise<{ usdc: string | null; eth: string | null }> => {
     if (!address) return { usdc: null, eth: null };
 
+    setIsBalanceLoading(true);
+
     // In mock mode, return hardcoded balances (no RPC needed)
     if (process.env.NEXT_PUBLIC_MOCK_CHAIN === "true") {
       setEthBalance("1.0000");
       setUsdcBalance("1000.00");
+      setIsBalanceLoading(false);
       return { usdc: "1000.00", eth: "1.0000" };
     }
 
@@ -120,6 +125,8 @@ export function WalletProvider({ children, mode }: WalletProviderProps) {
     } catch {
       // Silently fail on balance check
       return { usdc: null, eth: null };
+    } finally {
+      setIsBalanceLoading(false);
     }
   }, [address]);
 
@@ -368,6 +375,7 @@ export function WalletProvider({ children, mode }: WalletProviderProps) {
         publicClient,
         isConnecting,
         isAutoConnecting,
+        isBalanceLoading,
         isFunding,
         usdcBalance,
         ethBalance,
