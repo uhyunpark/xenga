@@ -8,7 +8,7 @@ import { facilitatorFetch } from "@/lib/api/client";
 const NAV_ITEMS = [
   { href: "/playground", label: "Playground" },
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/docs/agent-skills", label: "Agent Skills" },
+  { href: "/agent-skills.md", label: "Agent Skills", external: true },
   { href: "/docs", label: "Docs", external: true },
 ];
 

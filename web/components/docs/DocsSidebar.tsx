@@ -4,7 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 
-const SECTIONS = [
+type SidebarItem = { href: string; label: string; external?: boolean };
+
+const SECTIONS: { title: string; items: SidebarItem[] }[] = [
   {
     title: "Getting Started",
     items: [
@@ -23,7 +25,7 @@ const SECTIONS = [
     title: "Reference",
     items: [
       { href: "/docs/api-reference", label: "API Reference" },
-      { href: "/docs/agent-skills", label: "Agent Skills" },
+      { href: "/agent-skills.md", label: "Agent Skills", external: true },
       { href: "/docs/erc-8004-comparison", label: "ERC-8004 Comparison" },
     ],
   },
@@ -54,16 +56,31 @@ export function DocsSidebar() {
             <p className="px-3 pb-1 pt-4 text-[11px] font-medium uppercase tracking-wider text-text-tertiary">
               {section.title}
             </p>
-            {section.items.map((item) => (
-              <SidebarLink
-                key={item.href}
-                href={item.href}
-                active={pathname === item.href}
-                onClick={() => setMobileOpen(false)}
-              >
-                {item.label}
-              </SidebarLink>
-            ))}
+            {section.items.map((item) =>
+              item.external ? (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
+                >
+                  {item.label}
+                  <svg className="h-3 w-3 opacity-50" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M3.5 1.5h7m0 0v7m0-7L3 9" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </a>
+              ) : (
+                <SidebarLink
+                  key={item.href}
+                  href={item.href}
+                  active={pathname === item.href}
+                  onClick={() => setMobileOpen(false)}
+                >
+                  {item.label}
+                </SidebarLink>
+              )
+            )}
           </div>
         ))}
       </nav>

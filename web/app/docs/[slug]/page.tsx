@@ -14,7 +14,6 @@ const DOCS = [
   "agent-guide",
   "seller-guide",
   "erc-8004-comparison",
-  "agent-skills",
 ] as const;
 
 export const dynamicParams = false;
