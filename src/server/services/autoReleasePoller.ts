@@ -1,20 +1,17 @@
 import { getDb } from "../db/index.js";
-import { isReleasable } from "./escrowService.js";
-import { autoReleaseOnChain } from "../facilitator/settler.js";
+import { batchIsReleasable } from "./escrowService.js";
+import { autoReleaseOnChain, batchAutoReleaseOnChain } from "../facilitator/settler.js";
 import { logger } from "./logger.js";
 
 const POLL_INTERVAL_MS = 60_000; // 1 minute
+const MAX_BATCH_SIZE = 50; // Safety cap per batch transaction
 
 /**
  * Periodically checks for escrows eligible for auto-release and triggers them.
  *
- * Replaces any external automation (e.g. Chainlink Keepers). The facilitator
- * server is already the operator paying gas — it simply calls the permissionless
- * `autoRelease()` on EscrowVault when `isReleasable()` returns true.
- *
- * Query: orders in "escrowed" or "delivery_confirmed" status with a non-null
- * escrow_id are candidates. For each, call the on-chain `isReleasable` view —
- * if true, submit the `autoRelease` tx.
+ * Uses batch RPC calls (batchIsReleasable) to check eligibility in a single
+ * call, then submits a single batchAutoRelease transaction for all releasable
+ * escrows. Falls back to individual autoRelease calls if batch fails.
  */
 export function startAutoReleasePoller() {
   const run = async () => {
@@ -28,20 +25,66 @@ export function startAutoReleasePoller() {
 
       if (rows.length === 0) return;
 
-      for (const row of rows) {
-        try {
-          const releasable = await isReleasable(row.escrow_id);
-          if (!releasable) continue;
+      const escrowIds = rows.map((r) => r.escrow_id);
 
-          logger.info("auto-release", `Triggering autoRelease for escrow ${row.escrow_id}`);
-          const txHash = await autoReleaseOnChain(row.escrow_id);
-          logger.info("auto-release", `Auto-released escrow ${row.escrow_id}: ${txHash}`);
+      // Single RPC call to check all candidates
+      let releasableFlags: boolean[];
+      try {
+        releasableFlags = await batchIsReleasable(escrowIds);
+      } catch (err) {
+        logger.error(
+          "auto-release",
+          `batchIsReleasable failed: ${err instanceof Error ? err.message : String(err)}`
+        );
+        return;
+      }
+
+      const releasableIds = escrowIds.filter((_, i) => releasableFlags[i]);
+      if (releasableIds.length === 0) return;
+
+      logger.info("auto-release", `Found ${releasableIds.length} releasable escrow(s)`);
+
+      // Process in batches of MAX_BATCH_SIZE
+      for (let i = 0; i < releasableIds.length; i += MAX_BATCH_SIZE) {
+        const batch = releasableIds.slice(i, i + MAX_BATCH_SIZE);
+
+        if (batch.length === 1) {
+          // Single escrow — use direct call (cheaper, no self-call overhead)
+          try {
+            const txHash = await autoReleaseOnChain(batch[0]);
+            logger.info("auto-release", `Auto-released escrow ${batch[0]}: ${txHash}`);
+          } catch (err) {
+            logger.error(
+              "auto-release",
+              `Failed to auto-release escrow ${batch[0]}: ${err instanceof Error ? err.message : String(err)}`
+            );
+          }
+          continue;
+        }
+
+        try {
+          const { txHash, released } = await batchAutoReleaseOnChain(batch);
+          logger.info(
+            "auto-release",
+            `Batch auto-released ${released}/${batch.length} escrows: ${txHash}`
+          );
         } catch (err) {
-          // Log and continue — don't let one failure block others
+          // Batch failed — fall back to individual calls
           logger.error(
             "auto-release",
-            `Failed to auto-release escrow ${row.escrow_id}: ${err instanceof Error ? err.message : String(err)}`
+            `Batch auto-release failed, falling back to individual calls: ${err instanceof Error ? err.message : String(err)}`
           );
+          for (const escrowId of batch) {
+            try {
+              const txHash = await autoReleaseOnChain(escrowId);
+              logger.info("auto-release", `Auto-released escrow ${escrowId}: ${txHash}`);
+            } catch (innerErr) {
+              logger.error(
+                "auto-release",
+                `Failed to auto-release escrow ${escrowId}: ${innerErr instanceof Error ? innerErr.message : String(innerErr)}`
+              );
+            }
+          }
         }
       }
     } catch (err) {

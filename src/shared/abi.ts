@@ -120,6 +120,44 @@ export const escrowVaultAbi = [
   },
   {
     "type": "function",
+    "name": "batchAutoRelease",
+    "inputs": [
+      {
+        "name": "escrowIds",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "released",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "batchIsReleasable",
+    "inputs": [
+      {
+        "name": "escrowIds",
+        "type": "uint256[]",
+        "internalType": "uint256[]"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "results",
+        "type": "bool[]",
+        "internalType": "bool[]"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "buyerStats",
     "inputs": [
       {
