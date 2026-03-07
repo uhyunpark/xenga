@@ -10,11 +10,7 @@ description: >
 
 # Xenga — Escrow Payments for Agents
 
-On-chain escrow + reputation on Base using USDC. Three roles:
-
-- **Agent/Buyer** — pays for services, funds held in escrow until delivery
-- **Seller** — provides services, gets paid when buyer releases or auto-release triggers
-- **Arbiter** — resolves disputes by splitting funds
+On-chain escrow + reputation on Base using USDC. x402-compatible — any x402 agent can pay for any escrow-protected endpoint without Xenga-specific code.
 
 ## Install
 
@@ -22,27 +18,9 @@ On-chain escrow + reputation on Base using USDC. Three roles:
 npm install @xenga/client viem
 ```
 
-## Agent: Pay for Services
+## Agent: Pay for Any x402 Endpoint
 
-Agents use `escrowFetch` or `autoPayAndVerify` to pay for any x402-protected endpoint. The payment flow is automatic: send request → get 402 → sign ERC-3009 → retry with signature → done.
-
-### Quick Start
-
-```typescript
-import { createEscrowClient } from "@xenga/client";
-
-const client = createEscrowClient({
-  privateKey: process.env.WALLET_PRIVATE_KEY as `0x${string}`,
-  serverUrl: process.env.XENGA_SERVER_URL!, // Xenga API endpoint
-  chainId: 84532, // Base Sepolia (default) or 8453 (Base Mainnet)
-});
-
-// Pay for an order (handles 402 → sign → settle automatically)
-const { order, payment } = await client.payForOrder(orderId);
-console.log(`Paid! escrowId=${payment.escrowId} tx=${payment.txHash}`);
-```
-
-### escrowFetch — Drop-in for any URL
+Use `escrowFetch` as a drop-in replacement for `fetch`. If the endpoint returns 402, it automatically signs an ERC-3009 authorization and retries with payment. No configuration needed — the 402 response contains everything.
 
 ```typescript
 import { escrowFetch } from "@xenga/client";
@@ -53,115 +31,102 @@ import { baseSepolia } from "viem/chains";
 const walletClient = createWalletClient({
   chain: baseSepolia,
   transport: http(),
-  account: privateKeyToAccount(process.env.WALLET_PRIVATE_KEY as `0x${string}`),
+  account: privateKeyToAccount("0x..."),
 });
 
-// Works like fetch() — handles 402 payment flow transparently
+// Just fetch. If it's x402-protected, payment happens automatically.
 const { response, payment } = await escrowFetch(
-  "https://ai-service.example.com/api/inference",
+  "https://some-ai-service.com/api/inference",
   { method: "POST", body: JSON.stringify({ prompt: "hello" }) },
-  {
-    walletClient,
-    onSellerReputation: (rep) => rep.score >= 60, // abort if seller rep too low
-  }
+  { walletClient }
 );
 
 const data = await response.json();
+// payment?.escrowId, payment?.txHash available if payment occurred
 ```
 
-### autoPayAndVerify — One-call for agents
+### Check Seller Reputation Before Paying
+
+```typescript
+const { response, payment } = await escrowFetch(url, init, {
+  walletClient,
+  onSellerReputation: (rep) => rep.score >= 60, // return false to abort
+});
+```
+
+### One-Call Agent Helper
 
 ```typescript
 import { autoPayAndVerify } from "@xenga/client";
 
 const result = await autoPayAndVerify(
-  "https://ai-service.example.com/api/task",
+  "https://some-ai-service.com/api/task",
   { method: "POST", body: JSON.stringify({ task: "analyze data" }) },
-  {
-    walletClient,
-    minSellerReputation: 60, // skip sellers with low rep
-  }
+  { walletClient, minSellerReputation: 60 }
 );
 
 console.log(result.data);       // service response
 console.log(result.escrowId);   // on-chain escrow ID
-console.log(result.txHash);     // settlement transaction
 ```
 
-### Check Reputation Before Paying
+### Discover & Screen
 
 ```typescript
-import { screenSeller } from "@xenga/client";
+import { discoverServices, screenSeller } from "@xenga/client";
 
-const result = await screenSeller(serverUrl, "0xSellerAddress", 50);
-if (!result.acceptable) {
-  console.log(`Seller score ${result.score} (${result.confidence}) — skipping`);
-}
+// What services does this endpoint support?
+const info = await discoverServices("https://some-ai-service.com");
+// info.serviceTypes: [{ name: "agent-service", releaseWindow: 3600, ... }]
+
+// Is this seller trustworthy?
+const result = await screenSeller("https://some-ai-service.com", "0xSellerAddr", 50);
+if (!result.acceptable) console.log(`Score ${result.score} too low`);
 ```
 
-### Discover Available Services
+## Buyer: Manage Escrows After Payment
+
+After paying, buyers can release funds, dispute, or watch state.
 
 ```typescript
-import { discoverServices } from "@xenga/client";
+import { createEscrowClient } from "@xenga/client";
 
-const info = await discoverServices(serverUrl);
-console.log(info.chain);         // "base-sepolia"
-console.log(info.serviceTypes);  // [{ name: "agent-service", releaseWindow: 3600, ... }]
-```
-
-## Buyer: Manage Escrows
-
-After paying, buyers can release funds, dispute, or monitor escrow state.
-
-```typescript
 const client = createEscrowClient({
   privateKey: "0x...",
-  serverUrl: "...",
-  escrowVaultAddress: "0x...", // needed for on-chain calls
+  serverUrl: "https://the-service-you-paid.com", // the service you transacted with
+  escrowVaultAddress: "0x...", // from the 402 response or health endpoint
 });
 
-// Release funds to seller (marks as completed)
-await client.releaseOnChain(escrowId);
+await client.releaseOnChain(escrowId);    // release funds to seller
+await client.disputeOnChain(escrowId);    // dispute within window
 
-// Dispute an escrow (within dispute window)
-await client.disputeOnChain(escrowId);
-
-// Monitor escrow state changes
 const { stop } = client.watchEscrow(escrowId, (escrow) => {
-  console.log(`State: ${escrow.state}`); // Active, DeliveryConfirmed, Completed, etc.
+  console.log(`State: ${escrow.state}`);
 });
 
-// Read operations (no gas needed)
+// Read-only (no gas)
 const order = await client.getOrder(orderId);
 const escrow = await client.getEscrow(escrowId);
 const rep = await client.getReputation("0xAddress");
 ```
 
-## Seller: Accept Payments
+## Seller: Protect Endpoints & Manage Orders
 
-Sellers create orders and get paid through escrow. Two options: use the dashboard UI or integrate via API.
-
-### Via API
+Sellers add Xenga's x402 middleware to their endpoints. Any agent that hits a protected endpoint gets a 402 with payment instructions — their `escrowFetch` handles the rest.
 
 ```typescript
+import { createEscrowClient } from "@xenga/client";
+
 const client = createEscrowClient({
   privateKey: "0x...",
-  serverUrl: "...",
+  serverUrl: "https://your-own-service.com",
   escrowVaultAddress: "0x...",
 });
 
-// Confirm delivery (starts auto-release countdown)
-await client.confirmDeliveryOnChain(escrowId);
-
-// Voluntary refund
-await client.refundOnChain(escrowId);
+await client.confirmDeliveryOnChain(escrowId); // triggers auto-release countdown
+await client.refundOnChain(escrowId);          // voluntary refund
 ```
 
-### Protect Your Endpoints (x402 Middleware)
-
-Make any endpoint payment-protected. When an agent hits it without paying, they get a 402 with payment instructions. The agent's `escrowFetch` handles the rest.
-
-See `references/api-reference.md` for full endpoint specs for creating orders, managing webhooks, API keys, and payment links.
+Full API reference for order creation, webhooks, API keys, and payment links: see `references/api-reference.md`.
 
 ## Service Types
 
@@ -184,36 +149,23 @@ Active → DeliveryConfirmed → Completed      (buyer releases)
 Active → Refunded                            (seller voluntary)
 ```
 
-- **Active**: USDC locked. Buyer can release, seller can confirm delivery or refund.
-- **DeliveryConfirmed**: Dispute window starts. Buyer can release or dispute.
-- **AutoRelease**: Automatic when release window expires — no action needed.
-- **Disputed**: Arbiter resolves with `buyerPct` (0–100). Split applies to `amount - fee`.
-- **Refunded**: Buyer gets full deposit back including fee.
+## x402 Protocol Details
 
-## Authentication
-
-| Method | Header | Who uses it |
-|--------|--------|-------------|
-| API key | `X-API-KEY: xng_...` | Sellers creating orders, managing webhooks |
-| SIWE session | `Authorization: Bearer <jwt>` | Dashboard users (profile, API keys, payment links) |
-| No auth | — | Reputation lookup, escrow state, health |
-
-## x402 Payment Flow (Protocol Details)
-
-For SDK users this is handled automatically. For custom implementations:
+For custom implementations (SDK handles this automatically):
 
 ```
-1. POST /api/orders/:id/pay (no payment header)
+1. POST any-protected-endpoint (no payment header)
    ← 402 + PAYMENT-REQUIRED header (base64 JSON x402 envelope)
+   Contains: escrow contract, USDC address, amount, orderId, seller, releaseWindow
 
 2. Client signs ERC-3009 ReceiveWithAuthorization (EIP-712)
    domain: { name: "USDC", version: "2", chainId, verifyingContract: usdcAddress }
    message: { from, to (escrowVault), value, validAfter: 0, validBefore, nonce }
 
-3. POST /api/orders/:id/pay + PAYMENT-SIGNATURE header (base64 JSON)
-   → 200: { order, payment: { success, txHash, escrowId } }
+3. Retry same endpoint + PAYMENT-SIGNATURE header (base64 JSON)
+   → 200 + response data + PAYMENT-RESPONSE header (txHash, escrowId)
 ```
 
 ## Reference
 
-Full API endpoint specs, webhook format, fee system, reputation scoring, and error codes: see `references/api-reference.md`.
+Full API specs, webhook format, fee system, reputation scoring: see `references/api-reference.md`.
