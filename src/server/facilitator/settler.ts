@@ -140,10 +140,21 @@ export async function batchAutoReleaseOnChain(escrowIds: number[]): Promise<{ tx
     args: [escrowIds.map((id) => BigInt(id))],
   });
   const receipt = await getPublicClient().waitForTransactionReceipt({ hash: txHash });
-  // Count EscrowAutoReleased events to determine how many were released
-  const released = receipt.logs.filter(
-    (log) => log.address.toLowerCase() === config.escrowVaultAddress.toLowerCase()
-  ).length;
+  // Count only EscrowAutoReleased events (not USDC Transfer events)
+  let released = 0;
+  for (const log of receipt.logs) {
+    if (log.address.toLowerCase() !== config.escrowVaultAddress.toLowerCase()) continue;
+    try {
+      const decoded = decodeEventLog({
+        abi: escrowVaultAbi,
+        data: log.data,
+        topics: log.topics,
+      });
+      if (decoded.eventName === "EscrowAutoReleased") released++;
+    } catch {
+      // Not a vault event, skip
+    }
+  }
   return { txHash, released };
 }
 
