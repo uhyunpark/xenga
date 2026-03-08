@@ -1,6 +1,17 @@
-# Xenga API Reference
+# API Reference
 
-Complete endpoint reference for the Xenga API.
+Base URL: `https://api.xenga.xyz`
+
+## Authentication
+
+| Method | Header | Used for |
+|--------|--------|----------|
+| API key | `X-API-KEY: xng_...` | Order CRUD, webhooks (seller/operator) |
+| SIWE session | `Authorization: Bearer <jwt>` | Profile, API keys, payment links (dashboard) |
+| Wallet signature | `X-WALLET-ADDRESS` + `X-WALLET-SIGNATURE` + `X-WALLET-TIMESTAMP` | Dispute resolution (arbiter) |
+| No auth | — | Reputation, escrow state, health, payment link details |
+
+---
 
 ## Orders
 
@@ -29,6 +40,7 @@ Auth: X-API-KEY
 | `price` | number | Yes | USDC amount (e.g. 5.0, max 1,000,000) |
 | `serviceType` | string | Yes | Service type: `marketplace`, `agent-service`, `inference`, `tool-call`, `data-pipeline` |
 | `sellerAddress` | address | Yes | Seller's Ethereum address |
+| `terms` | string | No | Free-text terms. Hashed to `contentHash` (keccak256) and stored on-chain for dispute evidence. |
 
 **Response (201):**
 ```json
@@ -42,6 +54,7 @@ Auth: X-API-KEY
   "serviceType": "agent-service",
   "sellerAddress": "0x1234...abcd",
   "status": "created",
+  "contentHash": "0x...",
   "createdAt": 1710000000,
   "updatedAt": 1710000000
 }
@@ -192,6 +205,8 @@ Auth: X-API-KEY or Bearer JWT (seller only)
 }
 ```
 
+---
+
 ## Escrows
 
 ### Get Escrow State
@@ -217,11 +232,14 @@ Auth: none
   "deliveryConfirmedAt": 0,
   "disputeWindow": 259200,
   "facilitatorFee": "150000",
+  "contentHash": "0x...",
   "isReleasable": false
 }
 ```
 
 States: `None` (0), `Active` (1), `DeliveryConfirmed` (2), `Completed` (3), `AutoReleased` (4), `Disputed` (5), `Resolved` (6), `Refunded` (7)
+
+---
 
 ## Disputes
 
@@ -246,6 +264,13 @@ Auth: X-API-KEY
 ```
 
 Order must be in `escrowed` or `delivery_confirmed` state.
+
+### List Disputes
+
+```
+GET /api/disputes
+Auth: X-API-KEY
+```
 
 ### Resolve Dispute
 
@@ -276,6 +301,8 @@ Auth: Wallet signature (arbiter only)
   "sellerPct": 30
 }
 ```
+
+---
 
 ## Reputation
 
@@ -331,6 +358,8 @@ Auth: none
 | `days` | 90 | 1-365 | Lookback period |
 | `bucket` | 7 | 1-30 | Bucket size in days |
 
+---
+
 ## Sellers
 
 ### Register/Update Seller
@@ -363,6 +392,8 @@ Auth: none
 GET /api/sellers
 Auth: none
 ```
+
+---
 
 ## API Keys
 
@@ -405,6 +436,8 @@ DELETE /api/seller-api-keys/:id
 Auth: Bearer JWT
 ```
 
+---
+
 ## Webhooks
 
 ### Register Webhook
@@ -434,6 +467,8 @@ POST https://your-service.com/webhook
 Headers:
   Content-Type: application/json
   X-Webhook-Signature: sha256=<hmac-sha256 of body with secret>
+  X-Webhook-Event: escrow.released
+  X-Webhook-Id: <webhook-id>
 ```
 
 **Body:**
@@ -475,6 +510,8 @@ DELETE /api/webhooks/:id
 Auth: X-API-KEY or Bearer JWT
 ```
 
+---
+
 ## Payment Links
 
 ### Create Payment Link
@@ -490,9 +527,12 @@ Auth: Bearer JWT
   "title": "Premium AI Analysis",
   "description": "Deep analysis of your dataset",
   "price": 25.0,
-  "serviceType": "agent-service"
+  "serviceType": "agent-service",
+  "terms": "Results delivered within 1 hour. Refund if accuracy below 90%."
 }
 ```
+
+The optional `terms` field is hashed (`keccak256`) and stored on-chain as `contentHash` in the escrow when a buyer checks out.
 
 ### Get Payment Link Details (Public)
 
@@ -538,6 +578,8 @@ POST /api/payment-links/:id/deactivate
 Auth: Bearer JWT
 ```
 
+---
+
 ## Auth
 
 ### Get Nonce
@@ -564,7 +606,7 @@ Auth: none
 **Request:**
 ```json
 {
-  "message": "your-domain.com wants you to sign in with your Ethereum account: 0x...\n\nSign in to Xenga\n\nURI: https://your-domain.com\nVersion: 1\nChain ID: 84532\nNonce: a1b2c3d4e5f6...\nIssued At: 2024-03-10T00:00:00.000Z",
+  "message": "xenga.xyz wants you to sign in with your Ethereum account: 0x...\n\nSign in to Xenga\n\nURI: https://xenga.xyz\nVersion: 1\nChain ID: 84532\nNonce: a1b2c3d4e5f6...\nIssued At: 2024-03-10T00:00:00.000Z",
   "signature": "0x..."
 }
 ```
@@ -575,6 +617,8 @@ Auth: none
 ```
 
 JWT expires after 24 hours. Use as `Authorization: Bearer <token>`.
+
+---
 
 ## Demo
 
@@ -591,6 +635,8 @@ Auth: none (rate limited: 100 USDC/hr per IP+address)
 ```
 
 Sends 10 USDC + 0.005 ETH from operator wallet. Only available on testnets.
+
+---
 
 ## Health
 
@@ -610,6 +656,8 @@ Auth: none
 }
 ```
 
+---
+
 ## Fee System
 
 Fee is computed at escrow creation: `fee = (amount * feeBps) / 10000 + flatFee`
@@ -620,6 +668,21 @@ Fee is computed at escrow creation: `fee = (amount * feeBps) / 10000 + flatFee`
 - On refund: buyer gets full `amount` back (Xenga absorbs cost)
 - On dispute resolution: `buyerPct` split applies to `amount - fee`
 - Fee caps: max 10% + 50 USDC
+
+---
+
+## Header Reference
+
+| Header | Direction | Format | Description |
+|--------|-----------|--------|-------------|
+| `PAYMENT-REQUIRED` | Response (402) | base64 JSON | x402 envelope (`{ x402Version, accepts }`) |
+| `X-PAYMENT-REQUIRED` | Response (402) | base64 JSON | Legacy Xenga format (single requirement) |
+| `PAYMENT-SIGNATURE` | Request (retry) | base64 JSON | x402 signed ERC-3009 authorization |
+| `X-PAYMENT` | Request (retry) | base64 JSON | Legacy Xenga signed authorization |
+| `PAYMENT-RESPONSE` | Response (200) | base64 JSON | x402 settlement result (`{ transaction, network, payer }`) |
+| `X-PAYMENT-RESPONSE` | Response (200) | base64 JSON | Legacy Xenga settlement result (`{ txHash, escrowId }`) |
+
+---
 
 ## Error Codes
 
