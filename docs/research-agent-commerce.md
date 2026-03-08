@@ -478,7 +478,7 @@ import { createEscrowClient } from "@xenga/client";
 
 const client = createEscrowClient({
   privateKey: process.env.PRIVATE_KEY!,
-  serverUrl: "https://facilitator.your-domain.com",
+  serverUrl: "https://api.xenga.xyz",
   escrowVaultAddress: "0x...",
   chainId: 84532,
 });

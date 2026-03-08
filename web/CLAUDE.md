@@ -21,7 +21,7 @@ bun run start
 
 | Variable | Required | Description |
 |---|---|---|
-| `NEXT_PUBLIC_FACILITATOR_URL` | Yes (production) | URL of the Express facilitator (e.g. `https://facilitator.your-domain.com`). Empty for same-origin dev. |
+| `NEXT_PUBLIC_FACILITATOR_URL` | Yes (production) | URL of the Express facilitator (e.g. `https://api.xenga.xyz`). Empty for same-origin dev. |
 
 ## How It Works
 

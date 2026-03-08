@@ -11,7 +11,7 @@ primary_region = 'sjc'
 
 [env]
   CORS_ORIGIN = 'https://www.xenga.xyz'
-  DATABASE_PATH = '/data/x402-escrow.db'
+  DATABASE_PATH = '/data/xenga.db'
   PORT = '8080'
 
 [[mounts]]
