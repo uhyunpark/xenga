@@ -12,12 +12,15 @@ import { config } from "../config.js";
 import { logger } from "../services/logger.js";
 import { txQueue, getPublicClient } from "./txQueue.js";
 
+const ZERO_HASH: Hash = "0x0000000000000000000000000000000000000000000000000000000000000000";
+
 /**
  * Submit createEscrowWithAuth transaction on-chain
  * The operator (server) pays gas; the buyer's USDC is transferred via ERC-3009
  */
 export async function settleEscrow(
-  payload: EscrowPaymentPayload
+  payload: EscrowPaymentPayload,
+  contentHash?: Hash
 ): Promise<{ txHash: Hash; escrowId: number }> {
   const { v, r, s } = payload.signature;
 
@@ -31,6 +34,7 @@ export async function settleEscrow(
       BigInt(payload.value),
       payload.serviceType,
       BigInt(payload.releaseWindow),
+      contentHash ?? ZERO_HASH,
       payload.from,
       BigInt(payload.validAfter),
       BigInt(payload.validBefore),

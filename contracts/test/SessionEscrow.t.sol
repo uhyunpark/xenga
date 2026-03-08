@@ -3,10 +3,13 @@ pragma solidity ^0.8.24;
 
 import {Test, console2} from "forge-std/Test.sol";
 import {SessionEscrow} from "../src/SessionEscrow.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {MockUSDC} from "./mocks/MockUSDC.sol";
 
 contract SessionEscrowTest is Test {
     SessionEscrow public session;
+    SessionEscrow public sessionImpl;
     MockUSDC public usdc;
 
     address public facilitator = makeAddr("facilitator");
@@ -21,7 +24,12 @@ contract SessionEscrowTest is Test {
 
     function setUp() public {
         usdc = new MockUSDC();
-        session = new SessionEscrow(address(usdc), facilitator);
+        sessionImpl = new SessionEscrow();
+        ERC1967Proxy proxy = new ERC1967Proxy(
+            address(sessionImpl),
+            abi.encodeCall(SessionEscrow.initialize, (address(usdc), facilitator))
+        );
+        session = SessionEscrow(address(proxy));
 
         // Mint USDC to buyer
         usdc.mint(buyer, 100_000_000); // 100 USDC
@@ -313,5 +321,34 @@ contract SessionEscrowTest is Test {
         address newFacilitator = makeAddr("newFacilitator");
         session.setFacilitator(newFacilitator);
         assertEq(session.facilitator(), newFacilitator);
+    }
+
+    // ──────────── Test: UUPS Upgrade ────────────
+
+    function test_upgradeByOwner() public {
+        uint256 sessionId = _createSession();
+
+        SessionEscrow newImpl = new SessionEscrow();
+        session.upgradeToAndCall(address(newImpl), "");
+
+        // Storage preserved
+        SessionEscrow.Session memory s = session.getSession(sessionId);
+        assertEq(s.buyer, buyer);
+        assertEq(s.seller, seller);
+        assertEq(s.depositAmount, DEPOSIT);
+    }
+
+    function test_upgradeNotOwner_reverts() public {
+        SessionEscrow newImpl = new SessionEscrow();
+
+        address nonOwner = makeAddr("nonOwner");
+        vm.prank(nonOwner);
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, nonOwner));
+        session.upgradeToAndCall(address(newImpl), "");
+    }
+
+    function test_initializeCannotBeCalledTwice() public {
+        vm.expectRevert();
+        session.initialize(address(usdc), facilitator);
     }
 }

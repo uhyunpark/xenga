@@ -1,3 +1,4 @@
+import type { Hash } from "viem";
 import { config } from "../config.js";
 import { getScheme } from "../../shared/schemes.js";
 
@@ -36,13 +37,14 @@ export async function verifyViaFacilitator(
  */
 export async function settleViaFacilitator(
   payload: { scheme?: string; [key: string]: any },
-  paymentRequirement: { scheme?: string; [key: string]: any }
+  paymentRequirement: { scheme?: string; [key: string]: any },
+  contentHash?: Hash
 ): Promise<{ success: boolean; txHash?: string; escrowId?: unknown; network?: string; [key: string]: unknown }> {
   if (config.facilitatorUrl) {
     const res = await fetch(`${config.facilitatorUrl}/settle`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ payload, paymentRequirements: paymentRequirement }),
+      body: JSON.stringify({ payload, paymentRequirements: paymentRequirement, contentHash }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: "Settlement failed" })) as { error?: string };
@@ -57,5 +59,5 @@ export async function settleViaFacilitator(
   const scheme = getScheme(schemeName);
   if (!scheme) throw new Error(`Unknown scheme: ${schemeName}`);
 
-  return scheme.settle(payload);
+  return scheme.settle(payload, contentHash);
 }

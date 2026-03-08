@@ -34,14 +34,14 @@ docker run -p 8080:8080 --env-file .env xenga-facilitator
 
 ## Architecture
 
-On-chain escrow and reputation system on Base Sepolia using USDC (ERC-3009 gasless transfers). The Xenga protocol provides the HTTP integration layer.
+On-chain escrow and reputation system on Base Sepolia using USDC (ERC-3009 gasless transfers). The Xenga protocol provides the HTTP integration layer. Contracts use **UUPS upgradeable proxy pattern** (ERC1967Proxy + `initialize()`) for safe on-chain upgrades.
 
 **Split deployment:**
 - **`web/`** — Next.js 15 frontend deployed on **Vercel**. Pure client-side: pages, wallet management, EIP-712 signing, Protocol Inspector. Calls the facilitator API via `NEXT_PUBLIC_FACILITATOR_URL`.
-- **`src/server/`** — Express facilitator deployed on **GCP Cloud Run**. Handles all chain interaction: settlement, event listening, reputation, order management, SQLite DB. Runs with `PRIVATE_KEY` for gas.
+- **`src/server/`** — Express facilitator deployed on **Fly.io**. Handles all chain interaction: settlement, event listening, reputation, order management, SQLite DB. Runs with `PRIVATE_KEY` for gas.
 
 ```
-Vercel (web/)                    GCP Cloud Run (src/server/)
+Vercel (web/)                    Fly.io (src/server/)
 ┌──────────────────┐             ┌──────────────────────────┐
 │ Next.js Frontend │   fetch     │ Express Facilitator      │
 │ Pages + Signing  │────────────>│ REST API + Chain + SQLite│
@@ -53,7 +53,7 @@ Vercel (web/)                    GCP Cloud Run (src/server/)
 ```
 
 **Other layers:**
-- **`contracts/`** — Foundry project: EscrowVault (escrow state machine + stats), SessionEscrow (session micropayments), MockUSDC (test token)
+- **`contracts/`** — Foundry project: EscrowVault (escrow state machine + stats + UUPS upgradeable), SessionEscrow (session micropayments + UUPS upgradeable), MockUSDC (test token). Deployed behind ERC1967Proxy — `initialize()` replaces constructors. Storage gap (`uint256[48] private __gap;`) reserves slots for future upgrades.
 - **`src/client/`** — Client SDK: EIP-712 signing, reputation lookup (`getReputation()`), and xenga payment flow (`escrowFetch` with optional `onSellerReputation` callback)
 
 **Shared code** (`src/shared/`): types, constants, EIP-712 domain/types, and auto-generated ABIs (`abi.ts` — never edit manually, use `sync-abi`). The web app imports `@shared/` via webpack alias for types and EIP-712 signing functions (client-safe, no server deps).
@@ -67,7 +67,7 @@ None → Active → DeliveryConfirmed → Completed      (buyer releases)
          └───────────────────────────→ Refunded   (seller voluntary / arbiter)
 ```
 
-- **Active**: escrow created, USDC locked. Buyer can release anytime, seller/facilitator can confirm delivery or refund.
+- **Active**: escrow created, USDC locked, `contentHash` stored on-chain (keccak256 of order terms/metadata). Buyer can release anytime, seller/facilitator can confirm delivery or refund.
 - **DeliveryConfirmed**: seller/facilitator confirmed delivery, dispute window starts. Buyer can release or dispute.
 - **AutoRelease timing**: From Active state, requires `releaseWindow + disputeWindow`. From DeliveryConfirmed, requires `releaseWindow` from creation AND `disputeWindow` from delivery confirmation.
 - **Dispute timing**: From DeliveryConfirmed, within `disputeWindow` of confirmation. From Active, between `releaseWindow - disputeWindow` and `releaseWindow + disputeWindow` from creation.
@@ -127,6 +127,13 @@ All owner-callable setters. Ownership uses `Ownable2Step` — transfer requires 
 | Dispute window | EscrowVault | `setDisputeWindow(uint256)` | 3 days | 1 hour – 30 days |
 | Pause / unpause | EscrowVault, SessionEscrow | `pause()` / `unpause()` | unpaused | — |
 | Facilitator address | EscrowVault, SessionEscrow | `setFacilitator(address)` | address(0) | — |
+| UUPS upgrade | EscrowVault, SessionEscrow | `upgradeTo(address)` / `upgradeToAndCall(address, bytes)` | — | Owner only |
+
+**UUPS Upgrade procedure:**
+1. Deploy the new implementation contract (do NOT call `initialize()` on the implementation directly).
+2. Call `upgradeTo(newImplementation)` or `upgradeToAndCall(newImplementation, data)` on the **proxy** address. Only the owner can upgrade.
+3. The proxy address stays the same — all state is preserved. Use `Upgrade.s.sol` for scripted upgrades.
+4. **Safety**: Always verify storage layout compatibility before upgrading. The `__gap` (48 slots) provides room for new state variables without colliding with existing storage. Never reorder or remove existing state variables.
 
 **Design note — why `releaseWindow` is per-escrow but `disputeWindow` is a global default:**
 `releaseWindow` is a business timing parameter that must vary by service type (1h for agent-service, 7d for marketplace). It is computed by the server per-escrow from service types + reputation and stored in the escrow struct. `disputeWindow` is a consumer protection parameter — a uniform "cooling off period" — set globally by the owner so it cannot be manipulated by the facilitator on a per-escrow basis.
@@ -256,6 +263,9 @@ web/
 - **ABI source of truth**: Foundry artifacts in `contracts/out/` → run `sync-abi` to regenerate `src/shared/abi.ts`
 - **`disputeWindow` vs `releaseWindow`**: `releaseWindow` is per-escrow (set at creation from service type config). `disputeWindow` is a global owner-set default (applies to all new escrows, stored in each escrow struct at creation). Changing it post-deployment does not affect existing escrows.
 - **Workspaces**: root `package.json` has `"workspaces": ["packages/*", "web"]`; run `bun install` from root to link
+- **UUPS proxy pattern**: EscrowVault and SessionEscrow are deployed behind ERC1967Proxy. Constructors are disabled (`_disableInitializers()` in constructor); use `initialize()` instead. Deploy scripts (`Deploy.s.sol`, `DeployLocal.s.sol`) deploy implementation + proxy. `Upgrade.s.sol` handles upgrades. Never call `initialize()` on the implementation contract directly — only on the proxy.
+- **Storage gap**: Both contracts include `uint256[48] private __gap;` to reserve storage slots for future upgrades. When adding new state variables, reduce the gap size accordingly (e.g., adding 2 new `uint256` variables means changing `__gap` from `[48]` to `[46]`).
+- **`contentHash`**: `bytes32` field in the Escrow struct, set at creation time. Contains `keccak256` of the order terms/content metadata. Emitted in the `EscrowCreated` event. Provides tamper-proof evidence of agreed terms for dispute resolution. A value of `bytes32(0)` means no content hash was provided.
 
 ## Environment
 

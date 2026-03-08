@@ -18,6 +18,8 @@ interface OrderData {
   buyerAddress?: string;
   escrowId?: number;
   txHash?: string;
+  contentHash?: string;
+  contentMetadata?: string;
   createdAt: number;
 }
 

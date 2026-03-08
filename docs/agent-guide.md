@@ -140,6 +140,15 @@ Standard x402 does direct payment. Xenga uses x402 as the transport but settles 
 
 All of this is transparent to the agent. The agent signs the same `ReceiveWithAuthorization` — the difference is that `payTo` points to the EscrowVault contract instead of a seller wallet. The escrow lifecycle happens automatically after payment.
 
+### Content hash (tamper-proof terms)
+
+When an order includes `terms`, the facilitator computes `contentHash = keccak256(terms)` and stores it on-chain in the escrow. This provides immutable evidence of the agreed-upon terms:
+
+- The `contentHash` is emitted in the `EscrowCreated` event and readable via `GET /api/escrows/:escrowId`.
+- During a dispute, the arbiter can verify that the original terms match the on-chain hash.
+- Agents can verify the `contentHash` after payment by comparing `keccak256(terms)` against the on-chain value.
+- If no terms were provided, `contentHash` is `bytes32(0)`.
+
 ## After payment: escrow lifecycle
 
 The agent doesn't need to do anything for the happy path. After payment:
@@ -158,7 +167,7 @@ The agent can check escrow status:
 GET /api/escrows/{escrowId}
 ```
 
-Returns state (`Active`, `DeliveryConfirmed`, `Completed`, `AutoReleased`, `Disputed`, `Resolved`, `Refunded`), timing info, and `isReleasable` flag.
+Returns state (`Active`, `DeliveryConfirmed`, `Completed`, `AutoReleased`, `Disputed`, `Resolved`, `Refunded`), timing info, `isReleasable` flag, and `contentHash` (the keccak256 hash of the order terms, if provided). The agent can verify `contentHash` matches the expected terms to confirm the escrow was created with the correct agreement.
 
 ### Dispute path
 
@@ -234,7 +243,7 @@ For TypeScript agents that want a convenience wrapper, the `@xenga/client` packa
 import { escrowFetch } from "@xenga/client";
 
 const { response, payment } = await escrowFetch(
-  "https://api.example.com/api/orders/ORDER_ID/pay",
+  "https://api.xenga.xyz/api/orders/ORDER_ID/pay",
   { method: "POST" },
   { walletClient }
 );

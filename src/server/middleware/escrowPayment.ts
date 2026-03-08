@@ -38,8 +38,8 @@ function buildExpressDeps(): PaymentDeps {
     },
     getServiceType,
     verify: verifyViaFacilitator,
-    settle: async (payload, requirement) => {
-      const result = await settleViaFacilitator(payload, requirement);
+    settle: async (payload, requirement, contentHash) => {
+      const result = await settleViaFacilitator(payload, requirement, contentHash);
       return {
         txHash: result.txHash!,
         escrowId: result.escrowId as number,
@@ -73,6 +73,8 @@ export function escrowPaymentMiddleware() {
         getHeader: (name) => req.headers[name.toLowerCase()] as string | undefined,
         params: req.params as Record<string, string>,
         url: req.originalUrl,
+        method: req.method,
+        contentType: req.headers["content-type"] as string | undefined,
       },
       deps
     );

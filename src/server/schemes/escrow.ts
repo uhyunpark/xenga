@@ -1,3 +1,4 @@
+import type { Hash } from "viem";
 import type { PaymentScheme, PaymentRequirement, SettleResult } from "../../shared/schemes.js";
 import type { EscrowPaymentPayload } from "../../shared/types.js";
 import { verifyEscrowPayment } from "../facilitator/verifier.js";
@@ -25,9 +26,10 @@ export const escrowScheme: PaymentScheme = {
     return verifyEscrowPayment(payload as unknown as EscrowPaymentPayload);
   },
 
-  async settle(payload): Promise<SettleResult> {
+  async settle(payload, contentHash?: Hash): Promise<SettleResult> {
     const { txHash, escrowId } = await settleEscrow(
-      payload as unknown as EscrowPaymentPayload
+      payload as unknown as EscrowPaymentPayload,
+      contentHash
     );
     return { success: true, txHash, network: config.chainConfig.network, escrowId };
   },

@@ -32,11 +32,14 @@ export interface Order {
   description: string;
   price: bigint; // in USDC smallest unit (6 decimals)
   serviceType: string;
+  terms?: string; // optional free-text terms for dispute evidence
   sellerAddress: Address;
   buyerAddress?: Address;
   status: OrderStatus;
   escrowId?: number;
   txHash?: Hash;
+  contentMetadata?: string; // canonical JSON metadata (off-chain, for dispute review)
+  contentHash?: Hash; // keccak256 of contentMetadata (on-chain, tamper-proof)
   createdAt: number;
   updatedAt: number;
 }
@@ -55,6 +58,7 @@ export interface OnChainEscrow {
   deliveryConfirmedAt: bigint;
   disputeWindow: bigint;
   facilitatorFee: bigint;
+  contentHash: Hash;
 }
 
 // ──────────────────────── Stats ────────────────────────
@@ -196,6 +200,7 @@ export interface CreateOrderRequest {
   price: number; // USDC amount (e.g., 5.0)
   serviceType: string;
   sellerAddress: Address;
+  terms?: string; // optional free-text terms for dispute evidence
 }
 
 export interface DisputeRequest {

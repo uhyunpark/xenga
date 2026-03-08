@@ -11,6 +11,9 @@ export const SCHEMA = `
     status TEXT NOT NULL DEFAULT 'created',
     escrow_id INTEGER,
     tx_hash TEXT,
+    terms TEXT,
+    content_metadata TEXT,
+    content_hash TEXT,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
   );
@@ -93,6 +96,7 @@ export const SCHEMA = `
     description TEXT NOT NULL DEFAULT '',
     price TEXT NOT NULL,
     service_type TEXT NOT NULL DEFAULT 'marketplace',
+    terms TEXT,
     active INTEGER NOT NULL DEFAULT 1,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL

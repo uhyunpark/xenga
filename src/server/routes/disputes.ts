@@ -42,6 +42,8 @@ function handleFileDispute(req: import("express").Request, res: import("express"
   res.status(201).json({
     message: "Dispute filed",
     disputeId: id,
+    ...(order.contentMetadata ? { contentMetadata: order.contentMetadata } : {}),
+    ...(order.terms ? { terms: order.terms } : {}),
   });
 }
 

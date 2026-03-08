@@ -4,9 +4,10 @@ pragma solidity ^0.8.24;
 import {Script, console2} from "forge-std/Script.sol";
 import {EscrowVault} from "../src/EscrowVault.sol";
 import {SessionEscrow} from "../src/SessionEscrow.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /**
- * @notice Deploy all production contracts to Base Sepolia.
+ * @notice Deploy all production contracts to Base Sepolia via UUPS proxy pattern.
  *
  * Required env vars:
  *   PRIVATE_KEY          — deployer private key (hex, 0x-prefixed)
@@ -42,7 +43,7 @@ contract Deploy is Script {
         uint256 flatFee = vm.envOr("FEE_FLAT_USDC", uint256(0));
         address facilitator = vm.envOr("FACILITATOR_ADDRESS", deployer);
 
-        console2.log("=== Deploy to Base Sepolia ===");
+        console2.log("=== Deploy to Base Sepolia (UUPS Proxy) ===");
         console2.log("Deployer:         ", deployer);
         console2.log("USDC:             ", usdc);
         console2.log("Arbiter:          ", arbiter);
@@ -54,18 +55,31 @@ contract Deploy is Script {
 
         vm.startBroadcast(deployerKey);
 
-        EscrowVault vault = new EscrowVault(usdc, arbiter, feeRecipient, feeBps, flatFee);
+        // Deploy EscrowVault implementation + proxy
+        EscrowVault vaultImpl = new EscrowVault();
+        ERC1967Proxy vaultProxy = new ERC1967Proxy(
+            address(vaultImpl),
+            abi.encodeCall(EscrowVault.initialize, (usdc, arbiter, feeRecipient, feeBps, flatFee))
+        );
+        EscrowVault vault = EscrowVault(address(vaultProxy));
         vault.setFacilitator(facilitator);
-        console2.log("EscrowVault:       ", address(vault));
+        console2.log("EscrowVault impl:  ", address(vaultImpl));
+        console2.log("EscrowVault proxy: ", address(vaultProxy));
 
-        SessionEscrow session = new SessionEscrow(usdc, facilitator);
-        console2.log("SessionEscrow:     ", address(session));
+        // Deploy SessionEscrow implementation + proxy
+        SessionEscrow sessionImpl = new SessionEscrow();
+        ERC1967Proxy sessionProxy = new ERC1967Proxy(
+            address(sessionImpl),
+            abi.encodeCall(SessionEscrow.initialize, (usdc, facilitator))
+        );
+        console2.log("SessionEscrow impl:", address(sessionImpl));
+        console2.log("SessionEscrow prx: ", address(sessionProxy));
 
         vm.stopBroadcast();
 
         console2.log("---");
         console2.log("Next steps:");
-        console2.log("  1. Add to .env:  ESCROW_VAULT_ADDRESS=", address(vault));
+        console2.log("  1. Add to .env:  ESCROW_VAULT_ADDRESS=", address(vaultProxy));
         console2.log("  2. Run:          bun run sync-abi");
         console2.log("  3. Call setFacilitator() on SessionEscrow/EscrowVault if facilitator changes");
     }

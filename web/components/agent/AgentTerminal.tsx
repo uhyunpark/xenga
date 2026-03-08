@@ -255,6 +255,10 @@ export function AgentTerminal({ speed }: AgentTerminalProps) {
       addLine({ type: "success", text: `[settle] Tx: ${result.payment.txHash.slice(0, 14)}...`, delay: 0 });
       await wait(400);
       addLine({ type: "success", text: `[settle] Escrow ID: ${result.payment.escrowId}`, delay: 0 });
+      if (result.payment.contentHash) {
+        await wait(400);
+        addLine({ type: "success", text: `[settle] Evidence hash: ${result.payment.contentHash.slice(0, 14)}... (on-chain, tamper-proof)`, delay: 0 });
+      }
       await wait(1500);
 
       // Step 6: Auto-verify

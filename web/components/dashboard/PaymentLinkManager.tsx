@@ -24,6 +24,7 @@ export function PaymentLinkManager() {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [serviceType, setServiceType] = useState("marketplace");
+  const [terms, setTerms] = useState("");
   const [creating, setCreating] = useState(false);
   const [deactivating, setDeactivating] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +76,7 @@ export function PaymentLinkManager() {
           description: description.trim(),
           price: parseFloat(price),
           serviceType,
+          ...(terms.trim() && { terms: terms.trim() }),
         }),
       });
 
@@ -82,6 +84,7 @@ export function PaymentLinkManager() {
         setTitle("");
         setDescription("");
         setPrice("");
+        setTerms("");
         setServiceType("marketplace");
         setJustCreated(true);
         fetchLinks();
@@ -164,6 +167,18 @@ export function PaymentLinkManager() {
               placeholder="Brief description (optional)"
               maxLength={2000}
               rows={2}
+              className="mt-1 w-full resize-none rounded-lg border border-border-default bg-bg-primary px-3 py-2 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent/20"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-text-secondary">Terms (optional)</label>
+            <textarea
+              value={terms}
+              onChange={(e) => setTerms(e.target.value)}
+              placeholder="Payment terms, conditions, or deliverables. Hashed on-chain as dispute evidence."
+              maxLength={5000}
+              rows={3}
               className="mt-1 w-full resize-none rounded-lg border border-border-default bg-bg-primary px-3 py-2 text-sm outline-none transition-colors focus:border-accent focus:ring-1 focus:ring-accent/20"
             />
           </div>

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { getEscrow, isReleasable } from "../services/escrowService.js";
 import { EscrowState } from "../../shared/types.js";
+import { getDb } from "../db/index.js";
 
 const router = Router();
 
@@ -20,6 +21,12 @@ router.get("/:escrowId", async (req, res) => {
 
     const releasable = await isReleasable(escrowId);
 
+    // Look up contentMetadata from orders DB
+    const db = getDb();
+    const orderRow = db.prepare("SELECT content_metadata FROM orders WHERE escrow_id = ?").get(escrowId) as
+      | { content_metadata: string | null }
+      | undefined;
+
     res.json({
       escrowId,
       orderId: escrow.orderId,
@@ -34,6 +41,8 @@ router.get("/:escrowId", async (req, res) => {
       deliveryConfirmedAt: Number(escrow.deliveryConfirmedAt),
       disputeWindow: Number(escrow.disputeWindow),
       facilitatorFee: escrow.facilitatorFee.toString(),
+      contentHash: escrow.contentHash,
+      ...(orderRow?.content_metadata ? { contentMetadata: orderRow.content_metadata } : {}),
       isReleasable: releasable,
     });
   } catch (err) {

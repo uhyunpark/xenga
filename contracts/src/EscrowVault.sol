@@ -3,13 +3,14 @@ pragma solidity ^0.8.24;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IERC3009} from "./interfaces/IERC3009.sol";
 
 /**
  * @title EscrowVault
- * @notice Xenga escrow contract for USDC payments
+ * @notice Xenga escrow contract for USDC payments (UUPS upgradeable)
  * @dev Supports gasless deposits via ERC-3009 receiveWithAuthorization
  *
  * State Machine:
@@ -18,7 +19,7 @@ import {IERC3009} from "./interfaces/IERC3009.sol";
  *                 → Disputed → Resolved (arbiter split)
  *                 → Refunded (seller voluntary / arbiter)
  */
-contract EscrowVault is Ownable2Step, Pausable {
+contract EscrowVault is Ownable2StepUpgradeable, PausableUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
 
     // ──────────────────────────── Types ────────────────────────────
@@ -46,11 +47,12 @@ contract EscrowVault is Ownable2Step, Pausable {
         uint256 deliveryConfirmedAt;
         uint256 disputeWindow; // seconds from delivery confirmation for disputes
         uint256 facilitatorFee; // portion of amount going to feeRecipient on release
+        bytes32 contentHash; // keccak256 of canonical order metadata (tamper-proof evidence)
     }
 
     // ──────────────────────────── State ────────────────────────────
 
-    IERC20 public immutable usdc;
+    IERC20 public usdc;
     address public arbiter;
     address public facilitator;
     address public feeRecipient;
@@ -59,10 +61,10 @@ contract EscrowVault is Ownable2Step, Pausable {
     uint256 public constant MAX_FEE_BPS = 1000; // 10% cap
     uint256 public constant MAX_FLAT_FEE = 50_000_000; // 50 USDC cap (6 decimals)
 
-    uint256 public nextEscrowId = 1;
+    uint256 public nextEscrowId;
     mapping(uint256 => Escrow) public escrows;
 
-    uint256 public disputeWindow = 3 days; // owner-settable global default for new escrows
+    uint256 public disputeWindow;
     uint256 public constant MIN_DISPUTE_WINDOW = 1 hours;
     uint256 public constant MAX_DISPUTE_WINDOW = 30 days;
 
@@ -91,7 +93,8 @@ contract EscrowVault is Ownable2Step, Pausable {
         address seller,
         uint256 amount,
         uint256 facilitatorFee,
-        string serviceType
+        string serviceType,
+        bytes32 contentHash
     );
     event DeliveryConfirmed(uint256 indexed escrowId);
     event EscrowReleased(uint256 indexed escrowId, address releasedBy, uint256 sellerAmount, uint256 feeAmount);
@@ -122,18 +125,43 @@ contract EscrowVault is Ownable2Step, Pausable {
     error InvalidFeeRecipient();
     error InvalidDisputeWindow();
 
-    // ──────────────────────────── Constructor ──────────────────────
+    // ──────────────────────────── Constructor (disabled) ──────────
 
-    constructor(address _usdc, address _arbiter, address _feeRecipient, uint256 _feeBps, uint256 _flatFee) Ownable(msg.sender) {
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    // ──────────────────────────── Initializer ─────────────────────
+
+    function initialize(
+        address _usdc,
+        address _arbiter,
+        address _feeRecipient,
+        uint256 _feeBps,
+        uint256 _flatFee
+    ) external initializer {
         if (_feeBps > MAX_FEE_BPS) revert InvalidFee();
         if (_flatFee > MAX_FLAT_FEE) revert InvalidFee();
         if ((_feeBps > 0 || _flatFee > 0) && _feeRecipient == address(0)) revert InvalidFeeRecipient();
+
+        __Ownable_init(msg.sender);
+        __Ownable2Step_init();
+        __Pausable_init();
+        __UUPSUpgradeable_init();
+
         usdc = IERC20(_usdc);
         arbiter = _arbiter;
         feeRecipient = _feeRecipient;
         feeBps = _feeBps;
         flatFee = _flatFee;
+        nextEscrowId = 1;
+        disputeWindow = 3 days;
     }
+
+    // ──────────────────────────── UUPS ────────────────────────────
+
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 
     // ──────────────────────────── Modifiers ────────────────────────
 
@@ -166,6 +194,7 @@ contract EscrowVault is Ownable2Step, Pausable {
         uint256 amount,
         string calldata serviceType,
         uint256 releaseWindow,
+        bytes32 contentHash,
         // ERC-3009 params
         address from,
         uint256 validAfter,
@@ -181,7 +210,7 @@ contract EscrowVault is Ownable2Step, Pausable {
         // Execute ERC-3009 receiveWithAuthorization: transfers USDC from buyer to this contract
         IERC3009(address(usdc)).receiveWithAuthorization(from, address(this), amount, validAfter, validBefore, authNonce, v, r, s);
 
-        escrowId = _createEscrow(orderId, from, seller, amount, serviceType, releaseWindow);
+        escrowId = _createEscrow(orderId, from, seller, amount, serviceType, releaseWindow, contentHash);
     }
 
     /**
@@ -193,14 +222,15 @@ contract EscrowVault is Ownable2Step, Pausable {
         address seller,
         uint256 amount,
         string calldata serviceType,
-        uint256 releaseWindow
+        uint256 releaseWindow,
+        bytes32 contentHash
     ) external whenNotPaused returns (uint256 escrowId) {
         if (amount == 0) revert InvalidAmount();
         if (seller == address(0)) revert InvalidAddress();
 
         usdc.safeTransferFrom(msg.sender, address(this), amount);
 
-        escrowId = _createEscrow(orderId, msg.sender, seller, amount, serviceType, releaseWindow);
+        escrowId = _createEscrow(orderId, msg.sender, seller, amount, serviceType, releaseWindow, contentHash);
     }
 
     function _createEscrow(
@@ -209,7 +239,8 @@ contract EscrowVault is Ownable2Step, Pausable {
         address seller,
         uint256 amount,
         string calldata serviceType,
-        uint256 releaseWindow
+        uint256 releaseWindow,
+        bytes32 contentHash
     ) internal returns (uint256 escrowId) {
         if (buyer == seller) revert InvalidAddress();
         if (releaseWindow < disputeWindow) revert ReleaseWindowTooShort();
@@ -229,7 +260,8 @@ contract EscrowVault is Ownable2Step, Pausable {
             releaseWindow: releaseWindow,
             deliveryConfirmedAt: 0,
             disputeWindow: disputeWindow,
-            facilitatorFee: fee
+            facilitatorFee: fee,
+            contentHash: contentHash
         });
 
         sellerStats[seller].totalEscrows++;
@@ -239,7 +271,7 @@ contract EscrowVault is Ownable2Step, Pausable {
         serviceStats[serviceType].totalEscrows++;
         serviceStats[serviceType].totalAmount += amount;
 
-        emit EscrowCreated(escrowId, orderId, buyer, seller, amount, fee, serviceType);
+        emit EscrowCreated(escrowId, orderId, buyer, seller, amount, fee, serviceType, contentHash);
     }
 
     // ──────────────────────── Lifecycle ────────────────────────────
@@ -540,4 +572,8 @@ contract EscrowVault is Ownable2Step, Pausable {
     function getFeeConfig() external view returns (address, uint256, uint256) {
         return (feeRecipient, feeBps, flatFee);
     }
+
+    // ──────────────────────── Storage Gap ─────────────────────────
+
+    uint256[48] private __gap;
 }

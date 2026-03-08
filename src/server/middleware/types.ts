@@ -1,4 +1,4 @@
-import type { Address } from "viem";
+import type { Address, Hash } from "viem";
 import type {
   EscrowPaymentPayload,
   EscrowPaymentRequired,
@@ -22,6 +22,10 @@ export interface PaymentContext {
   params: Record<string, string>;
   /** Request URL (for x402 `resource` field). */
   url?: string;
+  /** HTTP method (GET, POST, etc.). */
+  method?: string;
+  /** Content-Type header value. */
+  contentType?: string;
 }
 
 /**
@@ -62,6 +66,8 @@ export interface OrderStatusUpdate {
   buyerAddress: Address;
   escrowId: number;
   txHash: `0x${string}`;
+  contentMetadata?: string;
+  contentHash?: Hash;
 }
 
 /**
@@ -92,7 +98,8 @@ export interface PaymentDeps {
   ): Promise<{ valid: boolean; error?: string }>;
   settle(
     payload: EscrowPaymentPayload,
-    requirement: EscrowPaymentRequired
+    requirement: EscrowPaymentRequired,
+    contentHash?: Hash
   ): Promise<{ txHash: string; escrowId: number }>;
 
   // ── Reputation (optional) ──

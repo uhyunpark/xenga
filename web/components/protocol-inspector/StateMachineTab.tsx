@@ -85,8 +85,13 @@ export function StateMachineTab() {
 
       {/* Legend */}
       {currentState && (
-        <div className="mt-8 text-xs text-text-tertiary">
-          Current state: <span className="font-semibold text-text-primary">{currentState}</span>
+        <div className="mt-8 space-y-1 text-center">
+          <div className="text-xs text-text-tertiary">
+            Current state: <span className="font-semibold text-text-primary">{currentState}</span>
+          </div>
+          <div className="text-[11px] text-text-tertiary">
+            Content hash stored on-chain as tamper-proof dispute evidence.
+          </div>
         </div>
       )}
       {!currentState && (

@@ -35,6 +35,7 @@ interface FlowState {
   orderId: string | null;
   escrowId: number | null;
   txHash: string | null;
+  contentHash: string | null;
   releaseTxHash: string | null;
   error: string | null;
   loading: boolean;
@@ -56,7 +57,7 @@ type FlowAction =
   | { type: "SET_ORDER"; orderId: string; orderData: any }
   | { type: "SET_PAYMENT_REQUIRED"; paymentRequired: PaymentRequired }
   | { type: "SET_PAYMENT_PAYLOAD"; paymentPayload: PaymentPayload }
-  | { type: "PAYMENT_COMPLETE"; escrowId: number; txHash: string }
+  | { type: "PAYMENT_COMPLETE"; escrowId: number; txHash: string; contentHash?: string }
   | { type: "SET_STEP"; step: BuyerStep }
   | { type: "SET_ERROR"; error: string }
   | { type: "CLEAR_ERROR" }
@@ -75,6 +76,7 @@ const initialState: FlowState = {
   orderId: null,
   escrowId: null,
   txHash: null,
+  contentHash: null,
   releaseTxHash: null,
   error: null,
   loading: false,
@@ -109,7 +111,7 @@ function reducer(state: FlowState, action: FlowAction): FlowState {
     case "SET_PAYMENT_PAYLOAD":
       return { ...state, paymentPayload: action.paymentPayload };
     case "PAYMENT_COMPLETE":
-      return { ...state, escrowId: action.escrowId, txHash: action.txHash, paySubStep: "locked", error: null };
+      return { ...state, escrowId: action.escrowId, txHash: action.txHash, contentHash: action.contentHash ?? state.contentHash, paySubStep: "locked", error: null };
     case "SET_STEP":
       return { ...state, step: action.step, error: null };
     case "SET_ERROR":
@@ -247,12 +249,13 @@ export function PaymentFlow() {
         orderId: state.orderId,
         escrowId: state.escrowId,
         txHash: state.txHash,
+        contentHash: state.contentHash,
         releaseTxHash: state.releaseTxHash,
         orderData: state.orderData,
         paymentRequired: state.paymentRequired,
       }));
     }
-  }, [state.step, state.product, state.orderId, state.escrowId, state.txHash, state.releaseTxHash, state.orderData, state.paymentRequired]);
+  }, [state.step, state.product, state.orderId, state.escrowId, state.txHash, state.contentHash, state.releaseTxHash, state.orderData, state.paymentRequired]);
 
   // ---- Delivery polling ----
   const deliveryOrderId = state.step === "tracking" && !state.deliveryConfirmed ? state.orderId : null;
@@ -450,6 +453,7 @@ export function PaymentFlow() {
         type: "PAYMENT_COMPLETE",
         escrowId: result.payment.escrowId,
         txHash: result.payment.txHash,
+        contentHash: result.payment.contentHash,
       });
       refreshBalances();
 
@@ -751,6 +755,7 @@ export function PaymentFlow() {
                 <TrackingStep
                   escrowId={state.escrowId}
                   txHash={state.txHash}
+                  contentHash={state.contentHash}
                   deliveryConfirmed={state.deliveryConfirmed}
                   disputeFiled={state.disputeFiled}
                   loading={!!state.loadingAction}
@@ -953,6 +958,13 @@ export function PaymentFlow() {
                   value={state.txHash ? <TxLink hash={state.txHash} label={`${state.txHash.slice(0, 12)}...`} className="text-xs" /> : "Pending"}
                   mono
                 />
+                {state.contentHash && (
+                  <MetaRow
+                    label="Evidence"
+                    value={<CopyableId value={state.contentHash} />}
+                    mono
+                  />
+                )}
                 <MetaRow label="Current Step" value={currentStepLabel} />
               </div>
             </div>

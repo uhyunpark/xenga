@@ -28,7 +28,7 @@ The **facilitator server** handles the xenga HTTP flow — it mediates between b
 ## Creating orders
 
 ```bash
-curl -X POST https://your-server/api/orders \
+curl -X POST https://api.xenga.xyz/api/orders \
   -H "Content-Type: application/json" \
   -H "X-API-KEY: sk_live_abc123" \
   -d '{
@@ -36,11 +36,12 @@ curl -X POST https://your-server/api/orders \
     "description": "A high-quality widget",
     "price": 25.00,
     "serviceType": "marketplace",
-    "sellerAddress": "0xYOUR_SELLER_ADDRESS"
+    "sellerAddress": "0xYOUR_SELLER_ADDRESS",
+    "terms": "Ships within 5 business days. 30-day return policy for defective items."
   }'
 ```
 
-The `sellerAddress` is where USDC will be sent when the escrow is released.
+The `sellerAddress` is where USDC will be sent when the escrow is released. The optional `terms` field is hashed (`keccak256`) and stored on-chain as `contentHash` in the escrow struct, providing tamper-proof evidence of agreed terms.
 
 ## Service types
 
@@ -84,7 +85,7 @@ import { createEscrowClient } from "@xenga/client";
 
 const client = createEscrowClient({
   privateKey: "0xSELLER_PRIVATE_KEY",
-  serverUrl: "https://your-server",
+  serverUrl: "https://api.xenga.xyz",
   escrowVaultAddress: "0xCONTRACT",
   chainId: 84532,
 });
@@ -116,7 +117,7 @@ Register webhooks to receive real-time notifications when escrow state changes.
 ### Register
 
 ```bash
-curl -X POST https://your-server/api/webhooks \
+curl -X POST https://api.xenga.xyz/api/webhooks \
   -H "Content-Type: application/json" \
   -H "X-API-KEY: sk_live_abc123" \
   -d '{
@@ -215,6 +216,31 @@ The server uses SQLite by default, but the `PaymentDeps` interface allows you to
 - `revertOrderClaim(id)` — revert on settlement failure
 
 See `src/server/middleware/types.ts` for the full `PaymentDeps` interface.
+
+## Transaction evidence (contentHash)
+
+When an order includes `terms` (or other content metadata), the server computes a `contentHash` (`keccak256` of the terms string) and stores it on-chain in the escrow struct. This provides tamper-proof evidence of the agreed-upon terms at the time of escrow creation.
+
+**How it works:**
+1. Seller includes `terms` when creating an order (e.g., delivery timeline, refund policy, service-level agreement).
+2. When the buyer pays, the facilitator computes `contentHash = keccak256(terms)` and passes it to `createEscrowWithAuth()`.
+3. The `contentHash` is stored immutably in the on-chain Escrow struct and emitted in the `EscrowCreated` event.
+4. During a dispute, the arbiter can verify that the original terms match the on-chain hash, preventing either party from altering the agreement after the fact.
+
+**Best practices:**
+- Include clear, specific terms for every order (delivery timelines, quality expectations, refund conditions).
+- For agent services, include the expected input/output format and SLA.
+- For marketplace orders, include shipping terms and return policy.
+- The `contentHash` is `bytes32(0)` when no terms are provided -- orders without terms still function normally but lack on-chain evidence for disputes.
+
+**Verifying a contentHash off-chain:**
+```typescript
+import { keccak256, toBytes } from "viem";
+
+const terms = "Ships within 5 business days. 30-day return policy.";
+const hash = keccak256(toBytes(terms));
+// Compare with on-chain escrow.contentHash
+```
 
 ## Security considerations
 

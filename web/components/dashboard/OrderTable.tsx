@@ -4,6 +4,8 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { shortenAddress } from "@/lib/utils";
 
+const ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000";
+
 interface OrderData {
   id: string;
   title: string;
@@ -13,6 +15,8 @@ interface OrderData {
   buyerAddress?: string;
   escrowId?: number;
   txHash?: string;
+  contentHash?: string;
+  contentMetadata?: string;
   createdAt: number;
 }
 
@@ -178,7 +182,20 @@ export function OrderTable({ orders, actionSlot }: OrderTableProps) {
                               : "\u2014"}
                           </p>
                         </div>
+                        {order.contentHash && order.contentHash !== ZERO_HASH && (
+                          <div>
+                            <span className="text-text-tertiary">Content Hash</span>
+                            <p className="truncate font-mono font-medium" title={order.contentHash}>
+                              {`${order.contentHash.slice(0, 10)}...`}
+                            </p>
+                          </div>
+                        )}
                       </div>
+
+                      {/* Evidence section */}
+                      {order.contentMetadata && (
+                        <EvidenceSection metadata={order.contentMetadata} />
+                      )}
 
                       {/* Action slot */}
                       {actionSlot && (
@@ -192,6 +209,46 @@ export function OrderTable({ orders, actionSlot }: OrderTableProps) {
               </AnimatePresence>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EvidenceSection({ metadata }: { metadata: string }) {
+  const [expanded, setExpanded] = useState(false);
+
+  let parsed: any = null;
+  try {
+    parsed = JSON.parse(metadata);
+  } catch {
+    // Not valid JSON, display as raw string
+  }
+
+  return (
+    <div className="mt-3 border-t border-border-default pt-3">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex w-full items-center justify-between text-xs text-text-tertiary transition-colors hover:text-text-secondary"
+      >
+        <span>View Evidence</span>
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          className={`transition-transform ${expanded ? "rotate-180" : ""}`}
+        >
+          <path d="M3 4.5l3 3 3-3" />
+        </svg>
+      </button>
+      {expanded && (
+        <div className="mt-2 max-h-48 overflow-auto rounded-lg border border-border-default bg-bg-primary p-2">
+          <pre className="whitespace-pre-wrap break-all font-mono text-[11px] text-text-secondary">
+            {parsed ? JSON.stringify(parsed, null, 2) : metadata}
+          </pre>
         </div>
       )}
     </div>

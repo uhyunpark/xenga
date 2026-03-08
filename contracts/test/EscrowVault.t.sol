@@ -3,11 +3,13 @@ pragma solidity ^0.8.24;
 
 import {Test, console2} from "forge-std/Test.sol";
 import {EscrowVault} from "../src/EscrowVault.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {MockUSDC} from "./mocks/MockUSDC.sol";
 
 contract EscrowVaultTest is Test {
     EscrowVault public vault;
+    EscrowVault public vaultImpl;
     MockUSDC public usdc;
 
     address public arbiter = makeAddr("arbiter");
@@ -21,6 +23,7 @@ contract EscrowVaultTest is Test {
     address public seller = makeAddr("seller");
 
     bytes32 constant ORDER_ID = keccak256("order-1");
+    bytes32 constant CONTENT_HASH = keccak256("test-content-metadata");
     uint256 constant AMOUNT = 5_000_000; // 5 USDC
     uint256 constant FEE_BPS = 100; // 1%
     uint256 constant FLAT_FEE = 50_000; // $0.05 USDC
@@ -30,7 +33,12 @@ contract EscrowVaultTest is Test {
 
     function setUp() public {
         usdc = new MockUSDC();
-        vault = new EscrowVault(address(usdc), arbiter, feeRecipient, FEE_BPS, FLAT_FEE);
+        vaultImpl = new EscrowVault();
+        ERC1967Proxy proxy = new ERC1967Proxy(
+            address(vaultImpl),
+            abi.encodeCall(EscrowVault.initialize, (address(usdc), arbiter, feeRecipient, FEE_BPS, FLAT_FEE))
+        );
+        vault = EscrowVault(address(proxy));
 
         vault.setFacilitator(facilitator);
 
@@ -38,12 +46,23 @@ contract EscrowVaultTest is Test {
         usdc.mint(buyer, 100_000_000); // 100 USDC
     }
 
+    // ──────────── Helper: deploy proxy with custom params ────────────
+
+    function _deployVault(address _arbiter, address _feeRecipient, uint256 _feeBps, uint256 _flatFee) internal returns (EscrowVault) {
+        EscrowVault impl = new EscrowVault();
+        ERC1967Proxy proxy = new ERC1967Proxy(
+            address(impl),
+            abi.encodeCall(EscrowVault.initialize, (address(usdc), _arbiter, _feeRecipient, _feeBps, _flatFee))
+        );
+        return EscrowVault(address(proxy));
+    }
+
     // ──────────── Helper: create escrow via approve ────────────
 
     function _createStandardEscrow() internal returns (uint256) {
         vm.startPrank(buyer);
         usdc.approve(address(vault), AMOUNT);
-        uint256 escrowId = vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW);
+        uint256 escrowId = vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW, CONTENT_HASH);
         vm.stopPrank();
         return escrowId;
     }
@@ -85,6 +104,7 @@ contract EscrowVaultTest is Test {
         assertEq(e.facilitatorFee, FEE);
         assertEq(uint256(e.state), uint256(EscrowVault.EscrowState.Active));
         assertEq(e.orderId, ORDER_ID);
+        assertEq(e.contentHash, CONTENT_HASH);
     }
 
     // ──────────── Test: ERC-3009 gasless deposit ────────────
@@ -99,7 +119,7 @@ contract EscrowVaultTest is Test {
 
         vm.prank(operator);
         uint256 escrowId = vault.createEscrowWithAuth(
-            ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW, buyer, validAfter, validBefore, nonce, v, r, s
+            ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW, CONTENT_HASH, buyer, validAfter, validBefore, nonce, v, r, s
         );
 
         assertEq(escrowId, 1);
@@ -108,6 +128,7 @@ contract EscrowVaultTest is Test {
         EscrowVault.Escrow memory e = vault.getEscrow(escrowId);
         assertEq(e.buyer, buyer);
         assertEq(e.seller, seller);
+        assertEq(e.contentHash, CONTENT_HASH);
     }
 
     // ──────────── Test: Happy path — create → confirm → release ────────────
@@ -153,7 +174,7 @@ contract EscrowVaultTest is Test {
         vm.warp(1000);
         vm.startPrank(buyer);
         usdc.approve(address(vault), AMOUNT);
-        uint256 escrowId = vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW);
+        uint256 escrowId = vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW, CONTENT_HASH);
         vm.stopPrank();
 
         // Cannot auto-release before releaseWindow + disputeWindow (Active state)
@@ -181,7 +202,7 @@ contract EscrowVaultTest is Test {
         // Create escrow with 7-day release window at t=1000
         vm.startPrank(buyer);
         usdc.approve(address(vault), AMOUNT);
-        uint256 escrowId = vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW);
+        uint256 escrowId = vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW, CONTENT_HASH);
         vm.stopPrank();
 
         // Seller confirms delivery at t=1000 + 6 days (near end of 7-day release window)
@@ -317,7 +338,7 @@ contract EscrowVaultTest is Test {
     function test_setFacilitatorNotOwner() public {
         address nonOwner = makeAddr("nonOwner");
         vm.prank(nonOwner);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonOwner));
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, nonOwner));
         vault.setFacilitator(makeAddr("newFacilitator"));
     }
 
@@ -386,14 +407,14 @@ contract EscrowVaultTest is Test {
     function test_cannotCreateWithZeroAmount() public {
         vm.prank(buyer);
         vm.expectRevert(EscrowVault.InvalidAmount.selector);
-        vault.createEscrow(ORDER_ID, seller, 0, "marketplace", RELEASE_WINDOW);
+        vault.createEscrow(ORDER_ID, seller, 0, "marketplace", RELEASE_WINDOW, CONTENT_HASH);
     }
 
     function test_cannotCreateWithZeroAddress() public {
         vm.startPrank(buyer);
         usdc.approve(address(vault), AMOUNT);
         vm.expectRevert(EscrowVault.InvalidAddress.selector);
-        vault.createEscrow(ORDER_ID, address(0), AMOUNT, "marketplace", RELEASE_WINDOW);
+        vault.createEscrow(ORDER_ID, address(0), AMOUNT, "marketplace", RELEASE_WINDOW, CONTENT_HASH);
         vm.stopPrank();
     }
 
@@ -401,7 +422,7 @@ contract EscrowVaultTest is Test {
         vm.startPrank(buyer);
         usdc.approve(address(vault), AMOUNT);
         vm.expectRevert(EscrowVault.ReleaseWindowTooShort.selector);
-        vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", 1 hours);
+        vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", 1 hours, CONTENT_HASH);
         vm.stopPrank();
     }
 
@@ -479,7 +500,7 @@ contract EscrowVaultTest is Test {
         vm.prank(operator);
         vm.expectRevert(); // MockUSDC AuthorizationExpired
         vault.createEscrowWithAuth(
-            ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW, buyer, validAfter, validBefore, nonce, v, r, s
+            ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW, CONTENT_HASH, buyer, validAfter, validBefore, nonce, v, r, s
         );
     }
 
@@ -493,7 +514,7 @@ contract EscrowVaultTest is Test {
 
         vm.prank(operator);
         vault.createEscrowWithAuth(
-            ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW, buyer, validAfter, validBefore, nonce, v, r, s
+            ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW, CONTENT_HASH, buyer, validAfter, validBefore, nonce, v, r, s
         );
 
         // Try to reuse the same nonce
@@ -505,6 +526,7 @@ contract EscrowVaultTest is Test {
             AMOUNT,
             "marketplace",
             RELEASE_WINDOW,
+            CONTENT_HASH,
             buyer,
             validAfter,
             validBefore,
@@ -519,7 +541,7 @@ contract EscrowVaultTest is Test {
         vm.warp(1000);
         vm.startPrank(buyer);
         usdc.approve(address(vault), AMOUNT);
-        uint256 escrowId = vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW);
+        uint256 escrowId = vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW, CONTENT_HASH);
         vm.stopPrank();
 
         assertFalse(vault.isReleasable(escrowId));
@@ -538,7 +560,7 @@ contract EscrowVaultTest is Test {
         usdc.mint(buyer, 100_000_000);
         vm.startPrank(buyer);
         usdc.approve(address(vault), 10_000_000);
-        uint256 id2 = vault.createEscrow(keccak256("order-2"), seller, 10_000_000, "agent-service", 3 days);
+        uint256 id2 = vault.createEscrow(keccak256("order-2"), seller, 10_000_000, "agent-service", 3 days, bytes32(0));
         vm.stopPrank();
 
         assertEq(id1, 1);
@@ -558,7 +580,7 @@ contract EscrowVaultTest is Test {
         usdc.approve(address(vault), AMOUNT);
         vm.expectRevert(EscrowVault.InvalidAddress.selector);
         // buyer == seller (msg.sender is buyer, and seller param is also buyer)
-        vault.createEscrow(ORDER_ID, buyer, AMOUNT, "marketplace", RELEASE_WINDOW);
+        vault.createEscrow(ORDER_ID, buyer, AMOUNT, "marketplace", RELEASE_WINDOW, CONTENT_HASH);
         vm.stopPrank();
     }
 
@@ -576,7 +598,7 @@ contract EscrowVaultTest is Test {
     function test_setArbiterNotOwner() public {
         address nonOwner = makeAddr("nonOwner");
         vm.prank(nonOwner);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonOwner));
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, nonOwner));
         vault.setArbiter(makeAddr("newArbiter"));
     }
 
@@ -587,7 +609,7 @@ contract EscrowVaultTest is Test {
 
         vm.startPrank(buyer);
         usdc.approve(address(vault), AMOUNT);
-        uint256 escrowId = vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW);
+        uint256 escrowId = vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW, CONTENT_HASH);
         vm.stopPrank();
 
         // Too early — before releaseWindow - disputeWindow
@@ -612,7 +634,7 @@ contract EscrowVaultTest is Test {
 
         vm.startPrank(buyer);
         usdc.approve(address(vault), AMOUNT);
-        uint256 escrowId = vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW);
+        uint256 escrowId = vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW, CONTENT_HASH);
         vm.stopPrank();
 
         // Just past releaseWindow — should fail because Active state requires releaseWindow + disputeWindow
@@ -644,7 +666,7 @@ contract EscrowVaultTest is Test {
         vm.startPrank(buyer);
         usdc.approve(address(vault), AMOUNT);
         vm.expectRevert(); // EnforcedPause
-        vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW);
+        vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW, CONTENT_HASH);
         vm.stopPrank();
     }
 
@@ -674,8 +696,6 @@ contract EscrowVaultTest is Test {
         assertEq(usdc.balanceOf(seller), expectedSellerAmount);
         assertEq(usdc.balanceOf(feeRecipient), FEE);
     }
-
-    // ──────────── Test: Fuzz — create escrow ────────────
 
     // ──────────── Test: Stats tracking ────────────
 
@@ -711,7 +731,7 @@ contract EscrowVaultTest is Test {
         vm.warp(1000);
         vm.startPrank(buyer);
         usdc.approve(address(vault), AMOUNT);
-        uint256 escrowId = vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW);
+        uint256 escrowId = vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW, CONTENT_HASH);
         vm.stopPrank();
 
         vm.warp(1000 + RELEASE_WINDOW + DISPUTE_WINDOW + 1);
@@ -780,7 +800,7 @@ contract EscrowVaultTest is Test {
         usdc.mint(buyer, 100_000_000);
         vm.startPrank(buyer);
         usdc.approve(address(vault), 10_000_000);
-        vault.createEscrow(keccak256("order-2"), seller, 10_000_000, "marketplace", RELEASE_WINDOW);
+        vault.createEscrow(keccak256("order-2"), seller, 10_000_000, "marketplace", RELEASE_WINDOW, CONTENT_HASH);
         vm.stopPrank();
 
         EscrowVault.Stats memory ss = vault.getSellerStats(seller);
@@ -794,7 +814,7 @@ contract EscrowVaultTest is Test {
         usdc.mint(buyer, 100_000_000);
         vm.startPrank(buyer);
         usdc.approve(address(vault), 10_000_000);
-        vault.createEscrow(keccak256("order-2"), seller, 10_000_000, "agent-service", 3 days);
+        vault.createEscrow(keccak256("order-2"), seller, 10_000_000, "agent-service", 3 days, bytes32(0));
         vm.stopPrank();
 
         EscrowVault.Stats memory mp = vault.getServiceTypeStats("marketplace");
@@ -837,7 +857,7 @@ contract EscrowVaultTest is Test {
         vm.warp(1000);
         vm.startPrank(buyer);
         usdc.approve(address(vault), AMOUNT);
-        uint256 escrowId = vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW);
+        uint256 escrowId = vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW, CONTENT_HASH);
         vm.stopPrank();
 
         vm.warp(1000 + RELEASE_WINDOW + DISPUTE_WINDOW + 1);
@@ -895,7 +915,7 @@ contract EscrowVaultTest is Test {
         usdc.mint(buyer, 100_000_000);
         vm.startPrank(buyer);
         usdc.approve(address(vault), 10_000_000);
-        vault.createEscrow(keccak256("order-2"), seller, 10_000_000, "marketplace", RELEASE_WINDOW);
+        vault.createEscrow(keccak256("order-2"), seller, 10_000_000, "marketplace", RELEASE_WINDOW, CONTENT_HASH);
         vm.stopPrank();
 
         EscrowVault.Stats memory bs = vault.getBuyerStats(buyer);
@@ -930,7 +950,7 @@ contract EscrowVaultTest is Test {
 
         vm.startPrank(buyer);
         usdc.approve(address(vault), amount);
-        uint256 escrowId = vault.createEscrow(ORDER_ID, seller, amount, "marketplace", RELEASE_WINDOW);
+        uint256 escrowId = vault.createEscrow(ORDER_ID, seller, amount, "marketplace", RELEASE_WINDOW, CONTENT_HASH);
         vm.stopPrank();
 
         EscrowVault.Escrow memory e = vault.getEscrow(escrowId);
@@ -955,7 +975,7 @@ contract EscrowVaultTest is Test {
 
     function test_setFeeConfigNotOwner() public {
         vm.prank(seller);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, seller));
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, seller));
         vault.setFeeConfig(makeAddr("x"), 200, 0);
     }
 
@@ -982,13 +1002,13 @@ contract EscrowVaultTest is Test {
     }
 
     function test_zeroFeeMode() public {
-        // Deploy a vault with zero fee
-        EscrowVault zeroFeeVault = new EscrowVault(address(usdc), arbiter, address(0), 0, 0);
+        // Deploy a vault with zero fee via proxy
+        EscrowVault zeroFeeVault = _deployVault(arbiter, address(0), 0, 0);
 
         usdc.mint(buyer, AMOUNT);
         vm.startPrank(buyer);
         usdc.approve(address(zeroFeeVault), AMOUNT);
-        uint256 escrowId = zeroFeeVault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW);
+        uint256 escrowId = zeroFeeVault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW, CONTENT_HASH);
         vm.stopPrank();
 
         EscrowVault.Escrow memory e = zeroFeeVault.getEscrow(escrowId);
@@ -1046,12 +1066,12 @@ contract EscrowVaultTest is Test {
         vm.assume(expectedFee < amount); // fee must not exceed amount
 
         address recipient = (bps > 0 || flat > 0) ? feeRecipient : address(0);
-        EscrowVault fuzzVault = new EscrowVault(address(usdc), arbiter, recipient, bps, flat);
+        EscrowVault fuzzVault = _deployVault(arbiter, recipient, bps, flat);
 
         usdc.mint(buyer, amount);
         vm.startPrank(buyer);
         usdc.approve(address(fuzzVault), amount);
-        uint256 escrowId = fuzzVault.createEscrow(ORDER_ID, seller, amount, "marketplace", RELEASE_WINDOW);
+        uint256 escrowId = fuzzVault.createEscrow(ORDER_ID, seller, amount, "marketplace", RELEASE_WINDOW, CONTENT_HASH);
         vm.stopPrank();
 
         EscrowVault.Escrow memory e = fuzzVault.getEscrow(escrowId);
@@ -1070,13 +1090,13 @@ contract EscrowVaultTest is Test {
     // ──────────── Test: Flat fee specific ────────────
 
     function test_flatFeeOnly() public {
-        // Deploy vault with feeBps=0, flatFee=50_000 ($0.05)
-        EscrowVault flatVault = new EscrowVault(address(usdc), arbiter, feeRecipient, 0, 50_000);
+        // Deploy vault with feeBps=0, flatFee=50_000 ($0.05) via proxy
+        EscrowVault flatVault = _deployVault(arbiter, feeRecipient, 0, 50_000);
 
         usdc.mint(buyer, AMOUNT);
         vm.startPrank(buyer);
         usdc.approve(address(flatVault), AMOUNT);
-        uint256 escrowId = flatVault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW);
+        uint256 escrowId = flatVault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW, CONTENT_HASH);
         vm.stopPrank();
 
         EscrowVault.Escrow memory e = flatVault.getEscrow(escrowId);
@@ -1092,13 +1112,13 @@ contract EscrowVaultTest is Test {
 
     function test_feeExceedsAmount() public {
         // Deploy vault with flatFee equal to AMOUNT — creating escrow should revert
-        EscrowVault bigFeeVault = new EscrowVault(address(usdc), arbiter, feeRecipient, 0, AMOUNT);
+        EscrowVault bigFeeVault = _deployVault(arbiter, feeRecipient, 0, AMOUNT);
 
         usdc.mint(buyer, AMOUNT);
         vm.startPrank(buyer);
         usdc.approve(address(bigFeeVault), AMOUNT);
         vm.expectRevert(EscrowVault.InvalidFee.selector);
-        bigFeeVault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW);
+        bigFeeVault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW, CONTENT_HASH);
         vm.stopPrank();
     }
 
@@ -1114,7 +1134,7 @@ contract EscrowVaultTest is Test {
         // New escrows use the updated window
         vm.startPrank(buyer);
         usdc.approve(address(vault), AMOUNT);
-        uint256 escrowId = vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", 1 days);
+        uint256 escrowId = vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", 1 days, CONTENT_HASH);
         vm.stopPrank();
         EscrowVault.Escrow memory e = vault.getEscrow(escrowId);
         assertEq(e.disputeWindow, newWindow);
@@ -1123,7 +1143,7 @@ contract EscrowVaultTest is Test {
     function test_setDisputeWindow_onlyOwner() public {
         address nonOwner = makeAddr("nonOwner");
         vm.prank(nonOwner);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonOwner));
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, nonOwner));
         vault.setDisputeWindow(1 days);
     }
 
@@ -1166,7 +1186,7 @@ contract EscrowVaultTest is Test {
         usdc.mint(buyer, AMOUNT);
         vm.startPrank(buyer);
         usdc.approve(address(vault), AMOUNT);
-        uint256 escrowId = vault.createEscrow(orderId, seller, AMOUNT, "marketplace", RELEASE_WINDOW);
+        uint256 escrowId = vault.createEscrow(orderId, seller, AMOUNT, "marketplace", RELEASE_WINDOW, CONTENT_HASH);
         vm.stopPrank();
         return escrowId;
     }
@@ -1241,7 +1261,7 @@ contract EscrowVaultTest is Test {
 
     function test_batchIsReleasable() public {
         uint256 id1 = _createEscrowAt(1000, keccak256("batch-r1"));
-        uint256 id2 = _createEscrowAt(1001, keccak256("batch-r2"));
+        uint256 id2 = _createEscrowAt(2000, keccak256("batch-r2"));
 
         // Only warp past id1's window, not id2's
         vm.warp(1000 + RELEASE_WINDOW + DISPUTE_WINDOW + 1);
@@ -1252,12 +1272,126 @@ contract EscrowVaultTest is Test {
 
         bool[] memory results = vault.batchIsReleasable(ids);
         assertTrue(results[0]);
-        assertFalse(results[1]); // id2 was created 1s later, needs 1 more second
+        assertFalse(results[1]); // id2 was created 1000s later
 
-        // Warp 1 more second — both should be releasable
-        vm.warp(1001 + RELEASE_WINDOW + DISPUTE_WINDOW + 1);
+        // Warp past id2's window — both should be releasable
+        vm.warp(2000 + RELEASE_WINDOW + DISPUTE_WINDOW + 1);
         results = vault.batchIsReleasable(ids);
         assertTrue(results[0]);
         assertTrue(results[1]);
+    }
+
+    // ──────────── Test: UUPS Upgrade ────────────
+
+    function test_upgradeByOwner() public {
+        // Create an escrow first
+        uint256 escrowId = _createStandardEscrow();
+        EscrowVault.Escrow memory eBefore = vault.getEscrow(escrowId);
+
+        // Deploy new implementation
+        EscrowVault newImpl = new EscrowVault();
+
+        // Upgrade (owner = address(this))
+        vault.upgradeToAndCall(address(newImpl), "");
+
+        // Storage should be preserved
+        EscrowVault.Escrow memory eAfter = vault.getEscrow(escrowId);
+        assertEq(eAfter.buyer, eBefore.buyer);
+        assertEq(eAfter.seller, eBefore.seller);
+        assertEq(eAfter.amount, eBefore.amount);
+        assertEq(eAfter.contentHash, eBefore.contentHash);
+        assertEq(uint256(eAfter.state), uint256(eBefore.state));
+    }
+
+    function test_upgradeNotOwner_reverts() public {
+        EscrowVault newImpl = new EscrowVault();
+
+        address nonOwner = makeAddr("nonOwner");
+        vm.prank(nonOwner);
+        vm.expectRevert(abi.encodeWithSelector(OwnableUpgradeable.OwnableUnauthorizedAccount.selector, nonOwner));
+        vault.upgradeToAndCall(address(newImpl), "");
+    }
+
+    function test_storagePreservedAfterUpgrade() public {
+        // Create multiple escrows
+        uint256 id1 = _createStandardEscrow();
+        usdc.mint(buyer, AMOUNT);
+        vm.startPrank(buyer);
+        usdc.approve(address(vault), AMOUNT);
+        uint256 id2 = vault.createEscrow(keccak256("order-2"), seller, AMOUNT, "agent-service", 3 days, bytes32(0));
+        vm.stopPrank();
+
+        // Release one
+        vm.prank(buyer);
+        vault.releaseFunds(id1);
+
+        // Capture state
+        uint256 nextId = vault.nextEscrowId();
+        EscrowVault.Stats memory sellerStatsBefore = vault.getSellerStats(seller);
+
+        // Upgrade
+        EscrowVault newImpl = new EscrowVault();
+        vault.upgradeToAndCall(address(newImpl), "");
+
+        // Verify all state preserved
+        assertEq(vault.nextEscrowId(), nextId);
+        assertEq(vault.arbiter(), arbiter);
+        assertEq(vault.facilitator(), facilitator);
+        assertEq(vault.disputeWindow(), 3 days);
+
+        EscrowVault.Stats memory sellerStatsAfter = vault.getSellerStats(seller);
+        assertEq(sellerStatsAfter.totalEscrows, sellerStatsBefore.totalEscrows);
+        assertEq(sellerStatsAfter.completedCount, sellerStatsBefore.completedCount);
+
+        EscrowVault.Escrow memory e2 = vault.getEscrow(id2);
+        assertEq(uint256(e2.state), uint256(EscrowVault.EscrowState.Active));
+        assertEq(e2.amount, AMOUNT);
+    }
+
+    function test_initializeCannotBeCalledTwice() public {
+        vm.expectRevert();
+        vault.initialize(address(usdc), arbiter, feeRecipient, FEE_BPS, FLAT_FEE);
+    }
+
+    // ──────────── Test: ContentHash ────────────
+
+    function test_contentHashStoredAndEmitted() public {
+        bytes32 hash = keccak256("my-content-metadata-json");
+
+        vm.startPrank(buyer);
+        usdc.approve(address(vault), AMOUNT);
+        uint256 escrowId = vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW, hash);
+        vm.stopPrank();
+
+        EscrowVault.Escrow memory e = vault.getEscrow(escrowId);
+        assertEq(e.contentHash, hash);
+    }
+
+    function test_contentHashCanBeZero() public {
+        vm.startPrank(buyer);
+        usdc.approve(address(vault), AMOUNT);
+        uint256 escrowId = vault.createEscrow(ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW, bytes32(0));
+        vm.stopPrank();
+
+        EscrowVault.Escrow memory e = vault.getEscrow(escrowId);
+        assertEq(e.contentHash, bytes32(0));
+    }
+
+    function test_contentHashWithAuth() public {
+        bytes32 hash = keccak256("auth-content-metadata");
+        bytes32 nonce = keccak256("nonce-hash-test");
+        uint256 validAfter = 0;
+        uint256 validBefore = type(uint256).max;
+
+        (uint8 v, bytes32 r, bytes32 s) =
+            _signReceiveAuth(buyerPk, buyer, address(vault), AMOUNT, validAfter, validBefore, nonce);
+
+        vm.prank(operator);
+        uint256 escrowId = vault.createEscrowWithAuth(
+            ORDER_ID, seller, AMOUNT, "marketplace", RELEASE_WINDOW, hash, buyer, validAfter, validBefore, nonce, v, r, s
+        );
+
+        EscrowVault.Escrow memory e = vault.getEscrow(escrowId);
+        assertEq(e.contentHash, hash);
     }
 }

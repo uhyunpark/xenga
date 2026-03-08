@@ -1,11 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useInspector } from "@/lib/protocol-inspector/context";
 import { useAutoScroll } from "@/lib/protocol-inspector/useAutoScroll";
 import { TxLink } from "@/components/ui/TxLink";
 import { Badge } from "@/components/ui/Badge";
 import { isMockChainClient } from "@/lib/env/isMockChainClient";
+
+const ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
 export function OnChainTab() {
   const { events } = useInspector();
@@ -82,6 +84,9 @@ function TxEventCard({ event }: { event: any }) {
             <span className="font-mono text-sm text-accent-purple">#{String(data.escrowId)}</span>
           </div>
         )}
+        {data.contentHash && data.contentHash !== ZERO_HASH && (
+          <ContentHashRow hash={data.contentHash} />
+        )}
         {data.args && (
           <div>
             <span className="text-xs text-text-tertiary">Function Arguments</span>
@@ -96,6 +101,40 @@ function TxEventCard({ event }: { event: any }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function ContentHashRow({ hash }: { hash: string }) {
+  const [copied, setCopied] = useState(false);
+  const truncated = `${hash.slice(0, 10)}...${hash.slice(-6)}`;
+
+  const copy = () => {
+    navigator.clipboard.writeText(hash);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-text-tertiary w-20">Evidence</span>
+      <span className="font-mono text-xs text-text-secondary">{truncated}</span>
+      <button
+        onClick={copy}
+        className="text-text-tertiary transition-colors hover:text-text-primary"
+        title="Copy full content hash"
+      >
+        {copied ? (
+          <svg className="h-3 w-3 text-success" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M4 8l3 3 5-5" />
+          </svg>
+        ) : (
+          <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <rect x="5" y="5" width="8" height="8" rx="1" />
+            <path d="M3 11V3h8" />
+          </svg>
+        )}
+      </button>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from "uuid";
-import { keccak256, toHex, parseUnits, type Address, type Hash } from "viem";
+import { keccak256, toHex, toBytes, parseUnits, type Address, type Hash } from "viem";
 import type {
   CreateOrderRequest,
   Order,
@@ -21,9 +21,21 @@ function toOrder(row: any): Order {
     status: row.status as OrderStatus,
     escrowId: row.escrow_id ?? undefined,
     txHash: row.tx_hash as Hash | undefined,
+    terms: row.terms ?? undefined,
+    contentMetadata: row.content_metadata ?? undefined,
+    contentHash: row.content_hash as Hash | undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+/**
+ * Compute a deterministic content hash from metadata.
+ * Uses sorted-key JSON serialization (no whitespace) + keccak256.
+ */
+export function computeContentHash(metadata: object): Hash {
+  const canonical = JSON.stringify(metadata, Object.keys(metadata).sort());
+  return keccak256(toBytes(canonical));
 }
 
 export function createOrder(req: CreateOrderRequest): Order {
@@ -34,8 +46,8 @@ export function createOrder(req: CreateOrderRequest): Order {
   const now = Math.floor(Date.now() / 1000);
 
   db.prepare(
-    `INSERT INTO orders (id, order_id, title, description, price, service_type, seller_address, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'created', ?, ?)`
+    `INSERT INTO orders (id, order_id, title, description, price, service_type, seller_address, terms, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'created', ?, ?)`
   ).run(
     id,
     orderId,
@@ -44,6 +56,7 @@ export function createOrder(req: CreateOrderRequest): Order {
     price.toString(),
     req.serviceType,
     req.sellerAddress,
+    req.terms ?? null,
     now,
     now
   );
@@ -109,6 +122,8 @@ export function updateOrderStatus(
     buyerAddress?: Address;
     escrowId?: number;
     txHash?: Hash;
+    contentMetadata?: string;
+    contentHash?: Hash;
   }
 ): Order | undefined {
   const db = getDb();
@@ -127,6 +142,14 @@ export function updateOrderStatus(
   if (update.txHash) {
     sets.push("tx_hash = ?");
     params.push(update.txHash);
+  }
+  if (update.contentMetadata) {
+    sets.push("content_metadata = ?");
+    params.push(update.contentMetadata);
+  }
+  if (update.contentHash) {
+    sets.push("content_hash = ?");
+    params.push(update.contentHash);
   }
 
   params.push(id);

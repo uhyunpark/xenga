@@ -40,6 +40,7 @@ export interface PaymentResponse {
   success: boolean;
   txHash: Hash;
   escrowId: number;
+  contentHash?: Hash;
 }
 
 type EventEmitter = (event: Omit<InspectorEvent, "id" | "timestamp">) => void;
@@ -282,6 +283,7 @@ export async function submitPayment(
       success: Boolean(raw.success),
       txHash: raw.txHash ?? raw.transaction,
       escrowId: Number(raw.escrowId),
+      contentHash: raw.contentHash,
     };
   }
 
@@ -305,6 +307,7 @@ export async function submitPayment(
       data: {
         txHash: paymentResponse.txHash,
         escrowId: paymentResponse.escrowId,
+        contentHash: paymentResponse.contentHash,
         function: "createEscrowWithAuth",
       },
     });

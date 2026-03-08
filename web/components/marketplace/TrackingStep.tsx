@@ -20,6 +20,7 @@ const TRACKING_EVENTS: TrackingEvent[] = [
 interface TrackingStepProps {
   escrowId: number | null;
   txHash: string | null;
+  contentHash?: string | null;
   deliveryConfirmed: boolean;
   disputeFiled: boolean;
   loading: boolean;
@@ -28,9 +29,12 @@ interface TrackingStepProps {
   onDispute: () => void;
 }
 
+const ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000";
+
 export function TrackingStep({
   escrowId,
   txHash,
+  contentHash,
   deliveryConfirmed,
   disputeFiled,
   loading,
@@ -244,6 +248,14 @@ export function TrackingStep({
                       {txHash.slice(0, 10)}...
                     </a>
                   )}
+                </div>
+              )}
+              {contentHash && contentHash !== ZERO_HASH && (
+                <div className="flex justify-between">
+                  <span className="text-text-tertiary">Evidence Hash</span>
+                  <span className="font-mono text-text-secondary" title={contentHash}>
+                    {contentHash.slice(0, 10)}...{contentHash.slice(-4)}
+                  </span>
                 </div>
               )}
             </motion.div>

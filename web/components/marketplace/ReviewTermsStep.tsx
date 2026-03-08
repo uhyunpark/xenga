@@ -112,6 +112,12 @@ export function ReviewTermsStep({
             </svg>
             Full refund if seller cancels
           </li>
+          <li className="flex items-start gap-1.5">
+            <svg className="mt-0.5 h-3 w-3 shrink-0 text-success" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M4 8l3 3 5-5" />
+            </svg>
+            Order details hashed on-chain as tamper-proof dispute evidence
+          </li>
         </ul>
       </div>
 

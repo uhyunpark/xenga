@@ -14,6 +14,65 @@ The app defaults to **Base Sepolia** (chain ID 84532) with USDC at `0x036CbD5384
 
 ---
 
+## Smart Contract Deployment (UUPS Proxy)
+
+EscrowVault and SessionEscrow use the **UUPS upgradeable proxy pattern** (ERC1967Proxy). This means each contract is deployed as two contracts: an **implementation** (the logic) and a **proxy** (the entry point that holds all state). Users and the facilitator interact only with the proxy address.
+
+### Initial deployment
+
+The deploy scripts (`Deploy.s.sol` for Base Sepolia, `DeployLocal.s.sol` for local Anvil) handle the full proxy deployment:
+
+1. Deploy the implementation contract (constructor calls `_disableInitializers()` to prevent direct initialization).
+2. Deploy an ERC1967Proxy pointing to the implementation, with `initialize()` calldata.
+3. The `initialize()` function replaces the traditional constructor -- it sets USDC address, arbiter, fees, and owner.
+
+```bash
+# Deploy to Base Sepolia
+bun run deploy
+
+# Deploy to local Anvil
+bun run deploy:local
+```
+
+The deploy script logs the **proxy address** -- this is the `ESCROW_VAULT_ADDRESS` you set in `.env`.
+
+### Upgrading contracts
+
+Use `Upgrade.s.sol` to upgrade an existing deployment to a new implementation:
+
+```bash
+# Upgrade EscrowVault on Base Sepolia
+forge script script/Upgrade.s.sol \
+  --fork-url $BASE_SEPOLIA_RPC \
+  --private-key $PRIVATE_KEY \
+  --broadcast
+```
+
+**How it works:**
+1. Deploys a new implementation contract.
+2. Calls `upgradeTo(newImplementation)` on the existing proxy.
+3. The proxy address stays the same -- all state (escrows, stats, configuration) is preserved.
+4. No changes needed in `.env` or facilitator configuration.
+
+**Safety checklist before upgrading:**
+- Verify storage layout compatibility: never reorder, rename, or remove existing state variables.
+- New state variables must be appended after existing ones, using slots from the `__gap` (reduce gap size accordingly).
+- Test the upgrade on a fork first: `forge script script/Upgrade.s.sol --fork-url $BASE_SEPOLIA_RPC` (without `--broadcast`).
+- The upgrade is owner-only (`_authorizeUpgrade` checks `onlyOwner`).
+- After upgrading, verify the proxy still works: `curl https://api.xenga.xyz/health`.
+
+### Storage layout
+
+Both contracts include a storage gap for future-proofing:
+
+```solidity
+uint256[48] private __gap;
+```
+
+This reserves 48 storage slots. When adding new state variables in an upgrade, reduce the gap size by the number of slots consumed. For example, adding 2 new `uint256` variables means changing `__gap` from `[48]` to `[46]`.
+
+---
+
 ## Deploying the Facilitator to Fly.io
 
 ### Prerequisites
@@ -77,7 +136,7 @@ This builds the Docker image, pushes it to Fly.io's registry, and starts the mac
 ```bash
 fly status         # Machine status
 fly logs           # Stream logs
-curl https://xenga-facilitator.fly.dev/health
+curl https://api.xenga.xyz/health
 ```
 
 The `/health` endpoint returns chain info, operator ETH balance, and server status. If operator ETH is low it will show `"degraded"`.
@@ -89,14 +148,14 @@ The `/health` endpoint returns chain info, operator ETH balance, and server stat
 Set this environment variable in your Vercel project for `web/`:
 
 ```
-NEXT_PUBLIC_FACILITATOR_URL=https://xenga-facilitator.fly.dev
+NEXT_PUBLIC_FACILITATOR_URL=https://api.xenga.xyz
 ```
 
-Then tighten CORS in `fly.toml` (currently `*`) to your Vercel domain:
+Then tighten CORS in `fly.toml` (currently `*`) to your frontend domain:
 
 ```toml
 [env]
-  CORS_ORIGIN = "https://your-app.vercel.app"
+  CORS_ORIGIN = "https://www.xenga.xyz"
 ```
 
 Redeploy the facilitator after this change: `fly deploy`.

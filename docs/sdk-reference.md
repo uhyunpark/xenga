@@ -18,7 +18,7 @@ Drop-in `fetch()` wrapper that handles the xenga 402 payment flow automatically.
 import { escrowFetch } from "@xenga/client";
 
 const { response, payment } = await escrowFetch(
-  "https://api.example.com/api/orders/ORDER_ID/pay",
+  "https://api.xenga.xyz/api/orders/ORDER_ID/pay",
   { method: "POST" },
   { walletClient }
 );
@@ -83,7 +83,7 @@ import { createEscrowClient } from "@xenga/client";
 
 const client = createEscrowClient({
   privateKey: "0xYOUR_PRIVATE_KEY",
-  serverUrl: "https://api.example.com",
+  serverUrl: "https://api.xenga.xyz",
   escrowVaultAddress: "0xCONTRACT_ADDRESS",
 });
 ```
@@ -300,7 +300,7 @@ import { discoverServices, screenSeller, autoPayAndVerify } from "@xenga/client/
 Discover available services and capabilities from a facilitator.
 
 ```typescript
-const info = await discoverServices("https://facilitator.example.com");
+const info = await discoverServices("https://api.xenga.xyz");
 console.log(info.serviceTypes); // [{ name: "agent-service", releaseWindow: 3600, ... }]
 ```
 
@@ -328,7 +328,7 @@ interface ServiceInfo {
 Screen a seller's reputation before paying.
 
 ```typescript
-const result = await screenSeller("https://facilitator.example.com", "0x...", 70);
+const result = await screenSeller("https://api.xenga.xyz", "0x...", 70);
 if (!result.acceptable) {
   console.log(`Seller score ${result.score} below minimum 70`);
 }
@@ -358,7 +358,7 @@ One-call payment + data retrieval for agent-to-agent commerce. Combines seller s
 
 ```typescript
 const result = await autoPayAndVerify(
-  "https://api.example.com/inference",
+  "https://api.xenga.xyz/inference",
   { method: "POST", body: JSON.stringify({ prompt: "hello" }) },
   { walletClient, minSellerReputation: 60 }
 );
@@ -501,6 +501,7 @@ interface OnChainEscrow {
   deliveryConfirmedAt: bigint;
   disputeWindow: bigint;
   facilitatorFee: bigint;
+  contentHash: Hash;       // keccak256 of order terms/metadata; bytes32(0) if none provided
 }
 ```
 

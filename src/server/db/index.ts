@@ -20,6 +20,12 @@ function runMigrations(db: Database) {
   try { db.exec("ALTER TABLE sellers ADD COLUMN payout_address TEXT"); } catch { /* already exists */ }
   // Add seller_address to webhooks table
   try { db.exec("ALTER TABLE webhooks ADD COLUMN seller_address TEXT"); } catch { /* already exists */ }
+  // Add content hash columns to orders table
+  try { db.exec("ALTER TABLE orders ADD COLUMN terms TEXT"); } catch { /* already exists */ }
+  try { db.exec("ALTER TABLE orders ADD COLUMN content_metadata TEXT"); } catch { /* already exists */ }
+  try { db.exec("ALTER TABLE orders ADD COLUMN content_hash TEXT"); } catch { /* already exists */ }
+  // Add terms to payment_links table
+  try { db.exec("ALTER TABLE payment_links ADD COLUMN terms TEXT"); } catch { /* already exists */ }
 }
 
 export function closeDb() {

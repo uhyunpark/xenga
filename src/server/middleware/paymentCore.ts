@@ -1,4 +1,4 @@
-import type { Address, Hash } from "viem";
+import { type Address, type Hash, keccak256, toBytes } from "viem";
 import type {
   EscrowPaymentPayload,
   EscrowPaymentRequired,
@@ -229,9 +229,26 @@ export async function processEscrowPayment(
     };
   }
 
+  // ── Assemble content metadata + hash ──
+  const contentMetadataObj: Record<string, unknown> = {
+    buyer: payload.from,
+    contentType: ctx.contentType,
+    description: order.description,
+    method: ctx.method,
+    price: order.price.toString(),
+    seller: order.sellerAddress,
+    serviceType: order.serviceType,
+    terms: order.terms,
+    timestamp: Math.floor(Date.now() / 1000),
+    title: order.title,
+    url: ctx.url,
+  };
+  const contentMetadata = JSON.stringify(contentMetadataObj, Object.keys(contentMetadataObj).sort());
+  const contentHash = keccak256(toBytes(contentMetadata));
+
   // ── Settle on-chain ──
   try {
-    const settleResult = await deps.settle(payload, paymentRequired);
+    const settleResult = await deps.settle(payload, paymentRequired, contentHash);
     const txHash = settleResult.txHash as `0x${string}`;
     const escrowId = settleResult.escrowId;
 
@@ -240,6 +257,8 @@ export async function processEscrowPayment(
       buyerAddress: payload.from,
       escrowId,
       txHash,
+      contentMetadata,
+      contentHash,
     });
 
     const paymentResponse = { success: true, txHash, escrowId };

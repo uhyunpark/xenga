@@ -33,6 +33,7 @@ export async function getEscrow(escrowId: number): Promise<OnChainEscrow> {
     deliveryConfirmedAt: BigInt((r["deliveryConfirmedAt"] ?? r[8] ?? 0) as string | number | bigint),
     disputeWindow: BigInt((r["disputeWindow"] ?? r[9] ?? 0) as string | number | bigint),
     facilitatorFee: BigInt((r["facilitatorFee"] ?? r[10] ?? 0) as string | number | bigint),
+    contentHash: (r["contentHash"] ?? r[11] ?? "0x0000000000000000000000000000000000000000000000000000000000000000") as Hash,
   };
 }
 

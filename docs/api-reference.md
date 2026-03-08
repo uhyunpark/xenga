@@ -47,7 +47,8 @@ Create a new order.
   "description": "A fine widget",
   "price": 5.0,
   "serviceType": "marketplace",
-  "sellerAddress": "0x..."
+  "sellerAddress": "0x...",
+  "terms": "Deliver within 3 business days. Full refund if defective."
 }
 ```
 
@@ -58,6 +59,7 @@ Create a new order.
 | `price` | number | Yes | USDC amount (e.g., 5.0). Max 1,000,000 |
 | `serviceType` | string | Yes | `"marketplace"` or `"agent-service"` |
 | `sellerAddress` | address | Yes | Valid Ethereum address |
+| `terms` | string | No | Free-text terms of service. Hashed to `contentHash` (keccak256) and stored on-chain in the escrow for tamper-proof dispute evidence. |
 
 **Response (201):**
 ```json
@@ -70,6 +72,8 @@ Create a new order.
   "status": "created",
   "serviceType": "marketplace",
   "sellerAddress": "0x...",
+  "terms": "Deliver within 3 business days. Full refund if defective.",
+  "contentHash": "0x...",
   "createdAt": 1700000000,
   "updatedAt": 1700000000
 }
@@ -169,9 +173,14 @@ Get on-chain escrow details.
   "releaseWindow": "604800",
   "deliveryConfirmedAt": "0",
   "disputeWindow": "259200",
-  "facilitatorFee": "100000"
+  "facilitatorFee": "100000",
+  "contentHash": "0x..."
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `contentHash` | bytes32 | Keccak256 hash of the order terms/content metadata. `0x0000...0000` if no terms were provided. Used as tamper-proof evidence during dispute resolution. |
 
 **Escrow states:** 0=None, 1=Active, 2=DeliveryConfirmed, 3=Completed, 4=AutoReleased, 5=Disputed, 6=Resolved, 7=Refunded
 

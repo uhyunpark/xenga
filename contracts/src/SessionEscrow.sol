@@ -3,13 +3,14 @@ pragma solidity ^0.8.24;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Ownable2Step, Ownable} from "@openzeppelin/contracts/access/Ownable2Step.sol";
-import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
+import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IERC3009} from "./interfaces/IERC3009.sol";
 
 /**
  * @title SessionEscrow
- * @notice Authorize-once, use-many session escrow for high-frequency micropayments
+ * @notice Authorize-once, use-many session escrow for high-frequency micropayments (UUPS upgradeable)
  * @dev Implements Issue #834 pattern: 1 signature for N API calls
  *
  * Flow:
@@ -19,7 +20,7 @@ import {IERC3009} from "./interfaces/IERC3009.sol";
  *   4. settleSession() finalizes: captures remaining + refunds unused
  *   5. reclaimExpired() safety valve if facilitator disappears
  */
-contract SessionEscrow is Ownable2Step, Pausable {
+contract SessionEscrow is Ownable2StepUpgradeable, PausableUpgradeable, UUPSUpgradeable {
     using SafeERC20 for IERC20;
 
     // ──────────────────────────── Types ────────────────────────────
@@ -43,10 +44,10 @@ contract SessionEscrow is Ownable2Step, Pausable {
 
     // ──────────────────────────── State ────────────────────────────
 
-    IERC20 public immutable usdc;
+    IERC20 public usdc;
     address public facilitator;
 
-    uint256 public nextSessionId = 1;
+    uint256 public nextSessionId;
     mapping(uint256 => Session) public sessions;
 
     // ──────────────────────────── Events ───────────────────────────
@@ -74,12 +75,29 @@ contract SessionEscrow is Ownable2Step, Pausable {
     error CaptureExceedsDeposit();
     error InvalidDuration();
 
-    // ──────────────────────────── Constructor ──────────────────────
+    // ──────────────────────────── Constructor (disabled) ──────────
 
-    constructor(address _usdc, address _facilitator) Ownable(msg.sender) {
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    // ──────────────────────────── Initializer ─────────────────────
+
+    function initialize(address _usdc, address _facilitator) external initializer {
+        __Ownable_init(msg.sender);
+        __Ownable2Step_init();
+        __Pausable_init();
+        __UUPSUpgradeable_init();
+
         usdc = IERC20(_usdc);
         facilitator = _facilitator;
+        nextSessionId = 1;
     }
+
+    // ──────────────────────────── UUPS ────────────────────────────
+
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 
     // ──────────────────────────── Modifiers ────────────────────────
 
@@ -240,4 +258,8 @@ contract SessionEscrow is Ownable2Step, Pausable {
     function unpause() external onlyOwner {
         _unpause();
     }
+
+    // ──────────────────────── Storage Gap ─────────────────────────
+
+    uint256[48] private __gap;
 }

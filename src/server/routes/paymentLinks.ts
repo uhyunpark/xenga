@@ -17,6 +17,7 @@ interface PaymentLink {
   description: string;
   price: string;
   serviceType: string;
+  terms?: string;
   active: boolean;
   createdAt: number;
   updatedAt: number;
@@ -30,6 +31,7 @@ function toPaymentLink(row: any): PaymentLink {
     description: row.description,
     price: row.price,
     serviceType: row.service_type,
+    terms: row.terms ?? undefined,
     active: row.active === 1,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -46,11 +48,12 @@ const checkoutLimiter = rateLimit({
 // ──────────── Create payment link (seller) ────────────
 router.post("/", sessionAuth(), (req: AuthenticatedRequest, res) => {
   const sellerAddress = req.callerAddress!.toLowerCase();
-  const { title, description, price, serviceType } = req.body as {
+  const { title, description, price, serviceType, terms } = req.body as {
     title?: string;
     description?: string;
     price?: number;
     serviceType?: string;
+    terms?: string;
   };
 
   if (!title || !price) {
@@ -66,6 +69,9 @@ router.post("/", sessionAuth(), (req: AuthenticatedRequest, res) => {
   if (typeof price !== "number" || price <= 0 || price > 1_000_000) {
     return res.status(400).json({ error: "Price must be a positive number up to 1,000,000 USDC" });
   }
+  if (terms && terms.length > 5000) {
+    return res.status(400).json({ error: "Terms must be 5000 characters or fewer" });
+  }
 
   const st = serviceType || "marketplace";
   if (!getServiceType(st)) {
@@ -77,9 +83,9 @@ router.post("/", sessionAuth(), (req: AuthenticatedRequest, res) => {
   const now = Math.floor(Date.now() / 1000);
 
   db.prepare(
-    `INSERT INTO payment_links (id, seller_address, title, description, price, service_type, active, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)`
-  ).run(id, sellerAddress, title, description || "", String(price), st, now, now);
+    `INSERT INTO payment_links (id, seller_address, title, description, price, service_type, terms, active, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`
+  ).run(id, sellerAddress, title, description || "", String(price), st, terms ?? null, now, now);
 
   const row = db.prepare("SELECT * FROM payment_links WHERE id = ?").get(id);
   res.status(201).json(toPaymentLink(row));
@@ -136,6 +142,7 @@ router.get("/:id/details", (_req, res) => {
     price: link.price,
     serviceType: link.serviceType,
     sellerAddress: link.sellerAddress,
+    ...(link.terms ? { terms: link.terms } : {}),
   });
 });
 
@@ -170,6 +177,7 @@ router.post("/:id/checkout", checkoutLimiter, (_req, res) => {
     price: Number(link.price),
     serviceType: link.serviceType,
     sellerAddress: sellerAddress as Address,
+    ...(link.terms ? { terms: link.terms } : {}),
   });
 
   res.status(201).json({

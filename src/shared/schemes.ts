@@ -30,7 +30,7 @@ export interface PaymentScheme {
   verify(payload: AnyPayload): Promise<{ valid: boolean; error?: string }>;
 
   /** Server-side: settle on-chain */
-  settle(payload: AnyPayload): Promise<SettleResult>;
+  settle(payload: AnyPayload, contentHash?: Hash): Promise<SettleResult>;
 }
 
 // ──────────────────────── Registry ────────────────────────

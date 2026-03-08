@@ -29,7 +29,7 @@ const walletClient = createWalletClient({
 
 // Just like fetch(), but handles 402 payment flow automatically
 const { response, payment } = await escrowFetch(
-  "https://api.example.com/api/orders/ORDER_ID/pay",
+  "https://api.xenga.xyz/api/orders/ORDER_ID/pay",
   { method: "POST" },
   { walletClient }
 );
@@ -43,7 +43,9 @@ console.log("TX Hash:", payment?.txHash);
 2. Server returns `402` with payment requirements in headers
 3. Client signs an ERC-3009 `receiveWithAuthorization` (USDC gasless transfer)
 4. Client retries with `PAYMENT-SIGNATURE` header
-5. Server verifies signature, creates escrow on-chain, returns `200`
+5. Server verifies signature, creates escrow on-chain (including `contentHash` if order has `terms`), returns `200`
+
+The `contentHash` is a keccak256 hash of the order terms stored immutably on-chain. It provides tamper-proof evidence of the agreed-upon terms for dispute resolution.
 
 ## 2. Using the full client SDK
 
@@ -54,7 +56,7 @@ import { createEscrowClient } from "@xenga/client";
 
 const client = createEscrowClient({
   privateKey: "0xYOUR_PRIVATE_KEY",
-  serverUrl: "https://api.example.com",
+  serverUrl: "https://api.xenga.xyz",
   escrowVaultAddress: "0xCONTRACT_ADDRESS", // for on-chain calls
   chainId: 84532, // Base Sepolia (default). Use 8453 for Base Mainnet.
 });

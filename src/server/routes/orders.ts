@@ -101,6 +101,9 @@ router.post("/", apiKeyAuth(), (req, res) => {
   if (body.description && body.description.length > 2000) {
     return res.status(400).json({ error: "Description must be 2000 characters or fewer" });
   }
+  if (body.terms && body.terms.length > 5000) {
+    return res.status(400).json({ error: "Terms must be 5000 characters or fewer" });
+  }
   if (!getServiceType(body.serviceType)) {
     return res.status(400).json({ error: `Unknown service type: ${body.serviceType}` });
   }
