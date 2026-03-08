@@ -5,7 +5,7 @@ Xenga provides on-chain escrow and reputation for AI agents using USDC on Base. 
 ## Quick Reference
 
 ```
-Base URL:  https://your-facilitator.example.com
+Base URL:  https://api.xenga.xyz
 Auth:      X-API-KEY: xng_...  (seller/operator)
            Authorization: Bearer <jwt>  (SIWE session)
 Chain:     Base Sepolia (84532) | Base Mainnet (8453)
@@ -52,28 +52,28 @@ Register as a seller, create an API key, and start accepting payments.
 
 ```bash
 # 1. Get SIWE nonce
-NONCE=$(curl -s $BASE_URL/api/auth/nonce | jq -r '.nonce')
+NONCE=$(curl -s https://api.xenga.xyz/api/auth/nonce | jq -r '.nonce')
 
 # 2. Sign SIWE message with your wallet, POST to get JWT
-TOKEN=$(curl -s -X POST $BASE_URL/api/auth/siwe \
+TOKEN=$(curl -s -X POST https://api.xenga.xyz/api/auth/siwe \
   -H "Content-Type: application/json" \
   -d '{"message":"...","signature":"0x..."}' | jq -r '.token')
 
 # 3. Register seller profile
-curl -X POST $BASE_URL/api/sellers \
+curl -X POST https://api.xenga.xyz/api/sellers \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name":"My Store","payoutAddress":"0x..."}'
 
 # 4. Create API key (key shown ONCE — save it)
-API_KEY=$(curl -s -X POST $BASE_URL/api/seller-api-keys \
+API_KEY=$(curl -s -X POST https://api.xenga.xyz/api/seller-api-keys \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name":"production"}' | jq -r '.key')
 # API_KEY = "xng_a1b2c3d4..."
 
 # 5. Create orders using API key
-curl -X POST $BASE_URL/api/orders \
+curl -X POST https://api.xenga.xyz/api/orders \
   -H "X-API-KEY: $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -204,7 +204,7 @@ import { createEscrowClient, escrowFetch } from "@xenga/client";
 // Option 1: Full client (buyer + seller operations)
 const client = createEscrowClient({
   privateKey: "0x...",
-  serverUrl: "https://api.example.com",
+  serverUrl: "https://api.xenga.xyz",
   escrowVaultAddress: "0x...",
   chainId: 84532, // Base Sepolia (default) or 8453 (Base Mainnet)
 });

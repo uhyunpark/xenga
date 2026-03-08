@@ -259,7 +259,7 @@ Standard x402 is a **direct payment** — once you pay, the money is gone. Xenga
 ### Architecture
 
 ```
-Vercel (web/)                    GCP Cloud Run (src/server/)
+Vercel (web/)                    Fly.io (src/server/)
 +--------------------+           +----------------------------+
 | Next.js Frontend   |   fetch   | Express Facilitator        |
 | Pages + Signing    |---------->| REST API + Chain + SQLite  |

@@ -48,7 +48,7 @@ Expiration Time: 2026-02-26T12:34:56.000Z
 
 ### Why JWT in sessionStorage (not cookie)
 
-Frontend (Vercel) and facilitator (GCP Cloud Run) are on different origins. Cookies would need `SameSite=None; Secure; HttpOnly` + explicit CORS `credentials: include`. JWT in sessionStorage is simpler, fits the existing header-based auth pattern, and clears on tab close.
+Frontend (Vercel) and facilitator (Fly.io) are on different origins. Cookies would need `SameSite=None; Secure; HttpOnly` + explicit CORS `credentials: include`. JWT in sessionStorage is simpler, fits the existing header-based auth pattern, and clears on tab close.
 
 ## Server Changes
 
