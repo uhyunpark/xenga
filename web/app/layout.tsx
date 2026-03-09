@@ -8,11 +8,12 @@ const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://xenga.xyz";
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: "Xenga — On-Chain Escrow for Agents",
+    default:
+      "Xenga — On-Chain Escrow and Open Credit Data for Humans & Agents",
     template: "%s — Xenga",
   },
   description:
-    "On-chain escrow and open credit data for agents and marketplaces — settlement, dispute resolution, and programmable release logic on Base.",
+    "On-chain escrow and open credit data for humans and agents — USDC settlement, dispute resolution, and portable reputation on Base.",
   authors: [{ name: "Xenga" }],
   creator: "Xenga",
   robots: { index: true, follow: true },
@@ -20,15 +21,15 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     siteName: "Xenga",
-    title: "Xenga — On-Chain Escrow for Agents",
+    title: "Xenga — On-Chain Escrow and Open Credit Data for Humans & Agents",
     description:
-      "On-chain escrow and open credit data for agents and marketplaces — settlement, dispute resolution, and programmable release logic on Base.",
+      "On-chain escrow and open credit data for humans and agents — USDC settlement, dispute resolution, and portable reputation on Base.",
   },
   twitter: {
     card: "summary",
-    title: "Xenga — On-Chain Escrow for Agents",
+    title: "Xenga — On-Chain Escrow and Open Credit Data for Humans & Agents",
     description:
-      "On-chain escrow and open credit data for agents and marketplaces with settlement and dispute resolution.",
+      "On-chain escrow and open credit data for humans and agents — USDC settlement, dispute resolution, and portable reputation on Base.",
   },
 };
 
@@ -39,7 +40,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <head />
+      <head>
+        <link rel="help" href="/llms.txt" />
+        <link rel="help" href="/agent-skills.md" />
+      </head>
       <body className="min-h-screen bg-bg-primary text-text-primary">
         <Navbar />
         <main>{children}</main>

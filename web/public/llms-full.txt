@@ -1,0 +1,983 @@
+# Xenga — Full Documentation
+
+> On-chain USDC escrow and open credit data for humans and agents on Base. x402-compatible — any x402 agent can pay without Xenga-specific code.
+
+---
+
+# Quickstart
+
+Get up and running with xenga escrow payments in 5 minutes.
+
+## Install
+
+```bash
+npm install @xenga/client viem
+# or
+bun add @xenga/client viem
+```
+
+## 1. Pay for an order with `escrowFetch`
+
+The simplest integration. `escrowFetch` wraps `fetch()` and handles the entire xenga payment flow automatically:
+
+```typescript
+import { escrowFetch } from "@xenga/client";
+import { createWalletClient, http } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { baseSepolia } from "viem/chains";
+
+const account = privateKeyToAccount("0xYOUR_PRIVATE_KEY");
+const walletClient = createWalletClient({
+  chain: baseSepolia,
+  transport: http(),
+  account,
+});
+
+// Just like fetch(), but handles 402 payment flow automatically
+const { response, payment } = await escrowFetch(
+  "https://api.xenga.xyz/api/orders/ORDER_ID/pay",
+  { method: "POST" },
+  { walletClient }
+);
+
+console.log("Escrow ID:", payment?.escrowId);
+console.log("TX Hash:", payment?.txHash);
+```
+
+**What happens under the hood:**
+1. Client sends POST without payment header
+2. Server returns `402` with payment requirements in headers
+3. Client signs an ERC-3009 `receiveWithAuthorization` (USDC gasless transfer)
+4. Client retries with `PAYMENT-SIGNATURE` header
+5. Server verifies signature, creates escrow on-chain (including `contentHash` if order has `terms`), returns `200`
+
+The `contentHash` is a keccak256 hash of the order terms stored immutably on-chain. It provides tamper-proof evidence of the agreed-upon terms for dispute resolution.
+
+## 2. Using the full client SDK
+
+For more control, use `createEscrowClient`:
+
+```typescript
+import { createEscrowClient } from "@xenga/client";
+
+const client = createEscrowClient({
+  privateKey: "0xYOUR_PRIVATE_KEY",
+  serverUrl: "https://api.xenga.xyz",
+  escrowVaultAddress: "0xCONTRACT_ADDRESS", // for on-chain calls
+  chainId: 84532, // Base Sepolia (default). Use 8453 for Base Mainnet.
+});
+
+// Pay for an order (handles full xenga flow)
+const { order, payment } = await client.payForOrder("ORDER_ID");
+
+// Release funds (buyer confirms receipt)
+const txHash = await client.releaseOnChain(payment.escrowId);
+
+// Or dispute (within dispute window)
+const txHash2 = await client.disputeOnChain(payment.escrowId);
+```
+
+### Seller operations
+
+```typescript
+// Confirm delivery (starts dispute window countdown)
+await client.confirmDeliveryOnChain(escrowId);
+
+// Voluntary refund
+await client.refundOnChain(escrowId);
+
+// Check on-chain stats
+const stats = await client.getSellerStats();
+console.log(`Completed: ${stats.completedCount}/${stats.totalEscrows}`);
+
+// Check ETH balance before transacting
+const { eth } = await client.getBalance();
+console.log(`ETH balance: ${eth}`);
+```
+
+## 3. Check seller reputation before paying
+
+```typescript
+const { response, payment } = await escrowFetch(
+  url,
+  { method: "POST" },
+  {
+    walletClient,
+    onSellerReputation: (rep) => {
+      if (rep.score < 50) {
+        console.log("Low reputation seller, aborting");
+        return false; // abort payment
+      }
+      return true; // proceed
+    },
+  }
+);
+```
+
+---
+
+# Agent Guide
+
+Xenga implements the [x402 protocol](https://www.x402.org/). If your agent already speaks x402, it works with Xenga out of the box — no SDK, no custom code, no integration work.
+
+Any x402-compatible agent (Coinbase AgentKit, Circle, Crossmint, or your own) can pay for Xenga-protected services using the standard HTTP 402 flow. Xenga adds on-chain escrow, reputation scoring, and service-type-aware release windows — all exposed through standard x402 fields.
+
+## How it works
+
+```
+Agent                          Xenga Facilitator              Base (on-chain)
+  │                                  │                             │
+  ├─ POST /api/orders/:id/pay ────→ │                             │
+  │  (no payment header)             │                             │
+  │                                  │                             │
+  │←── 402 + PAYMENT-REQUIRED ──────┤                             │
+  │    (x402 envelope)               │                             │
+  │                                  │                             │
+  ├─ sign ReceiveWithAuthorization   │                             │
+  │  (EIP-712, off-chain)            │                             │
+  │                                  │                             │
+  ├─ POST /api/orders/:id/pay ────→ │                             │
+  │  + PAYMENT-SIGNATURE header      │                             │
+  │                                  ├─ verify signature           │
+  │                                  ├─ createEscrowWithAuth() ──→│
+  │                                  │←── txHash + escrowId ──────┤
+  │←── 200 + PAYMENT-RESPONSE ─────┤                             │
+  │                                  │                             │
+  │  [Service delivered]             │                             │
+  │  [Auto-release after timeout]    │                             │
+```
+
+Three steps:
+1. **Request** — agent POSTs without payment header, gets `402` with requirements
+2. **Sign** — agent signs an ERC-3009 `ReceiveWithAuthorization` (gasless USDC transfer to escrow)
+3. **Pay** — agent retries with `PAYMENT-SIGNATURE` header, gets `200` with settlement confirmation
+
+This is the standard x402 flow. Nothing Xenga-specific.
+
+## x402 headers
+
+All headers are base64-encoded JSON. CORS exposes all of them via `Access-Control-Expose-Headers`.
+
+### 402 response: `PAYMENT-REQUIRED`
+
+```json
+{
+  "x402Version": 1,
+  "error": "Payment required",
+  "accepts": [
+    {
+      "scheme": "escrow",
+      "network": "base-sepolia",
+      "maxAmountRequired": "5000000",
+      "resource": "/api/orders/ORDER_ID/pay",
+      "description": "Escrow payment for order",
+      "mimeType": "application/json",
+      "outputSchema": null,
+      "payTo": "0xEscrowVaultAddress",
+      "maxTimeoutSeconds": 60,
+      "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      "extra": {
+        "name": "USDC",
+        "version": "2",
+        "primaryType": "ReceiveWithAuthorization",
+        "orderId": "0x...",
+        "sellerAddress": "0x...",
+        "releaseWindow": 3600,
+        "serviceType": "agent-service",
+        "facilitatorFee": "0",
+        "sellerReputation": {
+          "score": 82,
+          "confidence": "high",
+          "disputeRate": 0.03
+        }
+      }
+    }
+  ]
+}
+```
+
+Standard x402 fields (`scheme`, `network`, `maxAmountRequired`, `payTo`, `asset`) tell the agent what to pay. Xenga-specific data lives in `extra` — generic x402 clients can ignore it.
+
+Key `extra` fields:
+- `primaryType: "ReceiveWithAuthorization"` — tells the agent which EIP-712 type to sign
+- `name` / `version` — EIP-712 domain for the USDC contract
+- `sellerReputation` — agent can gate payment on seller trust score
+- `releaseWindow` — already adjusted by reputation (the agent doesn't need to compute this)
+
+### Payment submission: `PAYMENT-SIGNATURE`
+
+```json
+{
+  "x402Version": 1,
+  "scheme": "escrow",
+  "network": "base-sepolia",
+  "payload": {
+    "signature": "0x...",
+    "authorization": {
+      "from": "0xBuyerAddress",
+      "to": "0xEscrowVaultAddress",
+      "value": "5000000",
+      "validAfter": "0",
+      "validBefore": "1709337600",
+      "nonce": "0x..."
+    }
+  }
+}
+```
+
+### Settlement response: `PAYMENT-RESPONSE`
+
+```json
+{
+  "success": true,
+  "transaction": "0xTxHash",
+  "network": "base-sepolia",
+  "payer": "0xBuyerAddress",
+  "escrowId": 42
+}
+```
+
+### Header summary
+
+| Header | Direction | When |
+|---|---|---|
+| `PAYMENT-REQUIRED` | Server → Client | 402 response (no payment header sent) |
+| `PAYMENT-SIGNATURE` | Client → Server | Retry with signed authorization |
+| `PAYMENT-RESPONSE` | Server → Client | 200 response (settlement confirmed) |
+
+## What Xenga adds to x402
+
+Standard x402 does direct payment. Xenga uses x402 as the transport but settles into **on-chain escrow** instead:
+
+| Standard x402 | Xenga x402 |
+|---|---|
+| Funds go directly to seller | Funds go to EscrowVault contract |
+| Payment is final | Payment is escrowed — released after timeout or buyer confirmation |
+| No trust layer | Seller reputation included in 402 response |
+| Fixed terms | Release window dynamically adjusted by reputation |
+
+All of this is transparent to the agent. The agent signs the same `ReceiveWithAuthorization` — the difference is that `payTo` points to the EscrowVault contract instead of a seller wallet. The escrow lifecycle happens automatically after payment.
+
+### Content hash (tamper-proof terms)
+
+When an order includes `terms`, the facilitator computes `contentHash = keccak256(terms)` and stores it on-chain in the escrow. This provides immutable evidence of the agreed-upon terms:
+
+- The `contentHash` is emitted in the `EscrowCreated` event and readable via `GET /api/escrows/:escrowId`.
+- During a dispute, the arbiter can verify that the original terms match the on-chain hash.
+- Agents can verify the `contentHash` after payment by comparing `keccak256(terms)` against the on-chain value.
+- If no terms were provided, `contentHash` is `bytes32(0)`.
+
+## After payment: escrow lifecycle
+
+The agent doesn't need to do anything for the happy path. After payment:
+
+```
+Active → DeliveryConfirmed → AutoReleased
+```
+
+1. **Active** — USDC locked in escrow. Seller delivers the service.
+2. **DeliveryConfirmed** — Seller confirms delivery (auto-confirmed for `agent-service` and `tool-call` types). Dispute window starts.
+3. **AutoReleased** — After `releaseWindow + disputeWindow` expires, the facilitator's poller auto-releases funds to the seller. No action needed from the agent.
+
+The agent can check escrow status:
+
+```
+GET /api/escrows/{escrowId}
+```
+
+Returns state (`Active`, `DeliveryConfirmed`, `Completed`, `AutoReleased`, `Disputed`, `Resolved`, `Refunded`), timing info, `isReleasable` flag, and `contentHash`.
+
+### Dispute path
+
+If service quality fails, the agent (buyer) can dispute:
+
+```
+POST /api/disputes/{orderId}
+{ "reason": "Service did not deliver expected output" }
+```
+
+An arbiter reviews and splits funds by percentage. The agent gets `buyerPct` of `(amount - fee)`.
+
+**Timing constraints:**
+- From `DeliveryConfirmed`: dispute within `disputeWindow` (default 3 days) of confirmation
+- From `Active`: dispute between `releaseWindow - disputeWindow` and `releaseWindow + disputeWindow`
+
+## Service types
+
+The `serviceType` in the 402 response determines escrow behavior.
+
+| Service Type | Release Window | Auto-verify | Use Case |
+|---|---|---|---|
+| `tool-call` | 1 minute | Yes | Single API call (search, translate, compute) |
+| `inference` | 5 minutes | Yes | LLM inference, pay-per-call AI |
+| `agent-service` | 1 hour | Yes | Multi-step agent workflows |
+| `data-pipeline` | 1 hour | No | Batch processing, ETL |
+| `marketplace` | 7 days | No | Physical goods, human services |
+
+### Reputation-adjusted windows
+
+Release windows are dynamically adjusted before the 402 is sent.
+
+| Condition | Effect |
+|---|---|
+| Both parties score >= 80, high confidence | Window shortened (e.g. 1h → 30min for agent-service) |
+| Seller score < 40, medium/high confidence | Window extended (e.g. 1h → 4h for agent-service) |
+| New seller (low confidence) | Default window |
+
+## Reputation
+
+Seller reputation is included in the 402 response at `extra.sellerReputation`:
+
+```json
+{
+  "score": 82,
+  "confidence": "high",
+  "disputeRate": 0.03
+}
+```
+
+An agent can use this to decide whether to proceed with payment. For example, reject sellers with `score < 50` or `disputeRate > 0.2`.
+
+The agent can also query reputation directly:
+
+```
+GET /api/reputation/{address}
+```
+
+Returns full reputation breakdown (overall score, confidence, completion rate, dispute rate, volume, buyer/seller stats).
+
+### Building reputation
+
+Completed transactions build both buyer and seller reputation scores:
+- **Confidence levels**: `"low"` (< 3 escrows), `"medium"` (3-9), `"high"` (>= 10)
+- Higher reputation → shorter release windows → faster settlement
+- Clean completion history improves score; disputes and refunds lower it
+
+## Optional: `@xenga/client` SDK
+
+For TypeScript agents that want a convenience wrapper:
+
+```typescript
+import { escrowFetch } from "@xenga/client";
+
+const { response, payment } = await escrowFetch(
+  "https://api.xenga.xyz/api/orders/ORDER_ID/pay",
+  { method: "POST" },
+  { walletClient }
+);
+```
+
+This is purely optional. It handles header parsing, EIP-712 signing, retries, and reputation callbacks — but the underlying protocol is the same x402 flow any agent can implement directly.
+
+---
+
+# API Reference
+
+Base URL: `https://api.xenga.xyz`
+
+## Authentication
+
+| Method | Header | Used for |
+|--------|--------|----------|
+| API key | `X-API-KEY: xng_...` | Order CRUD, webhooks (seller/operator) |
+| SIWE session | `Authorization: Bearer <jwt>` | Profile, API keys, payment links (dashboard) |
+| Wallet signature | `X-WALLET-ADDRESS` + `X-WALLET-SIGNATURE` + `X-WALLET-TIMESTAMP` | Dispute resolution (arbiter) |
+| No auth | — | Reputation, escrow state, health, payment link details |
+
+## Orders
+
+### Create Order
+
+```
+POST /api/orders
+Auth: X-API-KEY
+```
+
+**Request:**
+```json
+{
+  "title": "AI Agent Task",
+  "description": "Process data using GPT-4",
+  "price": 5.0,
+  "serviceType": "agent-service",
+  "sellerAddress": "0x1234...abcd"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `title` | string | Yes | Order title (max 200 chars) |
+| `description` | string | No | Order description (max 2000 chars) |
+| `price` | number | Yes | USDC amount (e.g. 5.0, max 1,000,000) |
+| `serviceType` | string | Yes | Service type: `marketplace`, `agent-service`, `inference`, `tool-call`, `data-pipeline` |
+| `sellerAddress` | address | Yes | Seller's Ethereum address |
+| `terms` | string | No | Free-text terms. Hashed to `contentHash` (keccak256) and stored on-chain for dispute evidence. |
+
+### List Orders
+
+```
+GET /api/orders?seller=0x...&status=escrowed&limit=20&offset=0
+Auth: X-API-KEY (full list) or Bearer JWT with ?seller= (filtered)
+```
+
+Valid statuses: `created`, `pending_payment`, `escrowed`, `delivery_confirmed`, `completed`, `disputed`, `resolved`, `refunded`
+
+### Get Order
+
+```
+GET /api/orders/:id
+Auth: none
+```
+
+### Pay for Order (x402 Flow)
+
+```
+POST /api/orders/:id/pay
+```
+
+**Step 1 — No payment header:**
+
+Response (402) with `PAYMENT-REQUIRED` and `X-PAYMENT-REQUIRED` headers (base64 JSON).
+
+**Step 2 — With payment signature:**
+
+Send `PAYMENT-SIGNATURE` or `X-PAYMENT` header (base64 JSON) containing the signed ERC-3009 authorization.
+
+Response (200) with `PAYMENT-RESPONSE` and `X-PAYMENT-RESPONSE` headers.
+
+### Confirm Delivery
+
+```
+POST /api/orders/:id/confirm-delivery
+Auth: X-API-KEY or Bearer JWT (seller only)
+```
+
+### Refund
+
+```
+POST /api/orders/:id/refund
+Auth: X-API-KEY or Bearer JWT (seller only)
+```
+
+## Escrows
+
+### Get Escrow State
+
+```
+GET /api/escrows/:escrowId
+Auth: none
+```
+
+Returns: escrowId, orderId, buyer, seller, amount, serviceType, state, createdAt, releaseWindow, deliveryConfirmedAt, disputeWindow, facilitatorFee, contentHash, isReleasable.
+
+States: `None` (0), `Active` (1), `DeliveryConfirmed` (2), `Completed` (3), `AutoReleased` (4), `Disputed` (5), `Resolved` (6), `Refunded` (7)
+
+## Disputes
+
+### File Dispute
+
+```
+POST /api/disputes/:orderId
+Auth: X-API-KEY
+```
+
+Request: `{ "reason": "Service not delivered as described" }`
+
+### Resolve Dispute
+
+```
+POST /api/disputes/:disputeId/resolve
+Auth: Wallet signature (arbiter only)
+```
+
+Request: `{ "buyerPct": 70, "resolution": "Partial delivery confirmed" }`
+
+`buyerPct` (0-100): percentage of (amount - fee) returned to buyer.
+
+## Reputation
+
+### Get Reputation
+
+```
+GET /api/reputation/:address
+Auth: none
+```
+
+Returns: address, overall (0-100), confidence (low/medium/high), seller stats, buyer stats.
+
+### Get Reputation History
+
+```
+GET /api/reputation/:address/history?days=90&bucket=7
+Auth: none
+```
+
+## Sellers
+
+### Register/Update Seller
+
+```
+POST /api/sellers
+Auth: Bearer JWT (SIWE session)
+```
+
+Request: `{ "name": "My AI Service", "payoutAddress": "0x..." }`
+
+### Get Seller
+
+```
+GET /api/sellers/:address
+Auth: none
+```
+
+## API Keys
+
+### Create API Key
+
+```
+POST /api/seller-api-keys
+Auth: Bearer JWT
+```
+
+Request: `{ "name": "production" }`
+
+Returns key once — store securely.
+
+### List / Revoke
+
+```
+GET /api/seller-api-keys
+DELETE /api/seller-api-keys/:id
+Auth: Bearer JWT
+```
+
+## Webhooks
+
+### Register Webhook
+
+```
+POST /api/webhooks
+Auth: X-API-KEY or Bearer JWT
+```
+
+Request:
+```json
+{
+  "url": "https://your-service.com/webhook",
+  "secret": "your-secret-min-16-chars",
+  "eventTypes": ["escrow.created", "escrow.released", "delivery.confirmed"]
+}
+```
+
+Event types: `escrow.created`, `escrow.released`, `escrow.auto_released`, `escrow.disputed`, `escrow.resolved`, `escrow.refunded`, `delivery.confirmed`
+
+Signature verification: `X-Webhook-Signature: sha256=<hmac-sha256 of body with secret>`
+
+Retry policy: 3 attempts with exponential backoff (1s, 5s, 25s).
+
+## Payment Links
+
+### Create Payment Link
+
+```
+POST /api/payment-links
+Auth: Bearer JWT
+```
+
+### Get Details (Public)
+
+```
+GET /api/payment-links/:id/details
+Auth: none
+```
+
+### Checkout (Public)
+
+```
+POST /api/payment-links/:id/checkout
+Auth: none (rate limited: 5/min)
+```
+
+Creates an order from the payment link data. Returns orderId for the x402 payment flow.
+
+## Auth
+
+### Get Nonce
+
+```
+GET /api/auth/nonce
+```
+
+### SIWE Login
+
+```
+POST /api/auth/siwe
+```
+
+Returns JWT (24h expiry). Use as `Authorization: Bearer <token>`.
+
+## Demo
+
+### Fund Wallet (Testnet Only)
+
+```
+POST /api/demo/fund
+```
+
+Request: `{ "address": "0x..." }`
+
+Sends 10 USDC + 0.005 ETH. Rate limited: 100 USDC/hr per IP+address.
+
+## Health
+
+```
+GET /health
+```
+
+Returns: status, escrowVault address, serviceTypes, chain, chainId.
+
+## Fee System
+
+Fee = `(amount * feeBps) / 10000 + flatFee`
+
+- Seller pays: deducted from payout at settlement
+- Buyer pays exact price
+- On refund: buyer gets full amount back (facilitator absorbs cost)
+- Fee caps: max 10% + 50 USDC
+
+## Header Reference
+
+| Header | Direction | Format | Description |
+|--------|-----------|--------|-------------|
+| `PAYMENT-REQUIRED` | Response (402) | base64 JSON | x402 envelope |
+| `X-PAYMENT-REQUIRED` | Response (402) | base64 JSON | Legacy Xenga format |
+| `PAYMENT-SIGNATURE` | Request (retry) | base64 JSON | x402 signed authorization |
+| `X-PAYMENT` | Request (retry) | base64 JSON | Legacy Xenga authorization |
+| `PAYMENT-RESPONSE` | Response (200) | base64 JSON | x402 settlement result |
+| `X-PAYMENT-RESPONSE` | Response (200) | base64 JSON | Legacy Xenga settlement result |
+
+## Error Codes
+
+| Code | Meaning |
+|------|---------|
+| 400 | Bad request |
+| 401 | Unauthorized |
+| 402 | Payment required (x402 flow) |
+| 403 | Forbidden |
+| 404 | Not found |
+| 409 | Conflict |
+| 410 | Gone (deactivated payment link) |
+| 429 | Rate limited |
+| 500 | Internal server error |
+
+---
+
+# SDK Reference
+
+Complete reference for the `@xenga/client` SDK.
+
+## Installation
+
+```bash
+npm install @xenga/client viem
+# or
+bun add @xenga/client viem
+```
+
+## `escrowFetch(url, init, options)`
+
+Drop-in `fetch()` wrapper that handles the xenga 402 payment flow automatically.
+
+```typescript
+import { escrowFetch } from "@xenga/client";
+
+const { response, payment } = await escrowFetch(
+  "https://api.xenga.xyz/api/orders/ORDER_ID/pay",
+  { method: "POST" },
+  { walletClient }
+);
+```
+
+### `EscrowFetchOptions`
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `walletClient` | `WalletClient` | **required** | viem WalletClient with an account for signing |
+| `usdcAddress` | `Address` | Chain default | USDC contract address (for EIP-712 domain) |
+| `onSellerReputation` | `(rep) => boolean` | — | Return `false` to abort payment |
+| `timeoutMs` | `number` | `30000` | Request timeout |
+| `retryOptions` | `RetryOptions` | 3 retries | Retry configuration |
+
+### Return value
+
+```typescript
+{
+  response: Response;
+  payment?: EscrowPaymentResponse;  // { success, txHash, escrowId }
+}
+```
+
+## `createEscrowClient(config)`
+
+Full-featured client for managing escrow payments and on-chain operations.
+
+```typescript
+import { createEscrowClient } from "@xenga/client";
+
+const client = createEscrowClient({
+  privateKey: "0xYOUR_PRIVATE_KEY",
+  serverUrl: "https://api.xenga.xyz",
+  escrowVaultAddress: "0xCONTRACT_ADDRESS",
+});
+```
+
+### `EscrowClientConfig`
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `privateKey` | `Hex` | — | Private key (or provide `walletClient`) |
+| `walletClient` | `WalletClient` | — | Pre-configured WalletClient (or provide `privateKey`) |
+| `serverUrl` | `string` | **required** | Facilitator server URL |
+| `escrowVaultAddress` | `Address` | — | Required for on-chain calls |
+| `chainId` | `number` | `84532` | Chain ID (84532 = Base Sepolia, 8453 = Base Mainnet) |
+
+### Methods
+
+#### Payment
+- `payForOrder(orderId)` — Full xenga 402 flow. Returns `{ order, payment }`
+
+#### On-chain lifecycle
+- `releaseOnChain(escrowId)` — Release funds to seller (buyer action)
+- `disputeOnChain(escrowId)` — Dispute escrow (buyer action, within dispute window)
+- `confirmDeliveryOnChain(escrowId)` — Confirm delivery (seller action)
+- `refundOnChain(escrowId)` — Refund buyer (seller action)
+
+#### Read-only
+- `getOrder(orderId)` — Get order details
+- `getEscrow(escrowId)` — Get on-chain escrow state
+- `getReputation(address)` — Get reputation score
+- `getSellerStats(address?)` — Get on-chain seller stats
+- `getBuyerStats(address?)` — Get on-chain buyer stats
+- `getBalance()` — Get ETH balance
+- `watchEscrow(escrowId, callback, pollIntervalMs?)` — Poll for state changes
+
+## Agent helpers
+
+```typescript
+import { discoverServices, screenSeller, autoPayAndVerify } from "@xenga/client/agent";
+```
+
+- `discoverServices(facilitatorUrl)` — Discover available services
+- `screenSeller(facilitatorUrl, address, minScore?)` — Pre-screen seller reputation
+- `autoPayAndVerify(url, init, options)` — One-call payment + data retrieval
+
+## Error types
+
+| Error | Code | Description |
+|---|---|---|
+| `InvalidPaymentHeaderError` | `INVALID_PAYMENT_HEADER` | Malformed 402 response |
+| `UnsupportedSchemeError` | `UNSUPPORTED_SCHEME` | Unsupported payment scheme |
+| `NetworkError` | `NETWORK_ERROR` | Network-level error (retryable) |
+| `ReputationAbortError` | `REPUTATION_ABORT` | Seller reputation check failed |
+| `PaymentVerificationError` | `PAYMENT_VERIFICATION_ERROR` | Signature verification failed |
+| `SettlementError` | `SETTLEMENT_ERROR` | On-chain settlement failed |
+
+---
+
+# Seller Guide
+
+## Creating orders
+
+```bash
+curl -X POST https://api.xenga.xyz/api/orders \
+  -H "Content-Type: application/json" \
+  -H "X-API-KEY: xng_..." \
+  -d '{
+    "title": "Premium Widget",
+    "description": "A high-quality widget",
+    "price": 25.00,
+    "serviceType": "marketplace",
+    "sellerAddress": "0xYOUR_SELLER_ADDRESS",
+    "terms": "Ships within 5 business days. 30-day return policy."
+  }'
+```
+
+## Service types
+
+| Type | Release window | Auto-verify |
+|------|---------------|-------------|
+| `marketplace` | 7 days | No |
+| `agent-service` | 1 hour | Yes |
+| `inference` | 5 minutes | Yes |
+| `tool-call` | 1 minute | Yes |
+| `data-pipeline` | 1 hour | No |
+
+## Seller actions (on-chain)
+
+```typescript
+import { createEscrowClient } from "@xenga/client";
+
+const client = createEscrowClient({
+  privateKey: "0xSELLER_PRIVATE_KEY",
+  serverUrl: "https://api.xenga.xyz",
+  escrowVaultAddress: "0xCONTRACT",
+});
+
+// Confirm delivery (starts dispute window countdown)
+await client.confirmDeliveryOnChain(escrowId);
+
+// Voluntary refund
+await client.refundOnChain(escrowId);
+
+// Check stats
+const stats = await client.getSellerStats();
+```
+
+## Webhooks
+
+Register webhooks for real-time escrow lifecycle notifications:
+
+```bash
+curl -X POST https://api.xenga.xyz/api/webhooks \
+  -H "Content-Type: application/json" \
+  -H "X-API-KEY: xng_..." \
+  -d '{
+    "url": "https://yourapp.com/webhooks/xenga",
+    "secret": "whsec_your_secret_here_min16chars",
+    "eventTypes": ["escrow.created", "escrow.released", "escrow.disputed"]
+  }'
+```
+
+Event types: `escrow.created`, `delivery.confirmed`, `escrow.released`, `escrow.auto_released`, `escrow.disputed`, `escrow.resolved`, `escrow.refunded`
+
+Signature verification: `X-Webhook-Signature: sha256=<hmac-sha256 of body with secret>`
+
+## Fee configuration
+
+Fee = `(amount * feeBps) / 10000 + flatFee`
+
+- Seller pays: deducted from payout at settlement
+- Buyer pays exact price
+- On refund: buyer gets full amount back (facilitator absorbs cost)
+- Fee caps: max 10% + 50 USDC
+
+## Escrow lifecycle
+
+```
+None → Active → DeliveryConfirmed → Completed      (buyer releases)
+         │             │              AutoReleased   (timeout)
+         │             └────────────→ Disputed ──→ Resolved (arbiter)
+         └───────────────────────────→ Refunded   (seller/arbiter)
+```
+
+## Content hash (tamper-proof terms)
+
+When an order includes `terms`, the server computes `contentHash = keccak256(terms)` and stores it on-chain. This provides tamper-proof evidence of the agreed-upon terms for dispute resolution.
+
+```typescript
+import { keccak256, toBytes } from "viem";
+
+const terms = "Ships within 5 business days. 30-day return policy.";
+const hash = keccak256(toBytes(terms));
+// Compare with on-chain escrow.contentHash
+```
+
+---
+
+# Agent Skills
+
+On-chain USDC escrow and reputation on Base. x402-compatible — any x402 agent can pay without Xenga-specific code.
+
+## Quick Reference
+
+```
+Base URL:  https://api.xenga.xyz
+Chain:     Base Sepolia (84532)
+USDC:      6 decimals
+```
+
+## Pay for a Service
+
+### Option 1: escrowFetch (Recommended)
+
+```typescript
+import { escrowFetch } from "@xenga/client";
+
+const { response, payment } = await escrowFetch(
+  "https://api.xenga.xyz/api/orders/ORDER_ID/pay",
+  { method: "POST" },
+  { walletClient }
+);
+```
+
+Reject low-reputation sellers:
+
+```typescript
+const { response } = await escrowFetch(url, init, {
+  walletClient,
+  onSellerReputation: (rep) => rep.score >= 60,
+});
+```
+
+### Option 2: Manual x402 Flow
+
+1. `POST /api/orders/:id/pay` (no headers) → **402** with `PAYMENT-REQUIRED` header
+2. Parse requirements: escrow contract, USDC address, amount, orderId, seller, releaseWindow
+3. Sign ERC-3009 `ReceiveWithAuthorization` via EIP-712
+4. Retry same URL with `PAYMENT-SIGNATURE` header → **200** + service response
+
+### Option 3: Full Client
+
+```typescript
+import { createEscrowClient } from "@xenga/client";
+
+const client = createEscrowClient({
+  privateKey: "0x...",
+  serverUrl: "https://api.xenga.xyz",
+  escrowVaultAddress: "0x...",
+});
+
+const { order, payment } = await client.payForOrder(orderId);
+const escrow = await client.getEscrow(escrowId);
+const rep = await client.getReputation("0x...");
+```
+
+## Check Escrow & Reputation (No Auth)
+
+```
+GET /api/escrows/:escrowId       → escrow state, buyer, seller, amounts, timestamps
+GET /api/reputation/:address     → score (0-100), confidence, dispute rate
+GET /api/reputation/:address/history?days=90  → time-windowed history
+GET /health                      → server status, contract addresses
+```
+
+## Service Types
+
+| Type | Release Window | Auto-verify | Use Case |
+|------|----------------|-------------|----------|
+| `agent-service` | 1 hour | Yes | AI agent task execution |
+| `inference` | 5 minutes | Yes | LLM inference calls |
+| `tool-call` | 1 minute | Yes | Single tool/API calls |
+| `marketplace` | 7 days | No | Goods with manual confirmation |
+| `data-pipeline` | 1 hour | No | Data processing jobs |
+
+## Escrow Lifecycle
+
+```
+Active → DeliveryConfirmed → Completed / AutoReleased
+           → Disputed → Resolved (arbiter splits %)
+Active → Refunded (seller voluntary)
+```
+
+## Error Codes
+
+| Code | Meaning |
+|------|---------|
+| 400 | Bad request |
+| 401 | Unauthorized |
+| 402 | Payment required (sign and retry) |
+| 403 | Forbidden |
+| 404 | Not found |
+| 409 | Conflict |
+| 429 | Rate limited |
+| 500 | Internal server error |

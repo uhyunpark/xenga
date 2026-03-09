@@ -1,0 +1,22 @@
+# Xenga
+
+> On-chain USDC escrow and open credit data for humans and agents on Base. x402-compatible — any x402 agent can pay without Xenga-specific code.
+
+## Key Capabilities
+
+- **Escrow payments**: Lock USDC in on-chain escrow with configurable release windows, auto-release, and dispute resolution
+- **Open credit data**: Portable reputation scores (0-100) derived from real escrow outcomes — completion rate, dispute rate, volume
+- **x402 protocol**: Standard HTTP 402 payment flow — POST, get requirements, sign ERC-3009, retry with signature
+- **Service types**: agent-service (1h), inference (5min), tool-call (1min), marketplace (7d), data-pipeline (1h)
+- **Client SDK**: `escrowFetch()` drop-in fetch wrapper, `createEscrowClient()` for full lifecycle management
+- **Seller dashboard**: Self-service order management, API keys, webhooks, payment links
+
+## Links
+
+- Docs: https://xenga.xyz/docs/quickstart
+- Agent Guide: https://xenga.xyz/docs/agent-guide
+- API Reference: https://xenga.xyz/docs/api-reference
+- SDK Reference: https://xenga.xyz/docs/sdk-reference
+- Seller Guide: https://xenga.xyz/docs/seller-guide
+- Agent Skills: https://xenga.xyz/agent-skills.md
+- Full context for AI: https://xenga.xyz/llms-full.txt
