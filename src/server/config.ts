@@ -39,7 +39,7 @@ export const config = {
   chainConfig,
   isMock,
   apiKeys: (process.env.API_KEYS || "").split(",").map(k => k.trim()).filter(Boolean),
-  jwtSecret: process.env.JWT_SECRET || "dev-jwt-secret-change-in-production",
+  jwtSecret: process.env.JWT_SECRET || (() => { throw new Error("JWT_SECRET is required — generate one with: openssl rand -hex 32"); })(),
   /** On-chain disputeWindow (seconds), populated at startup */
   disputeWindow: undefined as number | undefined,
 };
