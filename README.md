@@ -2,8 +2,6 @@
 
 An on-chain escrow and reputation system for secure, verifiable payments — for both humans and autonomous agents.
 
-**Website:** [xenga.xyz](https://xenga.xyz)
-
 ## Escrow State Machine
 
 Buyers deposit USDC into escrow. Funds are held until delivery is confirmed and released, or disputes are resolved by an arbiter.
